@@ -1,0 +1,9 @@
+{
+  "enabledMcpjsonServers": [
+    "laravel-boost",
+    "context7",
+    "playwright",
+    "render",
+    "supabase"
+  ]
+}
