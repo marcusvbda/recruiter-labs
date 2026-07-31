@@ -34,6 +34,10 @@ Usage rule: for any non-trivial task, delegate to the matching domain subagent i
 
 Never create branches, commit, or push unless explicitly asked to in that specific message. This applies to every agent (main thread and subagents) — do not commit as a side effect of "finishing" a task.
 
+## Plan documents
+
+When a task involves generating an implementation plan `.md` file (e.g. via a planning skill) in any folder, delete that plan file once the plan has been fully executed. Plan files are working scaffolding for the session, not project documentation — they should not end up versioned in the repo.
+
 ## Conventions
 
 _(to be filled in as the project gets started — folder structure, naming conventions, etc.)_

@@ -27,3 +27,9 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+**/caddy
+frankenphp
+frankenphp-worker.php
+
+.playwright-mcp
+.playwright-mcp/*
