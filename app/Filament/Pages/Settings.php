@@ -44,6 +44,11 @@ class Settings extends Page implements HasActions, HasSchemas
         return __('settings.navigation_label');
     }
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
+
     public function mount(): void
     {
         $user = auth()->user();

@@ -11,11 +11,11 @@ class PlanSeeder extends Seeder
 {
     public function run(): void
     {
-        Plan::query()->firstOrCreate(
+        Plan::query()->updateOrCreate(
             ['slug' => 'default'],
             [
                 'name' => 'Default',
-                'features' => [Feature::Leads->value],
+                'features' => [Feature::Candidates->value],
                 'limits' => [
                     Limit::Jobs->value => 5,
                     Limit::Applications->value => 1000,

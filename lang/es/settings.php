@@ -23,7 +23,7 @@ return [
         'note' => 'Los cambios de plan y la facturación estarán disponibles en una futura actualización.',
     ],
     'features' => [
-        'leads' => 'Leads',
+        'candidates' => 'Candidatos',
     ],
     'integrations' => [
         'placeholder' => 'Integraciones aquí ...',

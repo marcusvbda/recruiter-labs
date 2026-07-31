@@ -21,9 +21,19 @@ class Company extends Model
         return $this->belongsToMany(User::class)->withTimestamps();
     }
 
-    public function leads(): HasMany
+    public function candidates(): HasMany
     {
-        return $this->hasMany(Lead::class);
+        return $this->hasMany(Candidate::class);
+    }
+
+    public function jobs(): HasMany
+    {
+        return $this->hasMany(Job::class);
+    }
+
+    public function referrals(): HasMany
+    {
+        return $this->hasMany(Referral::class);
     }
 
     public function plan(): BelongsTo

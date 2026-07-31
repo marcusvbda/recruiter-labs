@@ -4,7 +4,7 @@ namespace App\Enums;
 
 enum Feature: string
 {
-    case Leads = 'leads';
+    case Candidates = 'candidates';
 
     public function label(): string
     {

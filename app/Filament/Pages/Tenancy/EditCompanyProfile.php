@@ -6,6 +6,7 @@ use App\Models\Company;
 use Filament\Actions\DeleteAction;
 use Filament\Forms\Components\TextInput;
 use Filament\Pages\Tenancy\EditTenantProfile;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Model;
@@ -26,18 +27,23 @@ class EditCompanyProfile extends EditTenantProfile
     {
         return $schema
             ->components([
-                TextInput::make('name')
-                    ->label(__('company.fields.name'))
-                    ->required()
-                    ->maxLength(255),
-                TextInput::make('slug')
-                    ->label(__('company.fields.slug'))
-                    ->required()
-                    ->live(onBlur: true)
-                    ->afterStateUpdated(fn (?string $state, Set $set) => $set('slug', trim((string) $state)))
-                    ->regex('/^[a-z0-9]+(-[a-z0-9]+)*$/')
-                    ->helperText(__('company.fields.slug_helper'))
-                    ->unique(Company::class, 'slug', ignoreRecord: true),
+                Section::make()
+                    ->columnSpanFull()
+                    ->columns(1)
+                    ->schema([
+                        TextInput::make('name')
+                            ->label(__('company.fields.name'))
+                            ->required()
+                            ->maxLength(255),
+                        TextInput::make('slug')
+                            ->label(__('company.fields.slug'))
+                            ->required()
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(fn (?string $state, Set $set) => $set('slug', trim((string) $state)))
+                            ->regex('/^[a-z0-9]+(-[a-z0-9]+)*$/')
+                            ->helperText(__('company.fields.slug_helper'))
+                            ->unique(Company::class, 'slug', ignoreRecord: true),
+                    ]),
             ]);
     }
 

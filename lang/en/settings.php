@@ -23,7 +23,7 @@ return [
         'note' => 'Plan changes and billing will be available in a future update.',
     ],
     'features' => [
-        'leads' => 'Leads',
+        'candidates' => 'Candidates',
     ],
     'integrations' => [
         'placeholder' => 'Integrations here ...',

@@ -2,10 +2,10 @@
 
 return [
     'stats' => [
-        'total_leads' => 'Total de leads',
+        'total_candidates' => 'Total de candidatos',
         'select_company' => 'Selecione uma empresa para ver as métricas',
     ],
     'chart' => [
-        'heading' => 'Leads criados — últimos 14 dias',
+        'heading' => 'Candidatos criados — últimos 14 dias',
     ],
 ];

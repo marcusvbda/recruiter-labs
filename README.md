@@ -1,6 +1,6 @@
 # recruiter-labs
 
-A multi-tenant recruiting SaaS boilerplate: Laravel 13 + Filament 5 for the admin panel (companies, leads, settings), Inertia.js + React for anything outside Filament's scope.
+A multi-tenant recruiting SaaS boilerplate: Laravel 13 + Filament 5 for the admin panel (companies, candidates, jobs, referrals, settings), Inertia.js + React for anything outside Filament's scope.
 
 ## Requirements
 

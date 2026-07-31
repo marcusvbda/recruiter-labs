@@ -14,6 +14,6 @@ enum SocialNetwork: string
 
     public function label(): string
     {
-        return __('leads.networks.'.$this->value);
+        return __('candidates.networks.'.$this->value);
     }
 }
