@@ -38,6 +38,7 @@ class AdminPanelProvider extends PanelProvider
             ->favicon(asset('assets/image/favicon.png').'?v=2')
             ->brandLogo(asset('assets/image/logo.png'))
             ->brandLogoHeight('3rem')
+            ->viteTheme('resources/css/filament/admin/theme.css')
             ->maxContentWidth(Width::Full)
             ->login()
             ->registration()
