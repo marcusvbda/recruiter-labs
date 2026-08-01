@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
-#[Fillable(['company_id', 'name', 'description', 'starts_at', 'ends_at', 'campaign_expectation'])]
+#[Fillable(['company_id', 'name', 'description', 'starts_at', 'ends_at', 'campaign_expectation', 'published'])]
 class Job extends Model
 {
     use HasFactory, HasUniqueKey;
@@ -19,11 +19,16 @@ class Job extends Model
     // unrelated to this model (also unrelated to any `App\Jobs\*` queue job class).
     protected $table = 'job_postings';
 
+    protected $attributes = [
+        'published' => false,
+    ];
+
     protected function casts(): array
     {
         return [
             'starts_at' => 'date',
             'ends_at' => 'date',
+            'published' => 'boolean',
         ];
     }
 

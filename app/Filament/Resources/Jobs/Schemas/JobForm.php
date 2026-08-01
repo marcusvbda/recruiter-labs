@@ -8,6 +8,7 @@ use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Slider;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
@@ -25,6 +26,9 @@ class JobForm
                             ->label(__('jobs.fields.name'))
                             ->required()
                             ->maxLength(255),
+                        Toggle::make('published')
+                            ->label(__('jobs.fields.published'))
+                            ->default(false),
                     ]),
                 Section::make(__('jobs.sections.campaign'))
                     ->columnSpanFull()

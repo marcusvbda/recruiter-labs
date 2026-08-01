@@ -33,6 +33,34 @@ it('aligns the criteria weight slider and fills its selected track', function ()
         ->assertSeeHtml("fillTrack: JSON.parse('[true,false]')");
 });
 
+it('changes the published status from the job form', function () {
+    $company = Company::factory()->create();
+    actAsCompany($company);
+
+    Livewire::test(CreateJob::class)
+        ->fillForm([
+            'name' => 'Published Job',
+            'published' => true,
+            'jobCriteria' => [],
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $job = Job::query()->where('name', 'Published Job')->sole();
+
+    expect($job->published)->toBeTrue();
+
+    Livewire::test(EditJob::class, ['record' => $job->getRouteKey()])
+        ->fillForm([
+            'published' => false,
+            'jobCriteria' => [],
+        ])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($job->fresh()->published)->toBeFalse();
+});
+
 it('creates a job with campaign fields and job criteria repeater rows', function () {
     $company = Company::factory()->create();
     actAsCompany($company);

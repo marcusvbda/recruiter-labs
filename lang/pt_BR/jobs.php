@@ -10,6 +10,8 @@ return [
         'description' => 'Descrição',
         'starts_at' => 'Data de início',
         'ends_at' => 'Data de término',
+        'key' => 'Chave',
+        'published' => 'Publicada',
         'campaign_expectation' => 'Expectativa da campanha',
         'campaign_expectation_helper' => 'Um texto livre descrevendo como é o sucesso desta campanha, por exemplo: "Espera-se contratar 4 desenvolvedores sêniores atendendo a pelo menos 80% dos critérios até o fim da campanha". Usado posteriormente pela IA para avaliar se a campanha atingiu seu objetivo.',
     ],

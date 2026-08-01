@@ -10,7 +10,6 @@ use Filament\Facades\Filament;
 use Filament\Forms\Components\MorphToSelect;
 use Filament\Forms\Components\MorphToSelect\Type;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
@@ -50,7 +49,11 @@ class AutomationEventForm
                             ->options(collect(AutomationActionType::cases())->mapWithKeys(fn (AutomationActionType $case) => [$case->value => $case->label()]))
                             ->required()
                             ->live()
-                            ->afterStateUpdated(fn (Set $set) => $set('action_config', [])),
+                            ->afterStateUpdated(function (Set $set, ?string $state): void {
+                                if ($state !== AutomationActionType::SendEmail->value) {
+                                    $set('action_config.email_template_id', null);
+                                }
+                            }),
                         // Writes into the nested `action_config` JSON column via
                         // Filament's dot-notation state binding: a component named
                         // `action_config.email_template_id` reads/writes
@@ -62,16 +65,13 @@ class AutomationEventForm
                         Select::make('action_config.email_template_id')
                             ->label(__('event-hooks.fields.email_template'))
                             ->options(fn (): array => EmailTemplate::query()
-                                ->where('company_id', Filament::getTenant()?->id)
+                                ->where('company_id', Filament::getTenant()?->getKey())
                                 ->pluck('name', 'id')
                                 ->all())
                             ->searchable()
-                            ->required()
+                            ->required(fn (Get $get): bool => $get('action_type') === AutomationActionType::SendEmail->value)
                             ->visible(fn (Get $get): bool => $get('action_type') === AutomationActionType::SendEmail->value)
                             ->dehydrated(fn (Get $get): bool => $get('action_type') === AutomationActionType::SendEmail->value),
-                        Toggle::make('is_active')
-                            ->label(__('event-hooks.fields.is_active'))
-                            ->default(true),
                     ]),
             ]);
     }
@@ -82,7 +82,7 @@ class AutomationEventForm
             ->types([
                 Type::make(Job::class)
                     ->titleAttribute('name')
-                    ->modifyOptionsQueryUsing(fn (Builder $query): Builder => $query->where('company_id', Filament::getTenant()?->id)),
+                    ->modifyOptionsQueryUsing(fn (Builder $query): Builder => $query->where('company_id', Filament::getTenant()?->getKey())),
             ])
             ->required()
             ->columnSpanFull();

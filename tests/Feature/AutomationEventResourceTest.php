@@ -63,6 +63,7 @@ it('creates an automation event with a send_email action and persists the email 
     $emailTemplate = EmailTemplate::factory()->for($company)->create();
 
     Livewire::test(CreateAutomationEvent::class)
+        ->assertFormFieldDoesNotExist('is_active')
         ->fillForm([
             'automatable_type' => (new Job)->getMorphClass(),
             'automatable_id' => $job->id,
@@ -80,7 +81,29 @@ it('creates an automation event with a send_email action and persists the email 
 
     expect($event->automatable_id)->toBe($job->id)
         ->and($event->automatable_type)->toBe((new Job)->getMorphClass())
-        ->and($event->action_config)->toBe(['email_template_id' => $emailTemplate->id]);
+        ->and($event->action_config)->toBe(['email_template_id' => $emailTemplate->id])
+        ->and($event->is_active)->toBeTrue();
+});
+
+it('keeps the selected email template after the action type updates live', function () {
+    $company = Company::factory()->create();
+    actAsCompany($company);
+
+    $job = Job::factory()->for($company)->create();
+    $emailTemplate = EmailTemplate::factory()->for($company)->create();
+
+    Livewire::test(CreateAutomationEvent::class)
+        ->set('data.automatable_type', (new Job)->getMorphClass())
+        ->set('data.automatable_id', $job->id)
+        ->set('data.event_type', AutomationEventType::ApplicationSubmitted->value)
+        ->set('data.action_type', AutomationActionType::SendEmail->value)
+        ->set('data.action_config.email_template_id', $emailTemplate->id)
+        ->set('data.action_type', AutomationActionType::SendEmail->value)
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    expect(AutomationEvent::query()->sole()->action_config)
+        ->toBe(['email_template_id' => $emailTemplate->id]);
 });
 
 it('requires the email template field when action type is send_email', function () {
@@ -162,6 +185,7 @@ it('edits an existing automation event', function () {
     $job = Job::factory()->for($company)->create();
     $emailTemplate = EmailTemplate::factory()->for($company)->create();
     $event = AutomationEvent::factory()->for($company)->create([
+        'event_type' => AutomationEventType::ApplicationSubmitted,
         'action_config' => ['email_template_id' => $emailTemplate->id],
     ]);
     $event->automatable()->associate($job);
@@ -170,9 +194,10 @@ it('edits an existing automation event', function () {
     actAsCompany($company);
 
     Livewire::test(EditAutomationEvent::class, ['record' => $event->getRouteKey()])
-        ->fillForm(['is_active' => false])
+        ->assertFormFieldDoesNotExist('is_active')
+        ->fillForm(['event_type' => AutomationEventType::StatusChanged->value])
         ->call('save')
         ->assertHasNoFormErrors();
 
-    expect($event->fresh()->is_active)->toBeFalse();
+    expect($event->fresh()->event_type)->toBe(AutomationEventType::StatusChanged);
 });

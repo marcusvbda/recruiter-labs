@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Referrals\Tables;
 
+use App\Models\Referral;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -24,6 +25,8 @@ class ReferralsTable
                     ->sortable(),
                 TextColumn::make('key')
                     ->label(__('referrals.fields.key'))
+                    ->copyable()
+                    ->copyableState(fn (Referral $record): string => route('referral.show', ['key' => $record->key]))
                     ->searchable(),
                 TextColumn::make('created_at')
                     ->label(__('referrals.fields.created_at'))

@@ -19,6 +19,7 @@ return new class extends Migration
             $table->date('ends_at')->nullable();
             $table->text('campaign_expectation')->nullable();
             $table->uuid('key')->unique();
+            $table->boolean('published')->default(false);
             $table->timestamps();
         });
     }
