@@ -16,8 +16,31 @@ return [
     ],
     'sections' => [
         'details' => 'Job details',
+        'application' => 'Application page',
         'campaign' => 'Campaign',
         'criteria' => 'Evaluation criteria',
+    ],
+    'application' => [
+        'section_description' => 'Configure the information and CV formats requested from candidates on the application page.',
+        'accepted_cv_types' => 'Accepted CV formats',
+        'accepted_cv_types_helper' => 'Choose one or more formats. Use Select all to accept PDF, DOC, and DOCX.',
+        'questions' => 'Application questions',
+        'question' => 'Question',
+        'response_type' => 'Response field type',
+        'required' => 'Required answer',
+        'field_description' => 'Field description',
+        'field_description_helper' => 'Optional guidance displayed below the field for the candidate.',
+        'add_question' => 'Add question',
+        'question_types' => [
+            'text' => 'Text input',
+            'number' => 'Number input',
+            'textarea' => 'Textarea',
+        ],
+        'cv_types' => [
+            'pdf' => 'PDF',
+            'doc' => 'DOC',
+            'docx' => 'DOCX',
+        ],
     ],
     'criteria' => [
         'prompt' => 'Criterion prompt',

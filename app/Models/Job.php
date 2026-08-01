@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
@@ -45,6 +46,16 @@ class Job extends Model
     public function applications(): HasMany
     {
         return $this->hasMany(Application::class);
+    }
+
+    public function applicationQuestions(): HasMany
+    {
+        return $this->hasMany(JobApplicationQuestion::class)->orderBy('sort');
+    }
+
+    public function acceptedCvTypes(): BelongsToMany
+    {
+        return $this->belongsToMany(CvFileType::class, 'cv_file_type_job');
     }
 
     public function automationEvents(): MorphMany

@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\Application;
 use App\Models\Company;
+use App\Models\JobApplicationQuestion;
 use App\Models\JobCriterion;
 use Closure;
 use Filament\Facades\Filament;
@@ -31,6 +32,7 @@ class ApplyTenantScopes
         };
 
         Application::addGlobalScope('tenant', $applyCompanyScope);
+        JobApplicationQuestion::addGlobalScope('tenant', $applyCompanyScope);
         JobCriterion::addGlobalScope('tenant', $applyCompanyScope);
 
         return $next($request);

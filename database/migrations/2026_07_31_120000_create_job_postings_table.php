@@ -8,6 +8,13 @@ return new class extends Migration
 {
     public function up(): void
     {
+        Schema::create('cv_file_types', function (Blueprint $table) {
+            $table->id();
+            $table->string('extension')->unique();
+            $table->unsignedSmallInteger('sort')->default(0);
+            $table->timestamps();
+        });
+
         // Table is named `job_postings` (not `jobs`) because Laravel's queue
         // system already owns the `jobs` table in this application.
         Schema::create('job_postings', function (Blueprint $table) {
@@ -22,10 +29,34 @@ return new class extends Migration
             $table->boolean('published')->default(false);
             $table->timestamps();
         });
+
+        Schema::create('job_application_questions', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('job_id')->constrained('job_postings')->cascadeOnDelete();
+            $table->string('question');
+            $table->string('response_type');
+            $table->text('description')->nullable();
+            $table->boolean('required')->default(true);
+            $table->unsignedInteger('sort')->default(0);
+            $table->timestamps();
+
+            $table->index(['job_id', 'sort']);
+        });
+
+        Schema::create('cv_file_type_job', function (Blueprint $table) {
+            $table->foreignId('cv_file_type_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('job_id')->constrained('job_postings')->cascadeOnDelete();
+
+            $table->primary(['cv_file_type_id', 'job_id']);
+        });
     }
 
     public function down(): void
     {
+        Schema::dropIfExists('cv_file_type_job');
+        Schema::dropIfExists('job_application_questions');
         Schema::dropIfExists('job_postings');
+        Schema::dropIfExists('cv_file_types');
     }
 };

@@ -1,11 +1,15 @@
 <?php
 
+use App\Enums\ApplicationQuestionType;
 use App\Filament\Resources\Jobs\Pages\CreateJob;
 use App\Filament\Resources\Jobs\Pages\EditJob;
 use App\Models\Company;
+use App\Models\CvFileType;
 use App\Models\Job;
 use App\Models\JobCriterion;
+use Database\Seeders\CvFileTypeSeeder;
 use Database\Seeders\PlanSeeder;
+use Filament\Forms\Components\MarkdownEditor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -17,6 +21,23 @@ uses(TestCase::class, RefreshDatabase::class);
 
 beforeEach(function () {
     $this->seed(PlanSeeder::class);
+    $this->seed(CvFileTypeSeeder::class);
+});
+
+it('disables file uploads in the job description markdown editor', function () {
+    $company = Company::factory()->create();
+    actAsCompany($company);
+
+    $page = Livewire::test(CreateJob::class);
+    $descriptionField = $page->instance()
+        ->getSchema('form')
+        ?->getComponent('description', withHidden: true);
+
+    expect($descriptionField)->toBeInstanceOf(MarkdownEditor::class);
+
+    /** @var MarkdownEditor $descriptionField */
+    expect($descriptionField->hasFileAttachments())->toBeFalse()
+        ->and($descriptionField->hasToolbarButton('attachFiles'))->toBeFalse();
 });
 
 it('aligns the criteria weight slider and fills its selected track', function () {
@@ -65,6 +86,11 @@ it('creates a job with campaign fields and job criteria repeater rows', function
     $company = Company::factory()->create();
     actAsCompany($company);
 
+    $acceptedCvTypeIds = CvFileType::query()
+        ->whereIn('extension', ['pdf', 'docx'])
+        ->pluck('id')
+        ->all();
+
     Livewire::test(CreateJob::class)
         ->fillForm([
             'name' => 'Senior Backend Engineer',
@@ -72,6 +98,27 @@ it('creates a job with campaign fields and job criteria repeater rows', function
             'starts_at' => '2026-08-01',
             'ends_at' => '2026-09-01',
             'campaign_expectation' => 'Expect to hire 2 engineers meeting at least 80% of criteria.',
+            'acceptedCvTypes' => $acceptedCvTypeIds,
+            'applicationQuestions' => [
+                [
+                    'question' => 'What is your preferred name?',
+                    'response_type' => 'text',
+                    'description' => 'Use the name you would like us to use during the process.',
+                    'required' => true,
+                ],
+                [
+                    'question' => 'How many years of Laravel experience do you have?',
+                    'response_type' => 'number',
+                    'description' => null,
+                    'required' => true,
+                ],
+                [
+                    'question' => 'Tell us about a challenging project.',
+                    'response_type' => 'textarea',
+                    'description' => 'Keep your answer concise.',
+                    'required' => false,
+                ],
+            ],
             'jobCriteria' => [
                 ['prompt' => 'Evaluate how clearly the candidate communicates.', 'weight' => 4],
                 ['prompt' => 'Evaluate the candidate\'s ability to design reliable APIs.', 'weight' => 9],
@@ -88,6 +135,25 @@ it('creates a job with campaign fields and job criteria repeater rows', function
         ->and($job->ends_at->toDateString())->toBe('2026-09-01')
         ->and($job->campaign_expectation)->toBe('Expect to hire 2 engineers meeting at least 80% of criteria.');
 
+    expect($job->acceptedCvTypes()->orderBy('sort')->pluck('extension')->all())
+        ->toBe(['pdf', 'docx']);
+
+    $applicationQuestions = $job->applicationQuestions()->get();
+
+    expect($applicationQuestions)->toHaveCount(3)
+        ->and($applicationQuestions[0]->company_id)->toBe($company->id)
+        ->and($applicationQuestions[0]->question)->toBe('What is your preferred name?')
+        ->and($applicationQuestions[0]->response_type)->toBe(ApplicationQuestionType::Text)
+        ->and($applicationQuestions[0]->description)->toBe('Use the name you would like us to use during the process.')
+        ->and($applicationQuestions[0]->required)->toBeTrue()
+        ->and($applicationQuestions[0]->sort)->toBe(1)
+        ->and($applicationQuestions[1]->response_type)->toBe(ApplicationQuestionType::Number)
+        ->and($applicationQuestions[1]->sort)->toBe(2)
+        ->and($applicationQuestions[2]->response_type)->toBe(ApplicationQuestionType::Textarea)
+        ->and($applicationQuestions[2]->description)->toBe('Keep your answer concise.')
+        ->and($applicationQuestions[2]->required)->toBeFalse()
+        ->and($applicationQuestions[2]->sort)->toBe(3);
+
     $pivotRows = JobCriterion::query()->where('job_id', $job->id)->get();
 
     expect($pivotRows)->toHaveCount(2);
@@ -101,6 +167,31 @@ it('creates a job with campaign fields and job criteria repeater rows', function
         ->and($rowForB)->not->toBeNull()
         ->and($rowForB->company_id)->toBe($company->id)
         ->and($rowForB->weight)->toBe(9);
+});
+
+it('requires a supported CV format and valid response field types', function () {
+    $company = Company::factory()->create();
+    actAsCompany($company);
+
+    Livewire::test(CreateJob::class)
+        ->fillForm([
+            'name' => 'Security Engineer',
+            'acceptedCvTypes' => [],
+            'applicationQuestions' => [
+                [
+                    'question' => 'Upload another document',
+                    'response_type' => 'file',
+                    'description' => null,
+                    'required' => true,
+                ],
+            ],
+            'jobCriteria' => [],
+        ])
+        ->call('create')
+        ->assertHasFormErrors([
+            'acceptedCvTypes',
+            'applicationQuestions.0.response_type',
+        ]);
 });
 
 it('rejects a job criteria weight outside the 0-10 range', function () {
@@ -140,6 +231,7 @@ it('adds job criteria rows to an existing job through the edit form', function (
 
     Livewire::test(EditJob::class, ['record' => $job->getRouteKey()])
         ->fillForm([
+            'acceptedCvTypes' => CvFileType::query()->pluck('id')->all(),
             'jobCriteria' => [
                 ['prompt' => 'Evaluate the candidate\'s leadership skills.', 'weight' => 7],
             ],

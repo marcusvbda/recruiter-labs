@@ -16,8 +16,31 @@ return [
     ],
     'sections' => [
         'details' => 'Detalles del empleo',
+        'application' => 'Página de postulación',
         'campaign' => 'Campaña',
         'criteria' => 'Criterios de evaluación',
+    ],
+    'application' => [
+        'section_description' => 'Configura la información y los formatos de currículum solicitados a los candidatos en la página de postulación.',
+        'accepted_cv_types' => 'Formatos de currículum aceptados',
+        'accepted_cv_types_helper' => 'Elige uno o más formatos. Usa Seleccionar todos para aceptar PDF, DOC y DOCX.',
+        'questions' => 'Preguntas de la postulación',
+        'question' => 'Pregunta',
+        'response_type' => 'Tipo de campo de respuesta',
+        'required' => 'Respuesta obligatoria',
+        'field_description' => 'Descripción del campo',
+        'field_description_helper' => 'Orientación opcional que se muestra debajo del campo para el candidato.',
+        'add_question' => 'Agregar pregunta',
+        'question_types' => [
+            'text' => 'Campo de texto',
+            'number' => 'Campo numérico',
+            'textarea' => 'Área de texto',
+        ],
+        'cv_types' => [
+            'pdf' => 'PDF',
+            'doc' => 'DOC',
+            'docx' => 'DOCX',
+        ],
     ],
     'criteria' => [
         'prompt' => 'Instrucción del criterio',
