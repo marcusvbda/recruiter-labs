@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\PhoneCountry;
 use App\Models\Company;
 use App\Models\CvFileType;
 use App\Models\Job;
@@ -27,6 +28,7 @@ it('shows the public application page with the job application data', function (
     ]);
 
     $job->acceptedCvTypes()->sync(CvFileType::query()->pluck('id'));
+    $job->coverLetterFileTypes()->sync(CvFileType::query()->where('extension', 'pdf')->pluck('id'));
     $job->applicationQuestions()->create([
         'company_id' => $company->id,
         'question' => 'Why do you want to join us?',
@@ -47,7 +49,11 @@ it('shows the public application page with the job application data', function (
                 && ! str_contains($description, '<script>'))
             ->has('job.accepted_cv_types', 3)
             ->where('job.accepted_cv_types.0.extension', 'pdf')
+            ->where('job.cover_letter_type', 'text')
+            ->where('job.cover_letter_required', false)
+            ->has('job.cover_letter_file_types', 1)
             ->has('job.application_questions', 1)
             ->where('job.application_questions.0.question', 'Why do you want to join us?')
-            ->where('job.application_questions.0.response_type', 'textarea'));
+            ->where('job.application_questions.0.response_type', 'textarea')
+            ->has('phoneCountries', count(PhoneCountry::cases())));
 });

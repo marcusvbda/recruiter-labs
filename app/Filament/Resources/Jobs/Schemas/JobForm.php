@@ -3,18 +3,20 @@
 namespace App\Filament\Resources\Jobs\Schemas;
 
 use App\Enums\ApplicationQuestionType;
+use App\Enums\CoverLetterType;
 use App\Models\CvFileType;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\MarkdownEditor;
 use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Slider;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -35,7 +37,7 @@ class JobForm
                         Toggle::make('published')
                             ->label(__('jobs.fields.published'))
                             ->default(false),
-                        MarkdownEditor::make('description')
+                        RichEditor::make('description')
                             ->label(__('jobs.fields.description'))
                             ->fileAttachments(false)
                             ->columnSpanFull(),
@@ -45,22 +47,61 @@ class JobForm
                     ->columnSpanFull()
                     ->columns(1)
                     ->schema([
-                        CheckboxList::make('acceptedCvTypes')
-                            ->label(__('jobs.application.accepted_cv_types'))
-                            ->helperText(__('jobs.application.accepted_cv_types_helper'))
-                            ->relationship(
-                                name: 'acceptedCvTypes',
-                                titleAttribute: 'extension',
-                                modifyQueryUsing: fn (Builder $query): Builder => $query->orderBy('sort'),
-                            )
-                            ->getOptionLabelFromRecordUsing(
-                                fn (CvFileType $record): string => __('jobs.application.cv_types.'.$record->extension),
-                            )
-                            ->default(fn (): array => CvFileType::query()->orderBy('sort')->pluck('id')->all())
-                            ->bulkToggleable()
-                            ->columns(3)
-                            ->required()
-                            ->minItems(1),
+                        Section::make(__('jobs.application.cv_section'))
+                            ->description(__('jobs.application.cv_section_description'))
+                            ->schema([
+                                CheckboxList::make('acceptedCvTypes')
+                                    ->label(__('jobs.application.accepted_cv_types'))
+                                    ->helperText(__('jobs.application.accepted_cv_types_helper'))
+                                    ->relationship(
+                                        name: 'acceptedCvTypes',
+                                        titleAttribute: 'extension',
+                                        modifyQueryUsing: fn (Builder $query): Builder => $query->orderBy('sort'),
+                                    )
+                                    ->getOptionLabelFromRecordUsing(
+                                        fn (CvFileType $record): string => __('jobs.application.cv_types.'.$record->extension),
+                                    )
+                                    ->default(fn (): array => CvFileType::query()->orderBy('sort')->pluck('id')->all())
+                                    ->bulkToggleable()
+                                    ->columns(3)
+                                    ->required()
+                                    ->minItems(1),
+                            ]),
+                        Section::make(__('jobs.application.cover_letter_section'))
+                            ->description(__('jobs.application.cover_letter_section_description'))
+                            ->columns(2)
+                            ->schema([
+                                Select::make('cover_letter_type')
+                                    ->label(__('jobs.application.cover_letter_type'))
+                                    ->options(collect(CoverLetterType::cases())
+                                        ->mapWithKeys(fn (CoverLetterType $coverLetterType) => [$coverLetterType->value => $coverLetterType->label()]))
+                                    ->default(CoverLetterType::Text->value)
+                                    ->native(false)
+                                    ->live()
+                                    ->required(),
+                                Toggle::make('cover_letter_required')
+                                    ->label(__('jobs.application.cover_letter_required'))
+                                    ->inline(false)
+                                    ->default(false),
+                                CheckboxList::make('coverLetterFileTypes')
+                                    ->label(__('jobs.application.accepted_cover_letter_types'))
+                                    ->helperText(__('jobs.application.accepted_cover_letter_types_helper'))
+                                    ->relationship(
+                                        name: 'coverLetterFileTypes',
+                                        titleAttribute: 'extension',
+                                        modifyQueryUsing: fn (Builder $query): Builder => $query->orderBy('sort'),
+                                    )
+                                    ->getOptionLabelFromRecordUsing(
+                                        fn (CvFileType $record): string => __('jobs.application.cv_types.'.$record->extension),
+                                    )
+                                    ->default(fn (): array => CvFileType::query()->orderBy('sort')->pluck('id')->all())
+                                    ->bulkToggleable()
+                                    ->columns(3)
+                                    ->required(fn (Get $get): bool => $get('cover_letter_type') === CoverLetterType::File->value)
+                                    ->minItems(fn (Get $get): ?int => $get('cover_letter_type') === CoverLetterType::File->value ? 1 : null)
+                                    ->visible(fn (Get $get): bool => $get('cover_letter_type') === CoverLetterType::File->value)
+                                    ->columnSpanFull(),
+                            ]),
                         Repeater::make('applicationQuestions')
                             ->label(__('jobs.application.questions'))
                             ->relationship()
@@ -87,6 +128,7 @@ class JobForm
                                 Toggle::make('required')
                                     ->label(__('jobs.application.required'))
                                     ->inline(false)
+                                    ->extraAttributes(['style' => 'margin-block: 0.4rem;'])
                                     ->default(true),
                                 Textarea::make('description')
                                     ->label(__('jobs.application.field_description'))

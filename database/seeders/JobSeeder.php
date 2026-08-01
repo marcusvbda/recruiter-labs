@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Enums\ApplicationQuestionType;
+use App\Enums\CoverLetterType;
 use App\Models\Company;
 use App\Models\CvFileType;
 use App\Models\Job;
@@ -39,36 +40,44 @@ class JobSeeder extends Seeder
             ]);
 
             $job->fill([
-                'description' => <<<'MARKDOWN'
-Join Gravity Labs to build thoughtful recruiting products used by growing teams around the world.
+                'description' => <<<'HTML'
+<p>Join Gravity Labs to build thoughtful recruiting products used by growing teams around the world.</p>
 
-### What you will do
+<h2>What you will do</h2>
 
-- Design and deliver end-to-end features with Laravel, React, TypeScript, and PostgreSQL.
-- Turn product requirements into maintainable APIs and polished user experiences.
-- Improve application performance, automated testing, observability, and developer tooling.
-- Collaborate closely with product, design, and engineering from discovery through release.
-- Review code and help evolve our technical standards as the team grows.
+<ul>
+    <li>Design and deliver end-to-end features with Laravel, React, TypeScript, and PostgreSQL.</li>
+    <li>Turn product requirements into maintainable APIs and polished user experiences.</li>
+    <li>Improve application performance, automated testing, observability, and developer tooling.</li>
+    <li>Collaborate closely with product, design, and engineering from discovery through release.</li>
+    <li>Review code and help evolve our technical standards as the team grows.</li>
+</ul>
 
-### What we are looking for
+<h2>What we are looking for</h2>
 
-- Strong professional experience building modern web applications.
-- Solid knowledge of PHP, Laravel, React, TypeScript, HTML, and CSS.
-- Confidence working with relational databases, queues, APIs, and automated tests.
-- Clear communication, product awareness, and ownership of delivered work.
-- Comfortable working in an English-speaking, remote-first environment.
+<ul>
+    <li>Strong professional experience building modern web applications.</li>
+    <li>Solid knowledge of PHP, Laravel, React, TypeScript, HTML, and CSS.</li>
+    <li>Confidence working with relational databases, queues, APIs, and automated tests.</li>
+    <li>Clear communication, product awareness, and ownership of delivered work.</li>
+    <li>Comfortable working in an English-speaking, remote-first environment.</li>
+</ul>
 
-### Nice to have
+<h2>Nice to have</h2>
 
-- Experience with Filament, Livewire, Tailwind CSS, CI/CD, or AI-powered products.
-- Familiarity with multi-tenant SaaS architecture and recruitment technology.
+<ul>
+    <li>Experience with Filament, Livewire, Tailwind CSS, CI/CD, or AI-powered products.</li>
+    <li>Familiarity with multi-tenant SaaS architecture and recruitment technology.</li>
+</ul>
 
-We value practical engineering, kind collaboration, and people who care about the details without losing sight of the customer.
-MARKDOWN,
+<p>We value practical engineering, kind collaboration, and people who care about the details without losing sight of the customer.</p>
+HTML,
                 'starts_at' => now()->subDays(7)->toDateString(),
                 'ends_at' => now()->addMonths(2)->toDateString(),
                 'campaign_expectation' => 'Hire one senior full stack engineer within 60 days, prioritizing strong Laravel and React experience, product thinking, communication, and pragmatic technical decisions.',
                 'published' => true,
+                'cover_letter_required' => true,
+                'cover_letter_type' => CoverLetterType::Text,
             ]);
 
             if (! $job->exists) {
@@ -78,6 +87,10 @@ MARKDOWN,
             $job->save();
 
             $job->acceptedCvTypes()->sync(
+                CvFileType::query()->orderBy('sort')->pluck('id'),
+            );
+
+            $job->coverLetterFileTypes()->sync(
                 CvFileType::query()->orderBy('sort')->pluck('id'),
             );
 

@@ -23,4 +23,9 @@ class CvFileType extends Model
     {
         return $this->belongsToMany(Job::class, 'cv_file_type_job');
     }
+
+    public function coverLetterJobs(): BelongsToMany
+    {
+        return $this->belongsToMany(Job::class, 'cover_letter_file_type_job');
+    }
 }

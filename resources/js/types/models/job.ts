@@ -29,6 +29,9 @@ export interface Job extends Model {
     campaign_expectation: string | null;
     key: string;
     published: boolean;
+    cover_letter_required: boolean;
+    cover_letter_type: 'text' | 'file';
     application_questions: JobApplicationQuestion[];
     accepted_cv_types: CvFileType[];
+    cover_letter_file_types: CvFileType[];
 }

@@ -21,9 +21,21 @@ return [
         'criteria' => 'Critérios de avaliação',
     ],
     'application' => [
-        'section_description' => 'Configure as informações e os formatos de currículo solicitados aos candidatos na página de candidatura.',
+        'section_description' => 'Configure as informações e os documentos solicitados aos candidatos na página de candidatura.',
+        'cv_section' => 'Currículo',
+        'cv_section_description' => 'Defina quais formatos de currículo os candidatos poderão enviar.',
         'accepted_cv_types' => 'Formatos de currículo aceitos',
         'accepted_cv_types_helper' => 'Escolha um ou mais formatos. Use Selecionar todos para aceitar PDF, DOC e DOCX.',
+        'cover_letter_section' => 'Carta de apresentação',
+        'cover_letter_section_description' => 'Escolha se o candidato deverá digitar a carta ou enviá-la como arquivo.',
+        'cover_letter_type' => 'Tipo de resposta',
+        'cover_letter_required' => 'Carta de apresentação obrigatória',
+        'accepted_cover_letter_types' => 'Formatos de carta aceitos',
+        'accepted_cover_letter_types_helper' => 'Obrigatório para upload. Escolha um ou mais formatos aceitos.',
+        'cover_letter_types' => [
+            'text' => 'Texto digitado',
+            'file' => 'Upload de arquivo',
+        ],
         'questions' => 'Perguntas da candidatura',
         'question' => 'Pergunta',
         'response_type' => 'Tipo do campo de resposta',
@@ -50,5 +62,11 @@ return [
     ],
     'pipeline' => [
         'view' => 'Pipeline',
+    ],
+    'edit_tabs' => [
+        'edit' => 'Edição',
+        'preview' => 'Preview',
+        'preview_title' => 'Preview da página de candidatura',
+        'preview_description' => 'Salve as alterações para atualizar o preview. O envio da candidatura está desabilitado.',
     ],
 ];

@@ -3,6 +3,7 @@
 use App\Http\Controllers\JobController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\ReferralController;
+use Filament\Http\Middleware\Authenticate;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -11,6 +12,10 @@ Route::get('/', function () {
 })->name('home');
 
 Route::get('/job/{key}', [JobController::class, 'show'])->name('job.show');
+
+Route::get('/job/{key}/preview', [JobController::class, 'preview'])
+    ->middleware(Authenticate::class)
+    ->name('job.preview');
 
 Route::get('/referal/{key}', [ReferralController::class, 'show'])->name('referral.show');
 

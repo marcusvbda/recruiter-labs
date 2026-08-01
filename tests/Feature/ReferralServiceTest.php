@@ -88,6 +88,7 @@ it('returns 404 from the public referral route when its job is unavailable', fun
 
 it('renders the referral application page for an available job', function () {
     $job = Job::factory()->create([
+        'description' => '<p>Referral description</p><script>alert("unsafe")</script>',
         'published' => true,
         'starts_at' => '2026-08-01',
         'ends_at' => '2026-08-31',
@@ -102,5 +103,7 @@ it('renders the referral application page for an available job', function () {
         ->assertInertia(fn (Assert $page): Assert => $page
             ->component('job/apply')
             ->where('referral.id', $referral->id)
-            ->where('job.id', $job->id));
+            ->where('job.id', $job->id)
+            ->where('job.description', fn (string $description): bool => str_contains($description, '<p>Referral description</p>')
+                && ! str_contains($description, '<script>')));
 });

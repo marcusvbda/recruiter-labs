@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\ApplicationQuestionType;
+use App\Enums\CoverLetterType;
 use App\Filament\Resources\Jobs\Pages\CreateJob;
 use App\Filament\Resources\Jobs\Pages\EditJob;
 use App\Models\Company;
@@ -122,6 +123,9 @@ it('creates a job with campaign fields and job criteria repeater rows', function
             'ends_at' => '2026-09-01',
             'campaign_expectation' => 'Expect to hire 2 engineers meeting at least 80% of criteria.',
             'acceptedCvTypes' => $acceptedCvTypeIds,
+            'cover_letter_type' => CoverLetterType::File->value,
+            'cover_letter_required' => true,
+            'coverLetterFileTypes' => $acceptedCvTypeIds,
             'applicationQuestions' => [
                 [
                     'question' => 'What is your preferred name?',
@@ -153,12 +157,18 @@ it('creates a job with campaign fields and job criteria repeater rows', function
     $job = Job::query()->where('name', 'Senior Backend Engineer')->sole();
 
     expect($job->company_id)->toBe($company->id)
-        ->and($job->description)->toBe('We are hiring for a senior backend role.')
+        ->and($job->description)->toBe('<p>We are hiring for a senior backend role.</p>')
         ->and($job->starts_at->toDateString())->toBe('2026-08-01')
         ->and($job->ends_at->toDateString())->toBe('2026-09-01')
         ->and($job->campaign_expectation)->toBe('Expect to hire 2 engineers meeting at least 80% of criteria.');
 
+    expect($job->cover_letter_type)->toBe(CoverLetterType::File)
+        ->and($job->cover_letter_required)->toBeTrue();
+
     expect($job->acceptedCvTypes()->orderBy('sort')->pluck('extension')->all())
+        ->toBe(['pdf', 'docx']);
+
+    expect($job->coverLetterFileTypes()->orderBy('sort')->pluck('extension')->all())
         ->toBe(['pdf', 'docx']);
 
     $applicationQuestions = $job->applicationQuestions()->get();
@@ -215,6 +225,22 @@ it('requires a supported CV format and valid response field types', function () 
             'acceptedCvTypes',
             'applicationQuestions.0.response_type',
         ]);
+});
+
+it('requires an accepted cover letter format when file upload is selected', function () {
+    $company = Company::factory()->create();
+    actAsCompany($company);
+
+    Livewire::test(CreateJob::class)
+        ->fillForm([
+            'name' => 'Platform Engineer',
+            'acceptedCvTypes' => CvFileType::query()->pluck('id')->all(),
+            'cover_letter_type' => CoverLetterType::File->value,
+            'coverLetterFileTypes' => [],
+            'jobCriteria' => [],
+        ])
+        ->call('create')
+        ->assertHasFormErrors(['coverLetterFileTypes']);
 });
 
 it('rejects a job criteria weight outside the 0-10 range', function () {

@@ -245,6 +245,23 @@ enum PhoneCountry: string
         return $masks;
     }
 
+    /**
+     * @return list<array{value: string, label: string, calling_code: string, mask: string, placeholder: string}>
+     */
+    public static function applicationOptions(): array
+    {
+        return array_map(
+            fn (self $country): array => [
+                'value' => $country->value,
+                'label' => $country->optionLabel(),
+                'calling_code' => $country->callingCode(),
+                'mask' => $country->mask(),
+                'placeholder' => $country->placeholder(),
+            ],
+            self::cases(),
+        );
+    }
+
     private function countryName(): string
     {
         return match ($this) {

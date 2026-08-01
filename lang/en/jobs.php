@@ -21,9 +21,21 @@ return [
         'criteria' => 'Evaluation criteria',
     ],
     'application' => [
-        'section_description' => 'Configure the information and CV formats requested from candidates on the application page.',
+        'section_description' => 'Configure the information and documents requested from candidates on the application page.',
+        'cv_section' => 'CV / resume',
+        'cv_section_description' => 'Define which CV file formats candidates may upload.',
         'accepted_cv_types' => 'Accepted CV formats',
         'accepted_cv_types_helper' => 'Choose one or more formats. Use Select all to accept PDF, DOC, and DOCX.',
+        'cover_letter_section' => 'Cover letter',
+        'cover_letter_section_description' => 'Choose whether candidates type their cover letter or upload it as a file.',
+        'cover_letter_type' => 'Response type',
+        'cover_letter_required' => 'Cover letter required',
+        'accepted_cover_letter_types' => 'Accepted cover letter formats',
+        'accepted_cover_letter_types_helper' => 'Required for file upload. Choose one or more accepted formats.',
+        'cover_letter_types' => [
+            'text' => 'Typed text',
+            'file' => 'File upload',
+        ],
         'questions' => 'Application questions',
         'question' => 'Question',
         'response_type' => 'Response field type',
@@ -50,5 +62,11 @@ return [
     ],
     'pipeline' => [
         'view' => 'Pipeline',
+    ],
+    'edit_tabs' => [
+        'edit' => 'Editing',
+        'preview' => 'Preview',
+        'preview_title' => 'Application page preview',
+        'preview_description' => 'Save your changes to refresh this preview. Application submission is disabled.',
     ],
 ];

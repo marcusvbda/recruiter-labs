@@ -21,6 +21,7 @@ class ReferralService
                 'job.company:id,name',
                 'job.applicationQuestions:id,job_id,question,response_type,description,required,sort',
                 'job.acceptedCvTypes:id,extension,sort',
+                'job.coverLetterFileTypes:id,extension,sort',
             ])
             ->where('key', $key)
             ->whereHas('job', fn (Builder $query): Builder => $query

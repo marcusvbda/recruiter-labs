@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CoverLetterType;
 use App\Models\Concerns\HasUniqueKey;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
-#[Fillable(['company_id', 'name', 'description', 'starts_at', 'ends_at', 'campaign_expectation', 'published'])]
+#[Fillable(['company_id', 'name', 'description', 'starts_at', 'ends_at', 'campaign_expectation', 'published', 'cover_letter_required', 'cover_letter_type'])]
 class Job extends Model
 {
     use HasFactory, HasUniqueKey;
@@ -22,6 +23,8 @@ class Job extends Model
 
     protected $attributes = [
         'published' => false,
+        'cover_letter_required' => false,
+        'cover_letter_type' => CoverLetterType::Text->value,
     ];
 
     protected function casts(): array
@@ -30,6 +33,8 @@ class Job extends Model
             'starts_at' => 'date',
             'ends_at' => 'date',
             'published' => 'boolean',
+            'cover_letter_required' => 'boolean',
+            'cover_letter_type' => CoverLetterType::class,
         ];
     }
 
@@ -56,6 +61,11 @@ class Job extends Model
     public function acceptedCvTypes(): BelongsToMany
     {
         return $this->belongsToMany(CvFileType::class, 'cv_file_type_job')->orderBy('sort');
+    }
+
+    public function coverLetterFileTypes(): BelongsToMany
+    {
+        return $this->belongsToMany(CvFileType::class, 'cover_letter_file_type_job')->orderBy('sort');
     }
 
     public function automationEvents(): MorphMany

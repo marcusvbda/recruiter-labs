@@ -21,9 +21,21 @@ return [
         'criteria' => 'Criterios de evaluación',
     ],
     'application' => [
-        'section_description' => 'Configura la información y los formatos de currículum solicitados a los candidatos en la página de postulación.',
+        'section_description' => 'Configura la información y los documentos solicitados a los candidatos en la página de postulación.',
+        'cv_section' => 'Currículum',
+        'cv_section_description' => 'Define los formatos de currículum que podrán cargar los candidatos.',
         'accepted_cv_types' => 'Formatos de currículum aceptados',
         'accepted_cv_types_helper' => 'Elige uno o más formatos. Usa Seleccionar todos para aceptar PDF, DOC y DOCX.',
+        'cover_letter_section' => 'Carta de presentación',
+        'cover_letter_section_description' => 'Elige si el candidato debe escribir la carta o cargarla como archivo.',
+        'cover_letter_type' => 'Tipo de respuesta',
+        'cover_letter_required' => 'Carta de presentación obligatoria',
+        'accepted_cover_letter_types' => 'Formatos de carta aceptados',
+        'accepted_cover_letter_types_helper' => 'Obligatorio para carga de archivo. Elige uno o más formatos aceptados.',
+        'cover_letter_types' => [
+            'text' => 'Texto escrito',
+            'file' => 'Carga de archivo',
+        ],
         'questions' => 'Preguntas de la postulación',
         'question' => 'Pregunta',
         'response_type' => 'Tipo de campo de respuesta',
@@ -50,5 +62,11 @@ return [
     ],
     'pipeline' => [
         'view' => 'Pipeline',
+    ],
+    'edit_tabs' => [
+        'edit' => 'Edición',
+        'preview' => 'Vista previa',
+        'preview_title' => 'Vista previa de la página de postulación',
+        'preview_description' => 'Guarda los cambios para actualizar la vista previa. El envío de postulaciones está deshabilitado.',
     ],
 ];

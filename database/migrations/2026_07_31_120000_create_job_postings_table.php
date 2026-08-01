@@ -27,6 +27,8 @@ return new class extends Migration
             $table->text('campaign_expectation')->nullable();
             $table->uuid('key')->unique();
             $table->boolean('published')->default(false);
+            $table->boolean('cover_letter_required')->default(false);
+            $table->string('cover_letter_type')->default('text');
             $table->timestamps();
         });
 
@@ -50,10 +52,18 @@ return new class extends Migration
 
             $table->primary(['cv_file_type_id', 'job_id']);
         });
+
+        Schema::create('cover_letter_file_type_job', function (Blueprint $table) {
+            $table->foreignId('cv_file_type_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('job_id')->constrained('job_postings')->cascadeOnDelete();
+
+            $table->primary(['cv_file_type_id', 'job_id']);
+        });
     }
 
     public function down(): void
     {
+        Schema::dropIfExists('cover_letter_file_type_job');
         Schema::dropIfExists('cv_file_type_job');
         Schema::dropIfExists('job_application_questions');
         Schema::dropIfExists('job_postings');

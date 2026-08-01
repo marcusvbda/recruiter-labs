@@ -1,21 +1,28 @@
 import { Head } from '@inertiajs/react';
-import type { ReactNode } from 'react';
+import { useRef, useState } from 'react';
+import type { FormEvent, ReactNode } from 'react';
 import type { Job } from '@/types/models/job';
 import type { Referral } from '@/types/models/referral';
 
 interface ApplyProps {
     referral?: Referral;
     job: Job;
+    phoneCountries: PhoneCountryOption[];
+    preview?: boolean;
+}
+
+interface PhoneCountryOption {
+    value: string;
+    label: string;
+    calling_code: string;
+    mask: string;
+    placeholder: string;
 }
 
 interface IconProps {
     children: ReactNode;
     className?: string;
 }
-
-type DescriptionBlock =
-    | { content: string; type: 'heading' | 'paragraph' }
-    | { content: string[]; type: 'list' };
 
 function Icon({ children, className = 'size-5' }: IconProps) {
     return (
@@ -104,66 +111,6 @@ function ArrowIcon({ className }: { className?: string }) {
     );
 }
 
-function CheckIcon({ className }: { className?: string }) {
-    return (
-        <Icon className={className}>
-            <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="m5.5 12.5 4 4 9-9"
-            />
-        </Icon>
-    );
-}
-
-function parseDescription(description: string | null): DescriptionBlock[] {
-    if (!description) {
-        return [];
-    }
-
-    const blocks: DescriptionBlock[] = [];
-    let listItems: string[] = [];
-
-    const flushList = () => {
-        if (listItems.length === 0) {
-            return;
-        }
-
-        blocks.push({ content: listItems, type: 'list' });
-        listItems = [];
-    };
-
-    for (const rawLine of description.split('\n')) {
-        const line = rawLine.trim();
-
-        if (!line) {
-            flushList();
-            continue;
-        }
-
-        if (line.startsWith('- ')) {
-            listItems.push(line.slice(2));
-            continue;
-        }
-
-        flushList();
-
-        if (line.startsWith('#')) {
-            blocks.push({
-                content: line.replace(/^#+\s*/, ''),
-                type: 'heading',
-            });
-            continue;
-        }
-
-        blocks.push({ content: line, type: 'paragraph' });
-    }
-
-    flushList();
-
-    return blocks;
-}
-
 function formatDate(value: string | null): string | null {
     if (!value) {
         return null;
@@ -178,9 +125,7 @@ function formatDate(value: string | null): string | null {
 }
 
 function JobDescription({ description }: { description: string | null }) {
-    const blocks = parseDescription(description);
-
-    if (blocks.length === 0) {
+    if (!description) {
         return (
             <p className="leading-8 text-slate-600 dark:text-slate-300">
                 More information about this opportunity will be available soon.
@@ -189,59 +134,373 @@ function JobDescription({ description }: { description: string | null }) {
     }
 
     return (
-        <div className="flex flex-col gap-5">
-            {blocks.map((block, index) => {
-                if (block.type === 'heading') {
-                    return (
-                        <h3
-                            key={`heading-${index}`}
-                            className="pt-3 text-xl font-semibold tracking-tight text-slate-950 first:pt-0 dark:text-white"
-                        >
-                            {block.content}
-                        </h3>
-                    );
-                }
-
-                if (block.type === 'list') {
-                    return (
-                        <ul
-                            key={`list-${index}`}
-                            className="flex flex-col gap-3"
-                        >
-                            {block.content.map((item) => (
-                                <li
-                                    key={item}
-                                    className="flex items-start gap-3 leading-7 text-slate-600 dark:text-slate-300"
-                                >
-                                    <span className="mt-1.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600 dark:bg-blue-400/10 dark:text-blue-300">
-                                        <CheckIcon className="size-3.5" />
-                                    </span>
-                                    <span>{item}</span>
-                                </li>
-                            ))}
-                        </ul>
-                    );
-                }
-
-                return (
-                    <p
-                        key={`paragraph-${index}`}
-                        className="leading-8 text-slate-600 dark:text-slate-300"
-                    >
-                        {block.content}
-                    </p>
-                );
-            })}
-        </div>
+        <div
+            className="flex flex-col gap-5 leading-8 text-slate-600 dark:text-slate-300 [&_a]:font-medium [&_a]:text-blue-600 [&_a]:underline [&_a]:underline-offset-4 dark:[&_a]:text-blue-300 [&_blockquote]:border-l-4 [&_blockquote]:border-blue-200 [&_blockquote]:pl-4 dark:[&_blockquote]:border-blue-400/40 [&_code]:rounded [&_code]:bg-slate-100 [&_code]:px-1.5 [&_code]:py-0.5 dark:[&_code]:bg-white/10 [&_h2]:pt-3 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:tracking-tight [&_h2]:text-slate-950 dark:[&_h2]:text-white [&_h3]:pt-2 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-slate-950 dark:[&_h3]:text-white [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-6 [&_pre]:overflow-x-auto [&_pre]:rounded-2xl [&_pre]:bg-slate-950 [&_pre]:p-5 [&_pre]:text-slate-100 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-slate-200 [&_td]:p-3 dark:[&_td]:border-white/10 [&_th]:border [&_th]:border-slate-200 [&_th]:bg-slate-50 [&_th]:p-3 [&_th]:text-left dark:[&_th]:border-white/10 dark:[&_th]:bg-white/5 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-6"
+            dangerouslySetInnerHTML={{ __html: description }}
+        />
     );
 }
 
-export default function Apply({ referral, job }: ApplyProps) {
+const fieldClassName =
+    'mt-2 block min-h-12 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-950 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500';
+
+function acceptedFileTypes(fileTypes: Job['accepted_cv_types']): string {
+    return fileTypes.map((fileType) => `.${fileType.extension}`).join(',');
+}
+
+function formatPhone(value: string, mask: string): string {
+    const digits = value.replace(/\D/g, '');
+    let formatted = '';
+    let digitIndex = 0;
+
+    for (const character of mask) {
+        if (character === '9') {
+            if (digitIndex >= digits.length) {
+                break;
+            }
+
+            formatted += digits[digitIndex];
+            digitIndex += 1;
+            continue;
+        }
+
+        if (digitIndex < digits.length) {
+            formatted += character;
+        }
+    }
+
+    return formatted;
+}
+
+interface ApplicationFormProps {
+    job: Job;
+    phoneCountries: PhoneCountryOption[];
+    sectionRef: React.RefObject<HTMLElement | null>;
+}
+
+function ApplicationForm({
+    job,
+    phoneCountries,
+    sectionRef,
+}: ApplicationFormProps) {
+    const defaultPhoneCountry =
+        phoneCountries.find((country) => country.value === 'BR') ??
+        phoneCountries[0];
+    const [phoneCountry, setPhoneCountry] = useState(
+        defaultPhoneCountry?.value ?? '',
+    );
+    const [phone, setPhone] = useState('');
+    const selectedPhoneCountry =
+        phoneCountries.find((country) => country.value === phoneCountry) ??
+        defaultPhoneCountry;
+    const coverLetterFileTypes = job.cover_letter_file_types ?? [];
+
+    function preventSubmission(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+    }
+
+    return (
+        <section
+            ref={sectionRef}
+            id="application-form"
+            className="scroll-mt-6 rounded-3xl border border-blue-100 bg-white p-6 shadow-xl shadow-blue-950/5 sm:p-8 lg:p-10 dark:border-blue-400/20 dark:bg-slate-900"
+        >
+            <div className="flex flex-col gap-3 border-b border-slate-100 pb-7 sm:flex-row sm:items-start sm:justify-between dark:border-white/10">
+                <div>
+                    <p className="text-xs font-semibold tracking-widest text-blue-600 uppercase dark:text-blue-300">
+                        Your application
+                    </p>
+                    <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">
+                        Tell us about yourself
+                    </h2>
+                    <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">
+                        Fields marked with an asterisk are required. Submission
+                        will be enabled in a future release.
+                    </p>
+                </div>
+                <span className="w-fit rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200 dark:bg-amber-400/10 dark:text-amber-300 dark:ring-amber-400/20">
+                    Preview only
+                </span>
+            </div>
+
+            <form onSubmit={preventSubmission} className="mt-8 space-y-9">
+                <fieldset>
+                    <legend className="text-base font-semibold text-slate-950 dark:text-white">
+                        Contact information
+                    </legend>
+                    <div className="mt-5 grid gap-5 sm:grid-cols-2">
+                        <label className="sm:col-span-2">
+                            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                                Full name{' '}
+                                <span className="text-rose-500">*</span>
+                            </span>
+                            <input
+                                type="text"
+                                name="name"
+                                required
+                                maxLength={255}
+                                autoComplete="name"
+                                className={fieldClassName}
+                                placeholder="How should we address you?"
+                            />
+                        </label>
+
+                        <label>
+                            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                                Email address{' '}
+                                <span className="font-normal text-slate-400">
+                                    (optional)
+                                </span>
+                            </span>
+                            <input
+                                type="email"
+                                name="email"
+                                maxLength={255}
+                                autoComplete="email"
+                                className={fieldClassName}
+                                placeholder="you@example.com"
+                            />
+                        </label>
+
+                        <div>
+                            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                                Phone{' '}
+                                <span className="font-normal text-slate-400">
+                                    (optional)
+                                </span>
+                            </span>
+                            <div className="mt-2 grid grid-cols-[minmax(8.5rem,0.8fr)_minmax(0,1.2fr)] gap-2">
+                                <select
+                                    name="phone_country"
+                                    value={phoneCountry}
+                                    required
+                                    aria-label="Phone country"
+                                    onChange={(event) => {
+                                        setPhoneCountry(event.target.value);
+                                        setPhone('');
+                                    }}
+                                    className="min-h-12 min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-950 shadow-sm transition outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-white/10 dark:bg-slate-950 dark:text-white"
+                                >
+                                    {phoneCountries.map((country) => (
+                                        <option
+                                            key={country.value}
+                                            value={country.value}
+                                        >
+                                            {country.label}
+                                        </option>
+                                    ))}
+                                </select>
+                                <div className="flex min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 dark:border-white/10 dark:bg-slate-950">
+                                    <span className="flex items-center border-r border-slate-200 px-3 text-sm font-medium text-slate-500 dark:border-white/10 dark:text-slate-400">
+                                        {selectedPhoneCountry?.calling_code}
+                                    </span>
+                                    <input
+                                        type="tel"
+                                        name="phone"
+                                        value={phone}
+                                        inputMode="tel"
+                                        autoComplete="tel-national"
+                                        maxLength={
+                                            selectedPhoneCountry?.mask.length
+                                        }
+                                        placeholder={
+                                            selectedPhoneCountry?.placeholder
+                                        }
+                                        onChange={(event) =>
+                                            setPhone(
+                                                formatPhone(
+                                                    event.target.value,
+                                                    selectedPhoneCountry?.mask ??
+                                                        '',
+                                                ),
+                                            )
+                                        }
+                                        className="min-h-12 min-w-0 flex-1 bg-transparent px-3 py-3 text-sm text-slate-950 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-500"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset className="border-t border-slate-100 pt-8 dark:border-white/10">
+                    <legend className="text-base font-semibold text-slate-950 dark:text-white">
+                        Documents
+                    </legend>
+                    <div className="mt-5 grid gap-5">
+                        <label>
+                            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                                CV / resume{' '}
+                                <span className="text-rose-500">*</span>
+                            </span>
+                            <input
+                                type="file"
+                                name="cv"
+                                required
+                                accept={acceptedFileTypes(
+                                    job.accepted_cv_types ?? [],
+                                )}
+                                className={`${fieldClassName} cursor-pointer file:mr-4 file:rounded-lg file:border-0 file:bg-blue-50 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-400/10 dark:file:text-blue-300`}
+                            />
+                            <span className="mt-2 block text-xs text-slate-500 dark:text-slate-400">
+                                Accepted formats:{' '}
+                                {(job.accepted_cv_types ?? [])
+                                    .map((fileType) =>
+                                        fileType.extension.toUpperCase(),
+                                    )
+                                    .join(', ')}
+                            </span>
+                        </label>
+
+                        {job.cover_letter_type === 'file' ? (
+                            <label>
+                                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                                    Cover letter{' '}
+                                    {job.cover_letter_required ? (
+                                        <span className="text-rose-500">*</span>
+                                    ) : (
+                                        <span className="font-normal text-slate-400">
+                                            (optional)
+                                        </span>
+                                    )}
+                                </span>
+                                <input
+                                    type="file"
+                                    name="cover_letter"
+                                    required={job.cover_letter_required}
+                                    accept={acceptedFileTypes(
+                                        coverLetterFileTypes,
+                                    )}
+                                    className={`${fieldClassName} cursor-pointer file:mr-4 file:rounded-lg file:border-0 file:bg-blue-50 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-400/10 dark:file:text-blue-300`}
+                                />
+                                <span className="mt-2 block text-xs text-slate-500 dark:text-slate-400">
+                                    Accepted formats:{' '}
+                                    {coverLetterFileTypes
+                                        .map((fileType) =>
+                                            fileType.extension.toUpperCase(),
+                                        )
+                                        .join(', ')}
+                                </span>
+                            </label>
+                        ) : (
+                            <label>
+                                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                                    Cover letter{' '}
+                                    {job.cover_letter_required ? (
+                                        <span className="text-rose-500">*</span>
+                                    ) : (
+                                        <span className="font-normal text-slate-400">
+                                            (optional)
+                                        </span>
+                                    )}
+                                </span>
+                                <textarea
+                                    name="cover_letter"
+                                    required={job.cover_letter_required}
+                                    rows={6}
+                                    className={fieldClassName}
+                                    placeholder="Tell us what makes this opportunity meaningful to you."
+                                />
+                            </label>
+                        )}
+                    </div>
+                </fieldset>
+
+                {job.application_questions.length > 0 && (
+                    <fieldset className="border-t border-slate-100 pt-8 dark:border-white/10">
+                        <legend className="text-base font-semibold text-slate-950 dark:text-white">
+                            Role questions
+                        </legend>
+                        <div className="mt-5 grid gap-5">
+                            {job.application_questions.map((question) => (
+                                <label key={question.id}>
+                                    <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                                        {question.question}{' '}
+                                        {question.required ? (
+                                            <span className="text-rose-500">
+                                                *
+                                            </span>
+                                        ) : (
+                                            <span className="font-normal text-slate-400">
+                                                (optional)
+                                            </span>
+                                        )}
+                                    </span>
+                                    {question.response_type === 'textarea' ? (
+                                        <textarea
+                                            name={`question_${question.id}`}
+                                            required={question.required}
+                                            rows={5}
+                                            className={fieldClassName}
+                                        />
+                                    ) : (
+                                        <input
+                                            type={
+                                                question.response_type ===
+                                                'number'
+                                                    ? 'number'
+                                                    : 'text'
+                                            }
+                                            name={`question_${question.id}`}
+                                            required={question.required}
+                                            className={fieldClassName}
+                                        />
+                                    )}
+                                    {question.description && (
+                                        <span className="mt-2 block text-xs leading-5 text-slate-500 dark:text-slate-400">
+                                            {question.description}
+                                        </span>
+                                    )}
+                                </label>
+                            ))}
+                        </div>
+                    </fieldset>
+                )}
+
+                <div className="border-t border-slate-100 pt-7 dark:border-white/10">
+                    <button
+                        type="submit"
+                        disabled
+                        className="inline-flex min-h-12 w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-slate-300 px-6 py-3 text-sm font-semibold text-slate-600 sm:w-auto dark:bg-white/10 dark:text-slate-400"
+                    >
+                        Submit application — coming soon
+                    </button>
+                    <p className="mt-3 text-xs leading-5 text-slate-400">
+                        No information entered on this screen will be submitted
+                        or stored yet.
+                    </p>
+                </div>
+            </form>
+        </section>
+    );
+}
+
+export default function Apply({
+    referral,
+    job,
+    phoneCountries,
+    preview = false,
+}: ApplyProps) {
+    const [showApplicationForm, setShowApplicationForm] = useState(false);
+    const applicationFormRef = useRef<HTMLElement>(null);
     const companyName = job.company?.name ?? 'Recruiter Labs';
     const closingDate = formatDate(job.ends_at);
     const openingDate = formatDate(job.starts_at);
     const questions = job.application_questions ?? [];
     const cvTypes = job.accepted_cv_types ?? [];
+
+    function openApplicationForm() {
+        setShowApplicationForm(true);
+
+        window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(() => {
+                applicationFormRef.current?.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start',
+                });
+            });
+        });
+    }
 
     return (
         <>
@@ -276,11 +535,23 @@ export default function Apply({ referral, job }: ApplyProps) {
 
                     <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-300">
                         <span className="size-2 rounded-full bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.12)]" />
-                        Applications open
+                        {preview ? 'Preview mode' : 'Applications open'}
                     </span>
                 </header>
 
                 <main className="relative mx-auto w-full max-w-7xl px-5 pb-16 sm:px-8 sm:pb-20 lg:px-10">
+                    {preview && (
+                        <div className="mb-5 flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 shadow-sm dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-200">
+                            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white">
+                                <DocumentIcon className="size-5" />
+                            </span>
+                            <p>
+                                Preview mode. You can inspect and fill the form,
+                                but no application can be submitted.
+                            </p>
+                        </div>
+                    )}
+
                     {referral && (
                         <div className="mb-5 flex items-center gap-3 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-800 shadow-sm dark:border-violet-400/20 dark:bg-violet-400/10 dark:text-violet-200">
                             <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white">
@@ -306,7 +577,9 @@ export default function Apply({ referral, job }: ApplyProps) {
                                     </span>
                                     <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-sm font-medium backdrop-blur-sm">
                                         <BriefcaseIcon className="size-4" />
-                                        Published opportunity
+                                        {preview
+                                            ? 'Application page preview'
+                                            : 'Published opportunity'}
                                     </span>
                                 </div>
 
@@ -325,9 +598,12 @@ export default function Apply({ referral, job }: ApplyProps) {
                                 <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
                                     <button
                                         type="button"
+                                        onClick={openApplicationForm}
                                         className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-blue-700 shadow-lg shadow-blue-950/15 transition hover:-translate-y-0.5 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
                                     >
-                                        Apply for this role
+                                        {showApplicationForm
+                                            ? 'View application form'
+                                            : 'Apply for this role'}
                                         <ArrowIcon className="size-4 transition group-hover:translate-x-0.5" />
                                     </button>
                                     <span className="inline-flex items-center justify-center gap-2 text-sm text-blue-100 sm:justify-start">
@@ -380,6 +656,14 @@ export default function Apply({ referral, job }: ApplyProps) {
 
                                 <JobDescription description={job.description} />
                             </section>
+
+                            {showApplicationForm && (
+                                <ApplicationForm
+                                    job={job}
+                                    phoneCountries={phoneCountries}
+                                    sectionRef={applicationFormRef}
+                                />
+                            )}
                         </div>
 
                         <aside className="lg:sticky lg:top-6">
@@ -459,9 +743,12 @@ export default function Apply({ referral, job }: ApplyProps) {
 
                                     <button
                                         type="button"
+                                        onClick={openApplicationForm}
                                         className="group inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
                                     >
-                                        Apply now
+                                        {showApplicationForm
+                                            ? 'View application form'
+                                            : 'Apply now'}
                                         <ArrowIcon className="size-4 transition group-hover:translate-x-0.5" />
                                     </button>
                                     <p className="text-center text-xs leading-5 text-slate-400">
