@@ -86,6 +86,7 @@ class JobForm
                                     ->required(),
                                 Toggle::make('required')
                                     ->label(__('jobs.application.required'))
+                                    ->inline(false)
                                     ->default(true),
                                 Textarea::make('description')
                                     ->label(__('jobs.application.field_description'))

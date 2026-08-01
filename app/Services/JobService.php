@@ -17,6 +17,11 @@ class JobService
         $today = today();
 
         return Job::query()
+            ->with([
+                'company:id,name',
+                'applicationQuestions:id,job_id,question,response_type,description,required,sort',
+                'acceptedCvTypes:id,extension,sort',
+            ])
             ->where('key', $key)
             ->where('published', true)
             ->where(fn (Builder $query): Builder => $query

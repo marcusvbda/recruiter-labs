@@ -9,7 +9,9 @@ use App\Models\Job;
 use App\Models\JobCriterion;
 use Database\Seeders\CvFileTypeSeeder;
 use Database\Seeders\PlanSeeder;
-use Filament\Forms\Components\MarkdownEditor;
+use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\RichEditor;
+use Filament\Forms\Components\Toggle;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -24,7 +26,7 @@ beforeEach(function () {
     $this->seed(CvFileTypeSeeder::class);
 });
 
-it('disables file uploads in the job description markdown editor', function () {
+it('uses a rich editor without file uploads for the job description', function () {
     $company = Company::factory()->create();
     actAsCompany($company);
 
@@ -33,11 +35,32 @@ it('disables file uploads in the job description markdown editor', function () {
         ->getSchema('form')
         ?->getComponent('description', withHidden: true);
 
-    expect($descriptionField)->toBeInstanceOf(MarkdownEditor::class);
+    expect($descriptionField)->toBeInstanceOf(RichEditor::class);
 
-    /** @var MarkdownEditor $descriptionField */
+    /** @var RichEditor $descriptionField */
     expect($descriptionField->hasFileAttachments())->toBeFalse()
         ->and($descriptionField->hasToolbarButton('attachFiles'))->toBeFalse();
+});
+
+it('stacks the required response toggle beside the response type field', function () {
+    $company = Company::factory()->create();
+    actAsCompany($company);
+
+    $page = Livewire::test(CreateJob::class);
+    $questionsRepeater = $page->instance()
+        ->getSchema('form')
+        ?->getComponent('applicationQuestions', withHidden: true);
+
+    expect($questionsRepeater)->toBeInstanceOf(Repeater::class);
+
+    /** @var Repeater $questionsRepeater */
+    $requiredToggle = $questionsRepeater->getChildSchema()
+        ?->getComponent('required', withHidden: true);
+
+    expect($requiredToggle)->toBeInstanceOf(Toggle::class);
+
+    /** @var Toggle $requiredToggle */
+    expect($requiredToggle->isInline())->toBeFalse();
 });
 
 it('aligns the criteria weight slider and fills its selected track', function () {

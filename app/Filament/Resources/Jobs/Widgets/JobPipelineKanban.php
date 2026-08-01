@@ -17,6 +17,8 @@ use Usamamuneerchaudhary\FilamentModelStates\Widgets\StateKanbanBoard;
 
 class JobPipelineKanban extends StateKanbanBoard
 {
+    protected string $view = 'filament.resources.jobs.widgets.job-pipeline-kanban';
+
     public Job $record;
 
     /** @var Collection<int, Status>|null */

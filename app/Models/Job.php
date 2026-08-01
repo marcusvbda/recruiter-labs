@@ -55,7 +55,7 @@ class Job extends Model
 
     public function acceptedCvTypes(): BelongsToMany
     {
-        return $this->belongsToMany(CvFileType::class, 'cv_file_type_job');
+        return $this->belongsToMany(CvFileType::class, 'cv_file_type_job')->orderBy('sort');
     }
 
     public function automationEvents(): MorphMany

@@ -143,3 +143,34 @@ it('renders the job pipeline as a kanban without the list view', function () {
         ->assertSeeLivewire(JobPipelineKanban::class)
         ->assertDontSee(__('applications.pipeline.view_list'));
 });
+
+it('translates the pipeline interface without translating database status names', function () {
+    app()->setLocale('pt_BR');
+
+    $company = Company::factory()->create();
+    $job = Job::factory()->for($company)->create();
+    $firstStatus = Status::factory()->for($company)->create([
+        'name' => 'Applied from database',
+        'order' => 0,
+    ]);
+    $secondStatus = Status::factory()->for($company)->create([
+        'name' => 'Screening from database',
+        'order' => 1,
+    ]);
+
+    actAsCompany($company);
+
+    Livewire::test(JobPipelineKanban::class, ['record' => $job])
+        ->assertSee(__('applications.pipeline.kanban.heading'))
+        ->assertSee(__('applications.pipeline.kanban.search_placeholder'))
+        ->assertSee(__('applications.pipeline.kanban.all_statuses'))
+        ->assertSee(__('applications.pipeline.kanban.can_move_to'))
+        ->assertSee(__('applications.pipeline.kanban.no_matching_applications'))
+        ->assertSee($firstStatus->name)
+        ->assertSee($secondStatus->name)
+        ->assertDontSee('Workflow board')
+        ->assertDontSee('Search records...')
+        ->assertDontSee('All states')
+        ->assertDontSee('Can move to')
+        ->assertDontSee('No matching records');
+});

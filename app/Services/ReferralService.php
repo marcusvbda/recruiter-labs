@@ -17,6 +17,11 @@ class ReferralService
         $today = today();
 
         return Referral::query()
+            ->with([
+                'job.company:id,name',
+                'job.applicationQuestions:id,job_id,question,response_type,description,required,sort',
+                'job.acceptedCvTypes:id,extension,sort',
+            ])
             ->where('key', $key)
             ->whereHas('job', fn (Builder $query): Builder => $query
                 ->where('published', true)
