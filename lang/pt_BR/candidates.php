@@ -4,6 +4,10 @@ return [
     'label' => 'Candidato',
     'plural_label' => 'Candidatos',
     'navigation_label' => 'Candidatos',
+    'sections' => [
+        'contact' => 'Informações de contato',
+        'social_profiles' => 'Perfis sociais',
+    ],
     'fields' => [
         'name' => 'Nome',
         'email' => 'E-mail',

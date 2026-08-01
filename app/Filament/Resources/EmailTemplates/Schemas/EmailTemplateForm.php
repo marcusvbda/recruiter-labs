@@ -13,7 +13,7 @@ class EmailTemplateForm
     {
         return $schema
             ->components([
-                Section::make()
+                Section::make(__('email-templates.sections.details'))
                     ->columnSpanFull()
                     ->columns(1)
                     ->schema([
@@ -26,6 +26,11 @@ class EmailTemplateForm
                             ->helperText(__('email-templates.fields.subject_helper_text'))
                             ->required()
                             ->maxLength(255),
+                    ]),
+                Section::make(__('email-templates.sections.content'))
+                    ->columnSpanFull()
+                    ->columns(1)
+                    ->schema([
                         Textarea::make('body')
                             ->label(__('email-templates.fields.body'))
                             ->helperText(__('email-templates.fields.body_helper_text'))

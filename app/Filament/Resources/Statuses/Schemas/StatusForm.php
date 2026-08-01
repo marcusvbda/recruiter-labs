@@ -13,7 +13,7 @@ class StatusForm
     {
         return $schema
             ->components([
-                Section::make()
+                Section::make(__('statuses.sections.details'))
                     ->columnSpanFull()
                     ->columns(1)
                     ->schema([

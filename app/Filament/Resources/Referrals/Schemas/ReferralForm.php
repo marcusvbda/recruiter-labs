@@ -17,7 +17,7 @@ class ReferralForm
     {
         return $schema
             ->components([
-                Section::make()
+                Section::make(__('referrals.sections.details'))
                     ->columnSpanFull()
                     ->columns(1)
                     ->schema([

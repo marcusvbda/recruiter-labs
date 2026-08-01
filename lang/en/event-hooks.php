@@ -1,9 +1,13 @@
 <?php
 
 return [
-    'label' => 'Automation Event',
-    'plural_label' => 'Automation Events',
-    'navigation_label' => 'Automation Events',
+    'label' => 'Event Hook',
+    'plural_label' => 'Event Hooks',
+    'navigation_label' => 'Event Hooks',
+    'sections' => [
+        'trigger' => 'Trigger',
+        'action' => 'Action',
+    ],
     'event_types' => [
         'application_submitted' => 'Application submitted',
         'status_changed' => 'Status changed',
@@ -21,6 +25,6 @@ return [
         'is_active' => 'Active',
     ],
     'relation_manager' => [
-        'title' => 'Automation events',
+        'title' => 'Event hooks',
     ],
 ];

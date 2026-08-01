@@ -14,11 +14,13 @@ return [
         'campaign_expectation_helper' => 'Um texto livre descrevendo como é o sucesso desta campanha, por exemplo: "Espera-se contratar 4 desenvolvedores sêniores atendendo a pelo menos 80% dos critérios até o fim da campanha". Usado posteriormente pela IA para avaliar se a campanha atingiu seu objetivo.',
     ],
     'sections' => [
+        'details' => 'Detalhes da vaga',
         'campaign' => 'Campanha',
         'criteria' => 'Critérios de avaliação',
     ],
     'criteria' => [
-        'criterion' => 'Critério',
+        'prompt' => 'Instrução do critério',
+        'prompt_helper' => 'Descreva o que este critério significa para o agente avaliador (máximo de 150 caracteres).',
         'weight' => 'Peso',
         'add' => 'Adicionar critério',
     ],

@@ -11,6 +11,6 @@ enum AutomationEventType: string
 
     public function label(): string
     {
-        return __('automation-events.event_types.'.$this->value);
+        return __('event-hooks.event_types.'.$this->value);
     }
 }

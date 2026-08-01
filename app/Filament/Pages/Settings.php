@@ -6,30 +6,29 @@ use App\Concerns\PasswordValidationRules;
 use App\Concerns\ProfileValidationRules;
 use App\Enums\Feature;
 use App\Models\User;
-use Filament\Actions\Concerns\InteractsWithActions;
-use Filament\Actions\Contracts\HasActions;
+use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Schemas\Components\Actions;
+use Filament\Schemas\Components\EmbeddedSchema;
+use Filament\Schemas\Components\Form;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Components\Utilities\Get;
-use Filament\Schemas\Concerns\InteractsWithSchemas;
-use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Schemas\Schema;
 use Illuminate\Validation\Rules\Password;
 
-class Settings extends Page implements HasActions, HasSchemas
+/**
+ * @property-read Schema $form
+ */
+class Settings extends Page
 {
-    use InteractsWithActions;
-    use InteractsWithSchemas;
     use PasswordValidationRules;
     use ProfileValidationRules;
-
-    protected string $view = 'filament.pages.settings';
 
     /** @var array<string, mixed> */
     public array $data = [];
@@ -51,18 +50,33 @@ class Settings extends Page implements HasActions, HasSchemas
 
     public function mount(): void
     {
-        $user = auth()->user();
+        $user = $this->getRecord();
 
-        $this->form->fill([
-            'name' => $user->name,
-            'email' => $user->email,
-            'locale' => $user->locale,
-        ]);
+        $this->form->fill($user->only(['name', 'email', 'locale']));
+    }
+
+    public function content(Schema $schema): Schema
+    {
+        return $schema
+            ->components([
+                Form::make([
+                    EmbeddedSchema::make('form'),
+                ])
+                    ->id('settings-form')
+                    ->livewireSubmitHandler('save')
+                    ->footer([
+                        Actions::make([
+                            Action::make('save')
+                                ->label(__('settings.actions.save'))
+                                ->submit('save'),
+                        ]),
+                    ]),
+            ]);
     }
 
     public function form(Schema $schema): Schema
     {
-        $user = auth()->user();
+        $user = $this->getRecord();
         $company = Filament::getTenant();
 
         return $schema
@@ -142,20 +156,17 @@ class Settings extends Page implements HasActions, HasSchemas
                             ]),
                     ]),
             ])
+            ->record($user)
             ->statePath('data');
     }
 
     public function save(): void
     {
         $data = $this->form->getState();
-        $user = auth()->user();
+        $user = $this->getRecord();
 
         $user->name = $data['name'];
         $user->email = $data['email'];
-
-        // The locale field's UI options are fixed to the three supported
-        // locales via the Select's `options()` above, matching the same
-        // set validated by `App\Http\Controllers\LocaleController`.
         $user->locale = $data['locale'];
 
         if (filled($data['password'] ?? null)) {
@@ -166,9 +177,20 @@ class Settings extends Page implements HasActions, HasSchemas
 
         app()->setLocale($user->locale ?: config('app.locale'));
 
+        $this->form->fill($user->only(['name', 'email', 'locale']));
+
         Notification::make()
             ->title(__('settings.notifications.saved'))
             ->success()
             ->send();
+    }
+
+    public function getRecord(): User
+    {
+        $user = Filament::auth()->user();
+
+        abort_unless($user instanceof User, 403);
+
+        return $user;
     }
 }

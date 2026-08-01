@@ -4,6 +4,9 @@ return [
     'label' => 'Estado',
     'plural_label' => 'Estados',
     'navigation_label' => 'Estados',
+    'sections' => [
+        'details' => 'Detalles del estado',
+    ],
     'fields' => [
         'name' => 'Nombre',
         'color' => 'Color',

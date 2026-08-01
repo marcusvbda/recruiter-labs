@@ -16,7 +16,7 @@ class AutomationEventsRelationManager extends RelationManager
 
     public static function getTitle(Model $ownerRecord, string $pageClass): string
     {
-        return __('automation-events.relation_manager.title');
+        return __('event-hooks.relation_manager.title');
     }
 
     public function form(Schema $schema): Schema

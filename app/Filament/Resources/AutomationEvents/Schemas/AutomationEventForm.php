@@ -31,17 +31,22 @@ class AutomationEventForm
     {
         return $schema
             ->components([
-                Section::make()
+                Section::make(__('event-hooks.sections.trigger'))
                     ->columnSpanFull()
-                    ->columns(2)
+                    ->columns(1)
                     ->schema([
                         ...($includeAutomatableSelect ? [static::morphToSelect()] : []),
                         Select::make('event_type')
-                            ->label(__('automation-events.fields.event_type'))
+                            ->label(__('event-hooks.fields.event_type'))
                             ->options(collect(AutomationEventType::cases())->mapWithKeys(fn (AutomationEventType $case) => [$case->value => $case->label()]))
                             ->required(),
+                    ]),
+                Section::make(__('event-hooks.sections.action'))
+                    ->columnSpanFull()
+                    ->columns(2)
+                    ->schema([
                         Select::make('action_type')
-                            ->label(__('automation-events.fields.action_type'))
+                            ->label(__('event-hooks.fields.action_type'))
                             ->options(collect(AutomationActionType::cases())->mapWithKeys(fn (AutomationActionType $case) => [$case->value => $case->label()]))
                             ->required()
                             ->live()
@@ -55,7 +60,7 @@ class AutomationEventForm
                         // hooks. This mirrors Filament's documented pattern for
                         // saving flat fields into JSON-cast columns.
                         Select::make('action_config.email_template_id')
-                            ->label(__('automation-events.fields.email_template'))
+                            ->label(__('event-hooks.fields.email_template'))
                             ->options(fn (): array => EmailTemplate::query()
                                 ->where('company_id', Filament::getTenant()?->id)
                                 ->pluck('name', 'id')
@@ -65,7 +70,7 @@ class AutomationEventForm
                             ->visible(fn (Get $get): bool => $get('action_type') === AutomationActionType::SendEmail->value)
                             ->dehydrated(fn (Get $get): bool => $get('action_type') === AutomationActionType::SendEmail->value),
                         Toggle::make('is_active')
-                            ->label(__('automation-events.fields.is_active'))
+                            ->label(__('event-hooks.fields.is_active'))
                             ->default(true),
                     ]),
             ]);

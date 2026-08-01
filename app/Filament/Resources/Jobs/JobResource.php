@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Jobs;
 
+use App\Filament\Clusters\Recruitment\RecruitmentCluster;
 use App\Filament\Resources\Jobs\Pages\CreateJob;
 use App\Filament\Resources\Jobs\Pages\EditJob;
 use App\Filament\Resources\Jobs\Pages\JobPipeline;
@@ -21,6 +22,10 @@ class JobResource extends Resource
     protected static ?string $model = Job::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBriefcase;
+
+    protected static ?string $cluster = RecruitmentCluster::class;
+
+    protected static ?int $navigationSort = 3;
 
     public static function getModelLabel(): string
     {

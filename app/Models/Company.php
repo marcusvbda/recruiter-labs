@@ -41,11 +41,6 @@ class Company extends Model
         return $this->hasMany(Status::class);
     }
 
-    public function criteria(): HasMany
-    {
-        return $this->hasMany(Criterion::class);
-    }
-
     public function emailTemplates(): HasMany
     {
         return $this->hasMany(EmailTemplate::class);
@@ -59,6 +54,11 @@ class Company extends Model
     public function applications(): HasMany
     {
         return $this->hasMany(Application::class);
+    }
+
+    public function jobCriteria(): HasMany
+    {
+        return $this->hasMany(JobCriterion::class);
     }
 
     public function plan(): BelongsTo

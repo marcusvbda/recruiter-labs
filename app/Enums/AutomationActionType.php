@@ -8,6 +8,6 @@ enum AutomationActionType: string
 
     public function label(): string
     {
-        return __('automation-events.action_types.'.$this->value);
+        return __('event-hooks.action_types.'.$this->value);
     }
 }

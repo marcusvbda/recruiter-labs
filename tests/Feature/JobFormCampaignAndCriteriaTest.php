@@ -3,7 +3,6 @@
 use App\Filament\Resources\Jobs\Pages\CreateJob;
 use App\Filament\Resources\Jobs\Pages\EditJob;
 use App\Models\Company;
-use App\Models\Criterion;
 use App\Models\Job;
 use App\Models\JobCriterion;
 use Database\Seeders\PlanSeeder;
@@ -20,12 +19,23 @@ beforeEach(function () {
     $this->seed(PlanSeeder::class);
 });
 
-it('creates a job with campaign fields and job criteria repeater rows', function () {
+it('aligns the criteria weight slider and fills its selected track', function () {
     $company = Company::factory()->create();
     actAsCompany($company);
 
-    $criterionA = Criterion::factory()->for($company)->create();
-    $criterionB = Criterion::factory()->for($company)->create();
+    Livewire::test(CreateJob::class)
+        ->fillForm([
+            'jobCriteria' => [
+                ['prompt' => 'Evaluate communication clarity.', 'weight' => 5],
+            ],
+        ])
+        ->assertSeeHtml('margin-block: 0.625rem;')
+        ->assertSeeHtml("fillTrack: JSON.parse('[true,false]')");
+});
+
+it('creates a job with campaign fields and job criteria repeater rows', function () {
+    $company = Company::factory()->create();
+    actAsCompany($company);
 
     Livewire::test(CreateJob::class)
         ->fillForm([
@@ -35,8 +45,8 @@ it('creates a job with campaign fields and job criteria repeater rows', function
             'ends_at' => '2026-09-01',
             'campaign_expectation' => 'Expect to hire 2 engineers meeting at least 80% of criteria.',
             'jobCriteria' => [
-                ['criterion_id' => $criterionA->id, 'weight' => 4],
-                ['criterion_id' => $criterionB->id, 'weight' => 9],
+                ['prompt' => 'Evaluate how clearly the candidate communicates.', 'weight' => 4],
+                ['prompt' => 'Evaluate the candidate\'s ability to design reliable APIs.', 'weight' => 9],
             ],
         ])
         ->call('create')
@@ -54,8 +64,8 @@ it('creates a job with campaign fields and job criteria repeater rows', function
 
     expect($pivotRows)->toHaveCount(2);
 
-    $rowForA = $pivotRows->firstWhere('criterion_id', $criterionA->id);
-    $rowForB = $pivotRows->firstWhere('criterion_id', $criterionB->id);
+    $rowForA = $pivotRows->firstWhere('prompt', 'Evaluate how clearly the candidate communicates.');
+    $rowForB = $pivotRows->firstWhere('prompt', 'Evaluate the candidate\'s ability to design reliable APIs.');
 
     expect($rowForA)->not->toBeNull()
         ->and($rowForA->company_id)->toBe($company->id)
@@ -69,29 +79,41 @@ it('rejects a job criteria weight outside the 0-10 range', function () {
     $company = Company::factory()->create();
     actAsCompany($company);
 
-    $criterion = Criterion::factory()->for($company)->create();
-
     Livewire::test(CreateJob::class)
         ->fillForm([
             'name' => 'Product Designer',
             'jobCriteria' => [
-                ['criterion_id' => $criterion->id, 'weight' => 15],
+                ['prompt' => 'Evaluate product design ability.', 'weight' => 15],
             ],
         ])
         ->call('create')
         ->assertHasFormErrors(['jobCriteria.0.weight']);
 });
 
+it('rejects a job criteria prompt longer than 150 characters', function () {
+    $company = Company::factory()->create();
+    actAsCompany($company);
+
+    Livewire::test(CreateJob::class)
+        ->fillForm([
+            'name' => 'Product Designer',
+            'jobCriteria' => [
+                ['prompt' => str_repeat('a', 151), 'weight' => 5],
+            ],
+        ])
+        ->call('create')
+        ->assertHasFormErrors(['jobCriteria.0.prompt' => 'max']);
+});
+
 it('adds job criteria rows to an existing job through the edit form', function () {
     $company = Company::factory()->create();
     $job = Job::factory()->for($company)->create();
-    $criterion = Criterion::factory()->for($company)->create();
     actAsCompany($company);
 
     Livewire::test(EditJob::class, ['record' => $job->getRouteKey()])
         ->fillForm([
             'jobCriteria' => [
-                ['criterion_id' => $criterion->id, 'weight' => 7],
+                ['prompt' => 'Evaluate the candidate\'s leadership skills.', 'weight' => 7],
             ],
         ])
         ->call('save')
@@ -100,6 +122,6 @@ it('adds job criteria rows to an existing job through the edit form', function (
     $pivotRow = JobCriterion::query()->where('job_id', $job->id)->sole();
 
     expect($pivotRow->company_id)->toBe($company->id)
-        ->and($pivotRow->criterion_id)->toBe($criterion->id)
+        ->and($pivotRow->prompt)->toBe('Evaluate the candidate\'s leadership skills.')
         ->and($pivotRow->weight)->toBe(7);
 });

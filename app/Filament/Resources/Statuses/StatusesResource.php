@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Statuses;
 
+use App\Filament\Clusters\Recruitment\RecruitmentCluster;
 use App\Filament\Resources\Statuses\Pages\CreateStatus;
 use App\Filament\Resources\Statuses\Pages\EditStatus;
 use App\Filament\Resources\Statuses\Pages\ListStatuses;
@@ -19,6 +20,10 @@ class StatusesResource extends Resource
     protected static ?string $model = Status::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTag;
+
+    protected static ?string $cluster = RecruitmentCluster::class;
+
+    protected static ?int $navigationSort = 2;
 
     public static function getModelLabel(): string
     {

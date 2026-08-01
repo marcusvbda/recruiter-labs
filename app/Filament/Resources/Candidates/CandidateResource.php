@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Candidates;
 
 use App\Enums\Feature;
+use App\Filament\Clusters\Recruitment\RecruitmentCluster;
 use App\Filament\Resources\Candidates\Pages\CreateCandidate;
 use App\Filament\Resources\Candidates\Pages\EditCandidate;
 use App\Filament\Resources\Candidates\Pages\ListCandidates;
@@ -21,6 +22,10 @@ class CandidateResource extends Resource
     protected static ?string $model = Candidate::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUsers;
+
+    protected static ?string $cluster = RecruitmentCluster::class;
+
+    protected static ?int $navigationSort = 1;
 
     public static function getModelLabel(): string
     {

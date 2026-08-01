@@ -14,11 +14,13 @@ return [
         'campaign_expectation_helper' => 'A free-text prompt describing what success looks like for this campaign, e.g. "Expect to hire 4 senior developers meeting at least 80% of criteria by the campaign end date". Used later by AI to evaluate whether the campaign met its goal.',
     ],
     'sections' => [
+        'details' => 'Job details',
         'campaign' => 'Campaign',
         'criteria' => 'Evaluation criteria',
     ],
     'criteria' => [
-        'criterion' => 'Criterion',
+        'prompt' => 'Criterion prompt',
+        'prompt_helper' => 'Describe what this criterion means to the evaluating agent (maximum 150 characters).',
         'weight' => 'Weight',
         'add' => 'Add criterion',
     ],

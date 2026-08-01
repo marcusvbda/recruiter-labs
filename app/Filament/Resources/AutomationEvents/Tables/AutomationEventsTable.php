@@ -24,19 +24,19 @@ class AutomationEventsTable
         return $table
             ->columns([
                 TextColumn::make('event_type')
-                    ->label(__('automation-events.fields.event_type'))
+                    ->label(__('event-hooks.fields.event_type'))
                     ->badge()
                     ->formatStateUsing(fn (AutomationEventType $state): string => $state->label()),
                 TextColumn::make('action_type')
-                    ->label(__('automation-events.fields.action_type'))
+                    ->label(__('event-hooks.fields.action_type'))
                     ->badge()
                     ->formatStateUsing(fn (AutomationActionType $state): string => $state->label()),
                 IconColumn::make('is_active')
-                    ->label(__('automation-events.fields.is_active'))
+                    ->label(__('event-hooks.fields.is_active'))
                     ->boolean(),
                 ...($includeAutomatableColumn ? [
                     TextColumn::make('automatable.name')
-                        ->label(__('automation-events.fields.automatable')),
+                        ->label(__('event-hooks.fields.automatable')),
                 ] : []),
             ])
             ->recordActions([

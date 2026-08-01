@@ -1,18 +1,12 @@
 <?php
 
-use App\Models\Criterion;
 use App\Models\Job;
 use App\Models\JobCriterion;
 use Database\Seeders\PlanSeeder;
-use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-// Note: `JobCriterion` has no factory (it is a real Pivot model with its
-// own auto-incrementing `id` and an extra `weight` column, not a plain
-// attribute-array pivot), so rows are created directly via
-// `JobCriterion::query()->create()` rather than `$job->criteria()->attach()`
-// — `attach()` would not populate the required `company_id` column.
+// `JobCriterion` has no factory, so rows are created directly.
 
 uses(TestCase::class, RefreshDatabase::class);
 
@@ -20,78 +14,45 @@ beforeEach(function () {
     $this->seed(PlanSeeder::class);
 });
 
-it('attaches multiple criteria to a job with a weight each', function () {
+it('stores multiple evaluation criteria prompts and weights for a job', function () {
     $job = Job::factory()->create();
-    $criterionA = Criterion::factory()->for($job->company)->create();
-    $criterionB = Criterion::factory()->for($job->company)->create();
 
     JobCriterion::query()->create([
         'company_id' => $job->company_id,
         'job_id' => $job->id,
-        'criterion_id' => $criterionA->id,
+        'prompt' => 'Evaluate communication clarity.',
         'weight' => 4,
     ]);
 
     JobCriterion::query()->create([
         'company_id' => $job->company_id,
         'job_id' => $job->id,
-        'criterion_id' => $criterionB->id,
+        'prompt' => 'Evaluate system design ability.',
         'weight' => 9,
     ]);
 
-    expect($job->criteria()->count())->toBe(2);
+    expect($job->jobCriteria()->count())->toBe(2)
+        ->and($job->jobCriteria()->pluck('prompt')->all())->toBe([
+            'Evaluate communication clarity.',
+            'Evaluate system design ability.',
+        ]);
 });
 
-it('round-trips the pivot weight through the job\'s criteria relation', function () {
+it('round-trips the prompt and weight through the JobCriterion model', function () {
     $job = Job::factory()->create();
-    $criterion = Criterion::factory()->for($job->company)->create();
-
-    JobCriterion::query()->create([
-        'company_id' => $job->company_id,
-        'job_id' => $job->id,
-        'criterion_id' => $criterion->id,
-        'weight' => 7,
-    ]);
-
-    $attachedCriterion = $job->criteria()->first();
-
-    expect($attachedCriterion->pivot->weight)->toBe(7);
-});
-
-it('round-trips the weight through the JobCriterion model directly', function () {
-    $job = Job::factory()->create();
-    $criterion = Criterion::factory()->for($job->company)->create();
 
     $jobCriterion = JobCriterion::query()->create([
         'company_id' => $job->company_id,
         'job_id' => $job->id,
-        'criterion_id' => $criterion->id,
-        'weight' => 3,
+        'prompt' => 'Evaluate leadership skills.',
+        'weight' => 7,
     ]);
 
-    expect($jobCriterion->fresh()->weight)->toBe(3)
-        ->and($jobCriterion->fresh()->weight)->toBeInt()
+    $freshJobCriterion = $jobCriterion->fresh();
+
+    expect($freshJobCriterion->prompt)->toBe('Evaluate leadership skills.')
+        ->and($freshJobCriterion->weight)->toBe(7)
+        ->and($freshJobCriterion->weight)->toBeInt()
         ->and(JobCriterion::query()->find($jobCriterion->id)->job->is($job))->toBeTrue()
-        ->and(JobCriterion::query()->find($jobCriterion->id)->criterion->is($criterion))->toBeTrue();
-});
-
-it('enforces uniqueness of the job_id/criterion_id pair at the database level', function () {
-    $job = Job::factory()->create();
-    $criterion = Criterion::factory()->for($job->company)->create();
-
-    JobCriterion::query()->create([
-        'company_id' => $job->company_id,
-        'job_id' => $job->id,
-        'criterion_id' => $criterion->id,
-        'weight' => 5,
-    ]);
-
-    expect(fn () => JobCriterion::query()->create([
-        'company_id' => $job->company_id,
-        'job_id' => $job->id,
-        'criterion_id' => $criterion->id,
-        'weight' => 8,
-    ]))->toThrow(QueryException::class);
-
-    expect(JobCriterion::query()->count())->toBe(1);
+        ->and(JobCriterion::query()->find($jobCriterion->id)->company->is($job->company))->toBeTrue();
 });

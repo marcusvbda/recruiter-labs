@@ -15,14 +15,15 @@ class CandidateForm
     {
         return $schema
             ->components([
-                Section::make()
+                Section::make(__('candidates.sections.contact'))
                     ->columnSpanFull()
-                    ->columns(1)
+                    ->columns(2)
                     ->schema([
                         TextInput::make('name')
                             ->label(__('candidates.fields.name'))
                             ->required()
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->columnSpanFull(),
                         TextInput::make('email')
                             ->label(__('candidates.fields.email'))
                             ->email()
@@ -31,6 +32,10 @@ class CandidateForm
                             ->label(__('candidates.fields.phone'))
                             ->tel()
                             ->maxLength(255),
+                    ]),
+                Section::make(__('candidates.sections.social_profiles'))
+                    ->columnSpanFull()
+                    ->schema([
                         Repeater::make('socials')
                             ->label(__('candidates.fields.socials'))
                             ->schema([

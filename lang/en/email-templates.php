@@ -4,6 +4,10 @@ return [
     'label' => 'Email Template',
     'plural_label' => 'Email Templates',
     'navigation_label' => 'Email Templates',
+    'sections' => [
+        'details' => 'Template details',
+        'content' => 'Message content',
+    ],
     'fields' => [
         'name' => 'Name',
         'subject' => 'Subject',

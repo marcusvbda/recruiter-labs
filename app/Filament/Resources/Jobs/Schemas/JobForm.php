@@ -5,13 +5,11 @@ namespace App\Filament\Resources\Jobs\Schemas;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Repeater;
-use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Slider;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
-use Illuminate\Database\Eloquent\Builder;
 
 class JobForm
 {
@@ -19,7 +17,7 @@ class JobForm
     {
         return $schema
             ->components([
-                Section::make()
+                Section::make(__('jobs.sections.details'))
                     ->columnSpanFull()
                     ->columns(1)
                     ->schema([
@@ -54,9 +52,8 @@ class JobForm
                         Repeater::make('jobCriteria')
                             ->label('')
                             ->relationship()
-                            // `JobCriterion` is a real Pivot model with its own required
-                            // `company_id` column. The relationship is a plain `HasMany`
-                            // (job_criteria), so Filament auto-fills `job_id` via
+                            // `JobCriterion` has its own required `company_id` column.
+                            // Filament auto-fills `job_id` via
                             // `$relationship->save($record)` but has no notion of the
                             // tenant's `company_id` — it must be injected explicitly here.
                             ->mutateRelationshipDataBeforeCreateUsing(function (array $data): array {
@@ -65,22 +62,18 @@ class JobForm
                                 return $data;
                             })
                             ->schema([
-                                Select::make('criterion_id')
-                                    ->label(__('jobs.criteria.criterion'))
-                                    ->relationship(
-                                        name: 'criterion',
-                                        titleAttribute: 'name',
-                                        modifyQueryUsing: fn (Builder $query): Builder => $query->where('company_id', Filament::getTenant()?->id),
-                                    )
+                                TextInput::make('prompt')
+                                    ->label(__('jobs.criteria.prompt'))
+                                    ->helperText(__('jobs.criteria.prompt_helper'))
                                     ->required()
-                                    ->searchable()
-                                    ->preload()
-                                    ->disableOptionsWhenSelectedInSiblingRepeaterItems(),
+                                    ->maxLength(150),
                                 Slider::make('weight')
                                     ->label(__('jobs.criteria.weight'))
                                     ->range(minValue: 0, maxValue: 10)
                                     ->step(1)
                                     ->default(5)
+                                    ->fillTrack()
+                                    ->extraAttributes(['style' => 'margin-block: 0.625rem;'])
                                     ->required(),
                             ])
                             ->addActionLabel(__('jobs.criteria.add'))

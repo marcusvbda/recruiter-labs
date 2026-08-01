@@ -4,6 +4,10 @@ return [
     'label' => 'Plantilla de correo',
     'plural_label' => 'Plantillas de correo',
     'navigation_label' => 'Plantillas de correo',
+    'sections' => [
+        'details' => 'Detalles de la plantilla',
+        'content' => 'Contenido del mensaje',
+    ],
     'fields' => [
         'name' => 'Nombre',
         'subject' => 'Asunto',

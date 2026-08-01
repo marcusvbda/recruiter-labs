@@ -4,6 +4,10 @@ return [
     'label' => 'Modelo de e-mail',
     'plural_label' => 'Modelos de e-mail',
     'navigation_label' => 'Modelos de e-mail',
+    'sections' => [
+        'details' => 'Detalhes do modelo',
+        'content' => 'Conteúdo da mensagem',
+    ],
     'fields' => [
         'name' => 'Nome',
         'subject' => 'Assunto',

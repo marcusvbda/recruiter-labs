@@ -1,9 +1,13 @@
 <?php
 
 return [
-    'label' => 'Evento de automação',
-    'plural_label' => 'Eventos de automação',
-    'navigation_label' => 'Automações',
+    'label' => 'Hook de evento',
+    'plural_label' => 'Hooks de eventos',
+    'navigation_label' => 'Hooks de eventos',
+    'sections' => [
+        'trigger' => 'Gatilho',
+        'action' => 'Ação',
+    ],
     'event_types' => [
         'application_submitted' => 'Candidatura enviada',
         'status_changed' => 'Status alterado',
@@ -21,6 +25,6 @@ return [
         'is_active' => 'Ativo',
     ],
     'relation_manager' => [
-        'title' => 'Eventos de automação',
+        'title' => 'Hooks de eventos',
     ],
 ];

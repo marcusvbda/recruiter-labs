@@ -2,6 +2,7 @@
 
 use App\Enums\AutomationActionType;
 use App\Enums\AutomationEventType;
+use App\Filament\Resources\AutomationEvents\AutomationEventResource;
 use App\Filament\Resources\AutomationEvents\Pages\CreateAutomationEvent;
 use App\Filament\Resources\AutomationEvents\Pages\EditAutomationEvent;
 use App\Filament\Resources\AutomationEvents\Pages\ListAutomationEvents;
@@ -27,6 +28,18 @@ uses(TestCase::class, RefreshDatabase::class);
 
 beforeEach(function () {
     $this->seed(PlanSeeder::class);
+});
+
+it('uses the event hooks resource name and URL slug', function () {
+    $company = Company::factory()->create();
+    actAsCompany($company);
+
+    expect(AutomationEventResource::getModelLabel())->toBe('Event Hook')
+        ->and(AutomationEventResource::getPluralModelLabel())->toBe('Event Hooks')
+        ->and(AutomationEventResource::getNavigationLabel())->toBe('Event Hooks')
+        ->and(AutomationEventResource::getSlug())->toBe('event-hooks')
+        ->and(AutomationEventResource::getUrl('index', tenant: $company))
+        ->toEndWith("/admin/{$company->slug}/automation/event-hooks");
 });
 
 it('lists automation events belonging to the current tenant', function () {

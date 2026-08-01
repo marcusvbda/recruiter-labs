@@ -34,7 +34,7 @@ class CandidatesStatsOverview extends BaseWidget
             Stat::make(__('dashboard.stats.total_candidates'), (string) $company->candidates()->count())
                 ->description(__('dashboard.chart.heading'))
                 ->chart($chart)
-                ->color('warning'),
+                ->color('primary'),
         ];
     }
 }

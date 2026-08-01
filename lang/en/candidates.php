@@ -4,6 +4,10 @@ return [
     'label' => 'Candidate',
     'plural_label' => 'Candidates',
     'navigation_label' => 'Candidates',
+    'sections' => [
+        'contact' => 'Contact information',
+        'social_profiles' => 'Social profiles',
+    ],
     'fields' => [
         'name' => 'Name',
         'email' => 'Email',

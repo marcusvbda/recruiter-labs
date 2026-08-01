@@ -4,6 +4,9 @@ return [
     'label' => 'Status',
     'plural_label' => 'Statuses',
     'navigation_label' => 'Statuses',
+    'sections' => [
+        'details' => 'Status details',
+    ],
     'fields' => [
         'name' => 'Name',
         'color' => 'Color',

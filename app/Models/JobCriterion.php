@@ -3,17 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\Pivot;
 
-#[Fillable(['company_id', 'job_id', 'criterion_id', 'weight'])]
-class JobCriterion extends Pivot
+#[Fillable(['company_id', 'job_id', 'prompt', 'weight'])]
+class JobCriterion extends Model
 {
     protected $table = 'job_criterion';
-
-    // Unlike default pivot tables, `job_criterion` has its own auto-increment
-    // `id` column, so this is a real Pivot model rather than an attribute-array pivot.
-    public $incrementing = true;
 
     protected function casts(): array
     {
@@ -22,13 +18,13 @@ class JobCriterion extends Pivot
         ];
     }
 
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
+    }
+
     public function job(): BelongsTo
     {
         return $this->belongsTo(Job::class);
-    }
-
-    public function criterion(): BelongsTo
-    {
-        return $this->belongsTo(Criterion::class);
     }
 }
