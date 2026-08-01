@@ -24,9 +24,9 @@ class JobsTable
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('key')
-                    ->label(__('jobs.fields.key'))
+                    ->label("URL")
                     ->copyable()
-                    ->copyableState(fn (Job $record): string => route('job.show', ['key' => $record->key]))
+                    ->copyableState(fn(Job $record): string => route('job.show', ['key' => $record->key]))
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('starts_at')
@@ -46,7 +46,7 @@ class JobsTable
                 Action::make('pipeline')
                     ->label(__('jobs.pipeline.view'))
                     ->icon(Heroicon::OutlinedViewColumns)
-                    ->url(fn ($record): string => JobResource::getUrl('pipeline', ['record' => $record])),
+                    ->url(fn($record): string => JobResource::getUrl('pipeline', ['record' => $record])),
                 EditAction::make(),
             ])
             ->toolbarActions([

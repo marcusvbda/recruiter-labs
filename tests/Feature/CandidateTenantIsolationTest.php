@@ -1,11 +1,15 @@
 <?php
 
+use App\Enums\PhoneCountry;
+use App\Filament\Resources\Candidates\Pages\CreateCandidate;
 use App\Filament\Resources\Candidates\Pages\EditCandidate;
 use App\Filament\Resources\Candidates\Pages\ListCandidates;
 use App\Models\Candidate;
 use App\Models\Company;
 use App\Models\Plan;
 use Database\Seeders\PlanSeeder;
+use Filament\Forms\Components\TextInput;
+use Filament\Support\RawJs;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -19,6 +23,61 @@ uses(TestCase::class, RefreshDatabase::class);
 beforeEach(function () {
     $this->seed(PlanSeeder::class);
 });
+
+it('changes the phone mask by country and stores the international number', function (PhoneCountry $country, string $phone, string $internationalPhone) {
+    $company = Company::factory()->create(['plan_id' => Plan::default()->id]);
+
+    actAsCompany($company);
+
+    Livewire::test(CreateCandidate::class)
+        ->set('data.phone_country', $country->value)
+        ->assertFormFieldExists('phone_country')
+        ->assertFormFieldExists('phone', fn ($field): bool => $field instanceof TextInput
+            && $field->getMask() instanceof RawJs
+            && $field->getPrefixLabel() === $country->callingCode())
+        ->fillForm([
+            'name' => "{$country->value} Phone Candidate",
+            'phone_country' => $country->value,
+            'phone' => $phone,
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    expect(Candidate::query()->where('name', "{$country->value} Phone Candidate")->sole()->phone)
+        ->toBe($internationalPhone);
+})->with([
+    'Brazil' => [PhoneCountry::Brazil, '(12) 12121-2121', '+5512121212121'],
+    'Ireland' => [PhoneCountry::Ireland, '87 123 4567', '+353871234567'],
+    'United States' => [PhoneCountry::UnitedStates, '(415) 555-2671', '+14155552671'],
+]);
+
+it('hydrates the country and national number from a stored international phone', function () {
+    $company = Company::factory()->create(['plan_id' => Plan::default()->id]);
+    $candidate = Candidate::factory()->for($company)->create(['phone' => '+353871234567']);
+
+    actAsCompany($company);
+
+    Livewire::test(EditCandidate::class, ['record' => $candidate->getRouteKey()])
+        ->assertFormSet([
+            'phone_country' => PhoneCountry::Ireland->value,
+            'phone' => '871234567',
+        ]);
+});
+
+it('formats the phone by country in the candidates list', function (string $phone, string $formattedPhone) {
+    $company = Company::factory()->create(['plan_id' => Plan::default()->id]);
+    $candidate = Candidate::factory()->for($company)->create(['phone' => $phone]);
+
+    actAsCompany($company);
+
+    Livewire::test(ListCandidates::class)
+        ->assertTableColumnFormattedStateSet('phone', $formattedPhone, $candidate);
+})->with([
+    'Brazil mobile' => ['+5512121212121', '+55 (12) 12121-2121'],
+    'Brazil landline' => ['+551212121212', '+55 (12) 1212-1212'],
+    'Ireland' => ['+353871234567', '+353 87 123 4567'],
+    'United States' => ['+14155552671', '+1 (415) 555-2671'],
+]);
 
 it('does not let a user from one company view a candidate belonging to another company', function () {
     $companyA = Company::factory()->create(['plan_id' => Plan::default()->id]);

@@ -24,9 +24,9 @@ class ReferralsTable
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('key')
-                    ->label(__('referrals.fields.key'))
+                    ->label("URL")
                     ->copyable()
-                    ->copyableState(fn (Referral $record): string => route('referral.show', ['key' => $record->key]))
+                    ->copyableState(fn(Referral $record): string => route('referral.show', ['key' => $record->key]))
                     ->searchable(),
                 TextColumn::make('created_at')
                     ->label(__('referrals.fields.created_at'))

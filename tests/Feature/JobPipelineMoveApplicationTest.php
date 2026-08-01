@@ -1,7 +1,10 @@
 <?php
 
+use App\Filament\Resources\Jobs\JobResource;
 use App\Filament\Resources\Jobs\Pages\JobPipeline;
+use App\Filament\Resources\Jobs\Widgets\JobPipelineKanban;
 use App\Models\Application;
+use App\Models\Candidate;
 use App\Models\Company;
 use App\Models\Job;
 use App\Models\Status;
@@ -13,12 +16,6 @@ use Tests\TestCase;
 // Note: the `actAsCompany()` helper used below is declared once, globally, in
 // tests/Pest.php and shared across tenant-isolation test files.
 //
-// `JobPipeline::moveApplication()` is the single most security-sensitive
-// piece introduced by this checkpoint: it is a public Livewire method
-// reachable with attacker-supplied ids from the client (the Kanban drag
-// handler), so it must re-validate server-side that both the application and
-// the destination status belong to the bound job/company before persisting.
-
 uses(TestCase::class, RefreshDatabase::class);
 
 beforeEach(function () {
@@ -37,8 +34,8 @@ it('moves an application belonging to the bound job to a status belonging to the
 
     actAsCompany($company);
 
-    Livewire::test(JobPipeline::class, ['record' => $job->getRouteKey()])
-        ->call('moveApplication', $application->id, $destinationStatus->id);
+    Livewire::test(JobPipelineKanban::class, ['record' => $job])
+        ->call('moveRecord', $application->id, (string) $destinationStatus->id);
 
     expect($application->fresh()->status_id)->toBe($destinationStatus->id);
 });
@@ -58,8 +55,8 @@ it('rejects moving an application to a status belonging to a different company',
 
     actAsCompany($companyA);
 
-    Livewire::test(JobPipeline::class, ['record' => $job->getRouteKey()])
-        ->call('moveApplication', $application->id, $foreignStatus->id);
+    Livewire::test(JobPipelineKanban::class, ['record' => $job])
+        ->call('moveRecord', $application->id, (string) $foreignStatus->id);
 
     expect($application->fresh()->status_id)->toBe($originalStatus->id)
         ->and($application->fresh()->status_id)->not->toBe($foreignStatus->id);
@@ -74,7 +71,6 @@ it('rejects moving an application that does not belong to the bound job', functi
     $originalStatus = Status::factory()->for($company)->create(['order' => 0]);
     $destinationStatus = Status::factory()->for($company)->create(['order' => 1]);
 
-    // Belongs to `$otherJob`, not the job the pipeline page is bound to.
     $foreignApplication = Application::factory()->for($company)->create([
         'job_id' => $otherJob->id,
         'status_id' => $originalStatus->id,
@@ -82,16 +78,13 @@ it('rejects moving an application that does not belong to the bound job', functi
 
     actAsCompany($company);
 
-    Livewire::test(JobPipeline::class, ['record' => $job->getRouteKey()])
-        ->call('moveApplication', $foreignApplication->id, $destinationStatus->id);
+    Livewire::test(JobPipelineKanban::class, ['record' => $job])
+        ->call('moveRecord', $foreignApplication->id, (string) $destinationStatus->id);
 
     expect($foreignApplication->fresh()->status_id)->toBe($originalStatus->id);
 });
 
 it('rejects moving an application belonging to a different company even when the status also belongs to that other company', function () {
-    // Belt-and-braces adversarial case: both the application and the
-    // destination status are foreign to the tenant currently acting, so
-    // the job-ownership check alone (via `job_id`) must still catch it.
     $companyA = Company::factory()->create();
     $companyB = Company::factory()->create();
 
@@ -106,8 +99,47 @@ it('rejects moving an application belonging to a different company even when the
 
     actAsCompany($companyA);
 
-    Livewire::test(JobPipeline::class, ['record' => $job->getRouteKey()])
-        ->call('moveApplication', $foreignApplication->id, $foreignStatus->id);
+    Livewire::test(JobPipelineKanban::class, ['record' => $job])
+        ->call('moveRecord', $foreignApplication->id, (string) $foreignStatus->id);
 
     expect($foreignApplication->fresh()->status_id)->toBe($foreignStatus->id);
+});
+
+it('shows only candidates linked to the bound job on the kanban board', function () {
+    $company = Company::factory()->create();
+    $job = Job::factory()->for($company)->create();
+    $otherJob = Job::factory()->for($company)->create();
+    $status = Status::factory()->for($company)->create();
+    $includedCandidate = Candidate::factory()->for($company)->create(['name' => 'Included Candidate']);
+    $excludedCandidate = Candidate::factory()->for($company)->create(['name' => 'Excluded Candidate']);
+
+    Application::factory()->for($company)->create([
+        'job_id' => $job->id,
+        'candidate_id' => $includedCandidate->id,
+        'status_id' => $status->id,
+    ]);
+    Application::factory()->for($company)->create([
+        'job_id' => $otherJob->id,
+        'candidate_id' => $excludedCandidate->id,
+        'status_id' => $status->id,
+    ]);
+
+    actAsCompany($company);
+
+    Livewire::test(JobPipelineKanban::class, ['record' => $job])
+        ->assertSee($includedCandidate->name)
+        ->assertDontSee($excludedCandidate->name);
+});
+
+it('renders the job pipeline as a kanban without the list view', function () {
+    $company = Company::factory()->create();
+    $job = Job::factory()->for($company)->create();
+
+    actAsCompany($company);
+
+    $this->get(JobResource::getUrl('pipeline', ['record' => $job], tenant: $company))
+        ->assertSuccessful()
+        ->assertSeeLivewire(JobPipeline::class)
+        ->assertSeeLivewire(JobPipelineKanban::class)
+        ->assertDontSee(__('applications.pipeline.view_list'));
 });

@@ -10,7 +10,6 @@ return [
     'fields' => [
         'job' => 'Job',
         'user' => 'User',
-        'key' => 'Key',
         'created_at' => 'Created at',
     ],
 ];

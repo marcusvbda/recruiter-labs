@@ -13,7 +13,8 @@
         "laravel/framework": "^13.17",
         "laravel/octane": "^2.18",
         "laravel/tinker": "^3.0",
-        "laravel/wayfinder": "^0.1.14"
+        "laravel/wayfinder": "^0.1.14",
+        "usamamuneerchaudhary/filament-model-states": "^1.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.24",

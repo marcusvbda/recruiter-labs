@@ -10,7 +10,6 @@ return [
         'description' => 'Description',
         'starts_at' => 'Starts at',
         'ends_at' => 'Ends at',
-        'key' => 'Key',
         'published' => 'Published',
         'campaign_expectation' => 'Campaign expectation',
         'campaign_expectation_helper' => 'A free-text prompt describing what success looks like for this campaign, e.g. "Expect to hire 4 senior developers meeting at least 80% of criteria by the campaign end date". Used later by AI to evaluate whether the campaign met its goal.',

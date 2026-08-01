@@ -12,6 +12,7 @@ return [
         'name' => 'Nombre',
         'email' => 'Correo electrónico',
         'phone' => 'Teléfono',
+        'phone_country' => 'Código de país',
         'socials' => 'Redes sociales',
         'network' => 'Red',
         'account' => 'Cuenta',
@@ -21,7 +22,6 @@ return [
         'created_between' => 'Creado entre',
         'from' => 'Desde',
         'until' => 'Hasta',
-        'social_network' => 'Red social',
     ],
     'networks' => [
         'instagram' => 'Instagram',

@@ -3,8 +3,10 @@
 namespace App\Filament\Resources\Jobs\Pages;
 
 use App\Filament\Resources\Jobs\JobResource;
+use App\Filament\Resources\Jobs\Widgets\JobPipelineKanban;
 use App\Models\Application;
 use App\Models\Candidate;
+use App\Models\Job;
 use App\Models\Status;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
@@ -16,7 +18,7 @@ use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
-use Illuminate\Support\Collection;
+use LogicException;
 
 class JobPipeline extends Page
 {
@@ -30,55 +32,16 @@ class JobPipeline extends Page
 
     protected string $view = 'filament.resources.jobs.pages.job-pipeline';
 
-    /**
-     * Toggles between the Kanban and list rendering modes. Deliberately not
-     * named `$view`: `Filament\Pages\Page` already declares a (non-static)
-     * `$view` property holding the Blade view path used to render the page —
-     * reusing that name here would silently overwrite it.
-     */
-    public string $activeView = 'kanban';
-
-    /** @var Collection<int, Status> */
-    public Collection $statuses;
-
-    /** @var Collection<int, Collection<int, Application>> */
-    public Collection $applicationsByStatus;
-
     public function mount(int|string $record): void
     {
         $this->record = $this->resolveRecord($record);
 
-        abort_unless(JobResource::canEdit($this->getRecord()), 403);
-
-        $this->refreshPipelineData();
+        abort_unless(JobResource::canEdit($this->getJob()), 403);
     }
 
     public function getTitle(): string|Htmlable
     {
-        return __('applications.pipeline.title', ['job' => $this->getRecord()->name]);
-    }
-
-    protected function refreshPipelineData(): void
-    {
-        $job = $this->getRecord();
-
-        $this->statuses = $job->company->statuses()->orderBy('order')->get();
-
-        // `collect()` (rather than assigning the `groupBy()` result directly)
-        // forces a plain `Illuminate\Support\Collection` as the outer
-        // container. Left as-is, `groupBy()` called on an
-        // `Illuminate\Database\Eloquent\Collection` returns another Eloquent
-        // Collection via late static binding — even though its items are
-        // inner `Collection`s, not `Application` models — which makes
-        // Livewire's Eloquent-collection synthesizer try to call `getKey()`
-        // on each group and fatal.
-        $this->applicationsByStatus = collect(
-            $job->applications()
-                ->with(['candidate', 'status'])
-                ->get()
-                ->groupBy('status_id')
-                ->all(),
-        );
+        return __('applications.pipeline.title', ['job' => $this->getJob()->name]);
     }
 
     /**
@@ -87,16 +50,6 @@ class JobPipeline extends Page
     protected function getHeaderActions(): array
     {
         return [
-            Action::make('viewKanban')
-                ->label(__('applications.pipeline.view_kanban'))
-                ->icon(Heroicon::OutlinedViewColumns)
-                ->color(fn (): string => $this->activeView === 'kanban' ? 'primary' : 'gray')
-                ->action(fn () => $this->activeView = 'kanban'),
-            Action::make('viewList')
-                ->label(__('applications.pipeline.view_list'))
-                ->icon(Heroicon::OutlinedQueueList)
-                ->color(fn (): string => $this->activeView === 'list' ? 'primary' : 'gray')
-                ->action(fn () => $this->activeView = 'list'),
             Action::make('addCandidate')
                 ->label(__('applications.pipeline.add_candidate'))
                 ->icon(Heroicon::OutlinedUserPlus)
@@ -104,24 +57,24 @@ class JobPipeline extends Page
                     Select::make('candidate_id')
                         ->label(__('applications.pipeline.select_candidate'))
                         ->options(fn (): array => Candidate::query()
-                            ->where('company_id', Filament::getTenant()?->id)
+                            ->where('company_id', Filament::getTenant()?->getKey())
                             ->whereDoesntHave(
                                 'applications',
-                                fn (Builder $query): Builder => $query->where('job_id', $this->getRecord()->id),
+                                fn (Builder $query): Builder => $query->where('job_id', $this->getJob()->id),
                             )
                             ->pluck('name', 'id')
                             ->all())
                         ->helperText(fn (Select $component): ?string => $component->getOptions() === []
-                            ? __('applications.pipeline.no_eligible_candidates')
+                            ? (string) __('applications.pipeline.no_eligible_candidates')
                             : null)
                         ->searchable()
                         ->required(),
                 ])
                 ->action(function (array $data): void {
-                    $job = $this->getRecord();
+                    $job = $this->getJob();
 
                     $firstStatus = Status::query()
-                        ->where('company_id', Filament::getTenant()?->id)
+                        ->where('company_id', Filament::getTenant()?->getKey())
                         ->orderBy('order')
                         ->first();
 
@@ -136,7 +89,7 @@ class JobPipeline extends Page
 
                     try {
                         Application::query()->create([
-                            'company_id' => Filament::getTenant()?->id,
+                            'company_id' => Filament::getTenant()?->getKey(),
                             'job_id' => $job->id,
                             'candidate_id' => $data['candidate_id'],
                             'status_id' => $firstStatus->id,
@@ -155,40 +108,29 @@ class JobPipeline extends Page
                         ->success()
                         ->send();
 
-                    $this->refreshPipelineData();
+                    $this->dispatch('pipeline-updated')->to(JobPipelineKanban::class);
                 }),
         ];
     }
 
     /**
-     * Livewire-callable from the Kanban board's Alpine/SortableJS `x-on:end`
-     * handler when a card is dropped into a (possibly different) column.
-     *
-     * Security: this is a public method reachable with attacker-supplied IDs
-     * from the client, so both the application and the destination status
-     * must be re-validated server-side against this job's own tenant/company
-     * before persisting — the drag-and-drop markup alone cannot be trusted.
+     * @return array<class-string>
      */
-    public function moveApplication(int $applicationId, int $statusId): void
+    protected function getHeaderWidgets(): array
     {
-        $job = $this->getRecord();
+        return [
+            JobPipelineKanban::class,
+        ];
+    }
 
-        $applicationBelongsToJob = Application::query()
-            ->whereKey($applicationId)
-            ->where('job_id', $job->id)
-            ->exists();
+    protected function getJob(): Job
+    {
+        $record = $this->getRecord();
 
-        $statusBelongsToCompany = Status::query()
-            ->whereKey($statusId)
-            ->where('company_id', $job->company_id)
-            ->exists();
-
-        if (! $applicationBelongsToJob || ! $statusBelongsToCompany) {
-            return;
+        if (! $record instanceof Job) {
+            throw new LogicException('The pipeline page must be bound to a job.');
         }
 
-        Application::query()->whereKey($applicationId)->update(['status_id' => $statusId]);
-
-        $this->refreshPipelineData();
+        return $record;
     }
 }

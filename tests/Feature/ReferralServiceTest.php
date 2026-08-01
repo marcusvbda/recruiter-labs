@@ -6,6 +6,7 @@ use App\Services\ReferralService;
 use Database\Seeders\PlanSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 uses(TestCase::class, RefreshDatabase::class);
@@ -83,4 +84,23 @@ it('returns 404 from the public referral route when its job is unavailable', fun
 
     $this->get(route('referral.show', ['key' => $referral->key]))
         ->assertNotFound();
+});
+
+it('renders the referral application page for an available job', function () {
+    $job = Job::factory()->create([
+        'published' => true,
+        'starts_at' => '2026-08-01',
+        'ends_at' => '2026-08-31',
+    ]);
+    $referral = Referral::factory()
+        ->for($job->company)
+        ->for($job)
+        ->create();
+
+    $this->get(route('referral.show', ['key' => $referral->key]))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page): Assert => $page
+            ->component('job/apply')
+            ->where('referral.id', $referral->id)
+            ->where('job.id', $job->id));
 });

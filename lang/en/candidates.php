@@ -12,6 +12,7 @@ return [
         'name' => 'Name',
         'email' => 'Email',
         'phone' => 'Phone',
+        'phone_country' => 'Country code',
         'socials' => 'Social networks',
         'network' => 'Network',
         'account' => 'Account',
@@ -21,7 +22,6 @@ return [
         'created_between' => 'Created between',
         'from' => 'From',
         'until' => 'Until',
-        'social_network' => 'Social network',
     ],
     'networks' => [
         'instagram' => 'Instagram',
