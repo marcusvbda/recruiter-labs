@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\ApplicationLocale;
 use App\Enums\ApplicationQuestionType;
 use App\Enums\CoverLetterType;
 use App\Filament\Resources\Jobs\Pages\CreateJob;
@@ -106,6 +107,48 @@ it('changes the published status from the job form', function () {
     expect($job->fresh()->published)->toBeFalse();
 });
 
+it('changes the application page language from the job form', function () {
+    $company = Company::factory()->create();
+    actAsCompany($company);
+
+    Livewire::test(CreateJob::class)
+        ->fillForm([
+            'name' => 'Localized Job',
+            'application_locale' => ApplicationLocale::BrazilianPortuguese->value,
+            'jobCriteria' => [],
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $job = Job::query()->where('name', 'Localized Job')->sole();
+
+    expect($job->application_locale)->toBe(ApplicationLocale::BrazilianPortuguese);
+
+    Livewire::test(EditJob::class, ['record' => $job->getRouteKey()])
+        ->fillForm([
+            'application_locale' => ApplicationLocale::Spanish->value,
+            'jobCriteria' => [],
+        ])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($job->fresh()->application_locale)->toBe(ApplicationLocale::Spanish);
+});
+
+it('rejects an unsupported application page language', function () {
+    $company = Company::factory()->create();
+    actAsCompany($company);
+
+    Livewire::test(CreateJob::class)
+        ->fillForm([
+            'name' => 'Unsupported Locale Job',
+            'application_locale' => 'fr',
+            'jobCriteria' => [],
+        ])
+        ->call('create')
+        ->assertHasFormErrors(['application_locale']);
+});
+
 it('creates a job with campaign fields and job criteria repeater rows', function () {
     $company = Company::factory()->create();
     actAsCompany($company);
@@ -118,6 +161,7 @@ it('creates a job with campaign fields and job criteria repeater rows', function
     Livewire::test(CreateJob::class)
         ->fillForm([
             'name' => 'Senior Backend Engineer',
+            'application_locale' => ApplicationLocale::English->value,
             'description' => 'We are hiring for a senior backend role.',
             'starts_at' => '2026-08-01',
             'ends_at' => '2026-09-01',
@@ -157,6 +201,7 @@ it('creates a job with campaign fields and job criteria repeater rows', function
     $job = Job::query()->where('name', 'Senior Backend Engineer')->sole();
 
     expect($job->company_id)->toBe($company->id)
+        ->and($job->application_locale)->toBe(ApplicationLocale::English)
         ->and($job->description)->toBe('<p>We are hiring for a senior backend role.</p>')
         ->and($job->starts_at->toDateString())->toBe('2026-08-01')
         ->and($job->ends_at->toDateString())->toBe('2026-09-01')

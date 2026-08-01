@@ -26,7 +26,7 @@ it('creates the default recruiting pipeline for every company', function () {
             'Offer',
             'Hired',
             'Rejected',
-        ]);
+        ])->and($company->statuses()->where('is_hired', true)->pluck('name')->all())->toBe(['Hired']);
     }
 });
 

@@ -8,10 +8,17 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['company_id', 'name', 'color', 'order'])]
+#[Fillable(['company_id', 'name', 'color', 'order', 'is_hired'])]
 class Status extends Model
 {
     use HasFactory;
+
+    protected function casts(): array
+    {
+        return [
+            'is_hired' => 'boolean',
+        ];
+    }
 
     public function company(): BelongsTo
     {

@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Statuses\Schemas;
 
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
@@ -24,6 +25,9 @@ class StatusForm
                         ColorPicker::make('color')
                             ->label(__('statuses.fields.color'))
                             ->required(),
+                        Toggle::make('is_hired')
+                            ->label(__('statuses.fields.is_hired'))
+                            ->helperText(__('statuses.fields.is_hired_helper')),
                     ]),
             ]);
     }

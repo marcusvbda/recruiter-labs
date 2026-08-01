@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Jobs\Schemas;
 
+use App\Enums\ApplicationLocale;
 use App\Enums\ApplicationQuestionType;
 use App\Enums\CoverLetterType;
 use App\Models\CvFileType;
@@ -34,6 +35,13 @@ class JobForm
                             ->label(__('jobs.fields.name'))
                             ->required()
                             ->maxLength(255),
+                        Select::make('application_locale')
+                            ->label(__('jobs.fields.application_locale'))
+                            ->helperText(__('jobs.fields.application_locale_helper'))
+                            ->options(ApplicationLocale::options())
+                            ->default(ApplicationLocale::English->value)
+                            ->native(false)
+                            ->required(),
                         Toggle::make('published')
                             ->label(__('jobs.fields.published'))
                             ->default(false),

@@ -23,6 +23,7 @@ export interface Job extends Model {
     company_id: number;
     company: JobCompany;
     name: string;
+    application_locale: 'en' | 'pt_BR' | 'es';
     description: string | null;
     starts_at: string | null;
     ends_at: string | null;

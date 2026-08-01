@@ -16,6 +16,8 @@ class EditJob extends EditRecord
 {
     protected static string $resource = JobResource::class;
 
+    public string $activeJobEditTab = 'edit';
+
     protected function getHeaderActions(): array
     {
         return [
@@ -29,12 +31,12 @@ class EditJob extends EditRecord
             ->components([
                 Tabs::make('job-edit-tabs')
                     ->tabs([
-                        Tab::make(__('jobs.edit_tabs.edit'))
+                        'edit' => Tab::make(__('jobs.edit_tabs.edit'))
                             ->icon(Heroicon::OutlinedPencilSquare)
                             ->schema([
                                 $this->getFormContentComponent(),
                             ]),
-                        Tab::make(__('jobs.edit_tabs.preview'))
+                        'preview' => Tab::make(__('jobs.edit_tabs.preview'))
                             ->icon(Heroicon::OutlinedEye)
                             ->schema([
                                 View::make('filament.resources.jobs.components.application-preview')
@@ -43,6 +45,7 @@ class EditJob extends EditRecord
                                     ]),
                             ]),
                     ])
+                    ->livewireProperty('activeJobEditTab')
                     ->columnSpanFull(),
                 $this->getRelationManagersContentComponent(),
             ]);
@@ -56,7 +59,7 @@ class EditJob extends EditRecord
 
         return route('job.preview', [
             'key' => $job->key,
-            'version' => $job->updated_at?->timestamp,
+            'version' => now()->getTimestampMs(),
         ]);
     }
 }

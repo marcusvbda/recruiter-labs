@@ -2,35 +2,38 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\HasUniqueKey;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['company_id', 'job_id', 'user_id'])]
-class Referral extends Model
+#[Fillable(['company_id', 'job_id', 'referral_id', 'ip_address'])]
+class JobClick extends Model
 {
-    use HasFactory, HasUniqueKey;
+    use HasFactory;
 
+    /** @return BelongsTo<Company, $this> */
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
     }
 
+    /** @return BelongsTo<Job, $this> */
     public function job(): BelongsTo
     {
         return $this->belongsTo(Job::class);
     }
 
-    public function user(): BelongsTo
+    /** @return BelongsTo<Referral, $this> */
+    public function referral(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Referral::class);
     }
 
-    public function clicks(): HasMany
+    /** @return HasMany<JobClickUtmParameter, $this> */
+    public function utmParameters(): HasMany
     {
-        return $this->hasMany(JobClick::class);
+        return $this->hasMany(JobClickUtmParameter::class);
     }
 }

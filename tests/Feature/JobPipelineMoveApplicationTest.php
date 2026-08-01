@@ -1,7 +1,7 @@
 <?php
 
 use App\Filament\Resources\Jobs\JobResource;
-use App\Filament\Resources\Jobs\Pages\JobPipeline;
+use App\Filament\Resources\Jobs\Pages\ViewJob;
 use App\Filament\Resources\Jobs\Widgets\JobPipelineKanban;
 use App\Models\Application;
 use App\Models\Candidate;
@@ -131,15 +131,15 @@ it('shows only candidates linked to the bound job on the kanban board', function
         ->assertDontSee($excludedCandidate->name);
 });
 
-it('renders the job pipeline as a kanban without the list view', function () {
+it('renders the job pipeline as a kanban inside the job view', function () {
     $company = Company::factory()->create();
     $job = Job::factory()->for($company)->create();
 
     actAsCompany($company);
 
-    $this->get(JobResource::getUrl('pipeline', ['record' => $job], tenant: $company))
+    $this->get(JobResource::getUrl('view', ['record' => $job], tenant: $company))
         ->assertSuccessful()
-        ->assertSeeLivewire(JobPipeline::class)
+        ->assertSeeLivewire(ViewJob::class)
         ->assertSeeLivewire(JobPipelineKanban::class)
         ->assertDontSee(__('applications.pipeline.view_list'));
 });

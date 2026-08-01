@@ -40,7 +40,8 @@ When a task involves generating an implementation plan `.md` file (e.g. via a pl
 
 ## Conventions
 
-_(to be filled in as the project gets started — folder structure, naming conventions, etc.)_
+- Keep Inertia page files focused on page-level rendering and component composition. Move reusable or substantial UI into `resources/js/components`.
+- When a file needs small local React components, declare them as arrow functions. The main Inertia page component must be declared as a default exported function.
 
 ===
 
@@ -145,7 +146,7 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 - Execute PHP in app context for debugging and testing code. Do not create models without user approval, prefer tests with factories instead. Prefer existing Artisan commands over custom tinker code.
 - Always use single quotes to prevent shell expansion: `php artisan tinker --execute 'Your::code();'`
-  - Double quotes for PHP strings inside: `php artisan tinker --execute 'User::where("active", true)->count();'`
+    - Double quotes for PHP strings inside: `php artisan tinker --execute 'User::where("active", true)->count();'`
 
 === php rules ===
 

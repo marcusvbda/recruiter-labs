@@ -5,11 +5,8 @@ use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\ReferralController;
 use Filament\Http\Middleware\Authenticate;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
-Route::get('/', function () {
-    return Inertia::render('welcome');
-})->name('home');
+Route::get('/', fn () => redirect('/admin'))->name('home');
 
 Route::get('/job/{key}', [JobController::class, 'show'])->name('job.show');
 

@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\ApplicationLocale;
 use App\Enums\ApplicationQuestionType;
 use App\Enums\CoverLetterType;
 use App\Models\Company;
@@ -10,6 +11,7 @@ use App\Models\Job;
 use App\Models\JobApplicationQuestion;
 use App\Models\JobCriterion;
 use App\Models\Plan;
+use App\Models\Referral;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -28,11 +30,11 @@ class JobSeeder extends Seeder
                 ],
             );
 
-            User::query()
+            $admin = User::query()
                 ->where('email', 'admin@user.com')
-                ->firstOrFail()
-                ->companies()
-                ->syncWithoutDetaching([$company->id]);
+                ->firstOrFail();
+
+            $admin->companies()->syncWithoutDetaching([$company->id]);
 
             $job = Job::query()->firstOrNew([
                 'company_id' => $company->id,
@@ -40,6 +42,7 @@ class JobSeeder extends Seeder
             ]);
 
             $job->fill([
+                'application_locale' => ApplicationLocale::English,
                 'description' => <<<'HTML'
 <p>Join Gravity Labs to build thoughtful recruiting products used by growing teams around the world.</p>
 
@@ -158,6 +161,60 @@ HTML,
                     'weight' => 7,
                 ],
             ]);
+
+            $this->seedAnalytics($job, $admin);
         });
+    }
+
+    private function seedAnalytics(Job $job, User $admin): void
+    {
+        $referral = Referral::query()->firstOrNew([
+            'company_id' => $job->company_id,
+            'job_id' => $job->id,
+            'user_id' => $admin->id,
+        ]);
+
+        if (! $referral->exists) {
+            $referral->key = (string) Str::uuid();
+            $referral->save();
+        }
+
+        $job->clicks()->delete();
+
+        $traffic = [
+            ['ip' => '203.0.113.10', 'source' => 'linkedin', 'medium' => 'social', 'campaign' => 'senior-engineering', 'content' => 'carousel', 'referral' => false],
+            ['ip' => '203.0.113.10', 'source' => 'linkedin', 'medium' => 'social', 'campaign' => 'senior-engineering', 'content' => 'carousel', 'referral' => false],
+            ['ip' => '203.0.113.10', 'source' => 'linkedin', 'medium' => 'social', 'campaign' => 'senior-engineering', 'content' => 'video', 'referral' => false],
+            ['ip' => '203.0.113.11', 'source' => 'linkedin', 'medium' => 'social', 'campaign' => 'senior-engineering', 'content' => 'carousel', 'referral' => false],
+            ['ip' => '203.0.113.12', 'source' => 'linkedin', 'medium' => 'social', 'campaign' => 'senior-engineering', 'content' => 'founder-post', 'referral' => false],
+            ['ip' => '198.51.100.20', 'source' => 'google', 'medium' => 'cpc', 'campaign' => 'laravel-jobs', 'content' => 'search-ad', 'referral' => false],
+            ['ip' => '198.51.100.20', 'source' => 'google', 'medium' => 'cpc', 'campaign' => 'laravel-jobs', 'content' => 'search-ad', 'referral' => false],
+            ['ip' => '198.51.100.21', 'source' => 'google', 'medium' => 'cpc', 'campaign' => 'laravel-jobs', 'content' => 'search-ad', 'referral' => false],
+            ['ip' => '192.0.2.30', 'source' => 'newsletter', 'medium' => 'email', 'campaign' => 'weekly-openings', 'content' => 'top-role', 'referral' => false],
+            ['ip' => '192.0.2.31', 'source' => 'newsletter', 'medium' => 'email', 'campaign' => 'weekly-openings', 'content' => 'top-role', 'referral' => false],
+            ['ip' => '192.0.2.40', 'source' => 'employee', 'medium' => 'referral', 'campaign' => 'internal-referrals', 'content' => 'direct-share', 'referral' => true],
+            ['ip' => '192.0.2.41', 'source' => 'employee', 'medium' => 'referral', 'campaign' => 'internal-referrals', 'content' => 'direct-share', 'referral' => true],
+        ];
+
+        foreach ($traffic as $index => $visit) {
+            $click = $job->clicks()->create([
+                'company_id' => $job->company_id,
+                'referral_id' => $visit['referral'] ? $referral->id : null,
+                'ip_address' => $visit['ip'],
+            ]);
+
+            $visitedAt = now()->subHours(($index + 1) * 7);
+            $click->forceFill([
+                'created_at' => $visitedAt,
+                'updated_at' => $visitedAt,
+            ])->save();
+
+            $click->utmParameters()->createMany([
+                ['name' => 'utm_source', 'value' => $visit['source']],
+                ['name' => 'utm_medium', 'value' => $visit['medium']],
+                ['name' => 'utm_campaign', 'value' => $visit['campaign']],
+                ['name' => 'utm_content', 'value' => $visit['content']],
+            ]);
+        }
     }
 }

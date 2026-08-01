@@ -10,6 +10,8 @@ return [
     'fields' => [
         'name' => 'Nome',
         'color' => 'Cor',
+        'is_hired' => 'Status de contratação',
+        'is_hired_helper' => 'Candidaturas neste status contam como contratações realizadas.',
     ],
     'notifications' => [
         'has_applications' => 'Este status possui candidatos e não pode ser excluído.',

@@ -5,8 +5,8 @@ namespace App\Filament\Resources\Jobs;
 use App\Filament\Clusters\Recruitment\RecruitmentCluster;
 use App\Filament\Resources\Jobs\Pages\CreateJob;
 use App\Filament\Resources\Jobs\Pages\EditJob;
-use App\Filament\Resources\Jobs\Pages\JobPipeline;
 use App\Filament\Resources\Jobs\Pages\ListJobs;
+use App\Filament\Resources\Jobs\Pages\ViewJob;
 use App\Filament\Resources\Jobs\RelationManagers\AutomationEventsRelationManager;
 use App\Filament\Resources\Jobs\Schemas\JobForm;
 use App\Filament\Resources\Jobs\Tables\JobsTable;
@@ -57,8 +57,8 @@ class JobResource extends Resource
         return [
             'index' => ListJobs::route('/'),
             'create' => CreateJob::route('/create'),
+            'view' => ViewJob::route('/{record}'),
             'edit' => EditJob::route('/{record}/edit'),
-            'pipeline' => JobPipeline::route('/{record}/pipeline'),
         ];
     }
 

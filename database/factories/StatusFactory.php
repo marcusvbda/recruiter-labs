@@ -23,6 +23,7 @@ class StatusFactory extends Factory
             'name' => $this->faker->unique()->word(),
             'color' => $this->faker->hexColor(),
             'order' => 0,
+            'is_hired' => false,
         ];
     }
 }

@@ -14,6 +14,7 @@ return new class extends Migration
             $table->string('name');
             $table->string('color');
             $table->unsignedInteger('order')->default(0);
+            $table->boolean('is_hired')->default(false);
             $table->timestamps();
 
             $table->unique(['company_id', 'name']);

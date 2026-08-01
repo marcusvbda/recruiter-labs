@@ -2,13 +2,11 @@
 
 namespace App\Filament\Resources\Jobs\Tables;
 
-use App\Filament\Resources\Jobs\JobResource;
 use App\Models\Job;
-use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Support\Icons\Heroicon;
+use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -35,10 +33,7 @@ class JobsTable
                     ->sortable(),
             ])
             ->recordActions([
-                Action::make('pipeline')
-                    ->label(__('jobs.pipeline.view'))
-                    ->icon(Heroicon::OutlinedViewColumns)
-                    ->url(fn ($record): string => JobResource::getUrl('pipeline', ['record' => $record])),
+                ViewAction::make(),
                 EditAction::make(),
             ])
             ->toolbarActions([
