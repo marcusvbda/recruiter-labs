@@ -7,5 +7,22 @@ return [
     'fields' => [
         'name' => 'Name',
         'created_at' => 'Created at',
+        'description' => 'Description',
+        'starts_at' => 'Starts at',
+        'ends_at' => 'Ends at',
+        'campaign_expectation' => 'Campaign expectation',
+        'campaign_expectation_helper' => 'A free-text prompt describing what success looks like for this campaign, e.g. "Expect to hire 4 senior developers meeting at least 80% of criteria by the campaign end date". Used later by AI to evaluate whether the campaign met its goal.',
+    ],
+    'sections' => [
+        'campaign' => 'Campaign',
+        'criteria' => 'Evaluation criteria',
+    ],
+    'criteria' => [
+        'criterion' => 'Criterion',
+        'weight' => 'Weight',
+        'add' => 'Add criterion',
+    ],
+    'pipeline' => [
+        'view' => 'Pipeline',
     ],
 ];

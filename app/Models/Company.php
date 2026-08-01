@@ -36,6 +36,31 @@ class Company extends Model
         return $this->hasMany(Referral::class);
     }
 
+    public function statuses(): HasMany
+    {
+        return $this->hasMany(Status::class);
+    }
+
+    public function criteria(): HasMany
+    {
+        return $this->hasMany(Criterion::class);
+    }
+
+    public function emailTemplates(): HasMany
+    {
+        return $this->hasMany(EmailTemplate::class);
+    }
+
+    public function automationEvents(): HasMany
+    {
+        return $this->hasMany(AutomationEvent::class);
+    }
+
+    public function applications(): HasMany
+    {
+        return $this->hasMany(Application::class);
+    }
+
     public function plan(): BelongsTo
     {
         return $this->belongsTo(Plan::class);

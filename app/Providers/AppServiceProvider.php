@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Models\Job;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
@@ -52,5 +54,11 @@ class AppServiceProvider extends ServiceProvider
                 ->uncompromised()
             : null,
         );
+
+        // Stores a short stable alias in polymorphic `*_type` columns
+        // (e.g. `automatable_type`) instead of the FQCN.
+        Relation::enforceMorphMap([
+            'job' => Job::class,
+        ]);
     }
 }

@@ -2,9 +2,16 @@
 
 namespace App\Filament\Resources\Jobs\Schemas;
 
+use Filament\Facades\Filament;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Slider;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Illuminate\Database\Eloquent\Builder;
 
 class JobForm
 {
@@ -20,6 +27,65 @@ class JobForm
                             ->label(__('jobs.fields.name'))
                             ->required()
                             ->maxLength(255),
+                    ]),
+                Section::make(__('jobs.sections.campaign'))
+                    ->columnSpanFull()
+                    ->columns(2)
+                    ->schema([
+                        Textarea::make('description')
+                            ->label(__('jobs.fields.description'))
+                            ->rows(4)
+                            ->columnSpanFull(),
+                        DatePicker::make('starts_at')
+                            ->label(__('jobs.fields.starts_at')),
+                        DatePicker::make('ends_at')
+                            ->label(__('jobs.fields.ends_at'))
+                            ->afterOrEqual('starts_at'),
+                        Textarea::make('campaign_expectation')
+                            ->label(__('jobs.fields.campaign_expectation'))
+                            ->rows(3)
+                            ->helperText(__('jobs.fields.campaign_expectation_helper'))
+                            ->columnSpanFull(),
+                    ]),
+                Section::make(__('jobs.sections.criteria'))
+                    ->columnSpanFull()
+                    ->columns(1)
+                    ->schema([
+                        Repeater::make('jobCriteria')
+                            ->label('')
+                            ->relationship()
+                            // `JobCriterion` is a real Pivot model with its own required
+                            // `company_id` column. The relationship is a plain `HasMany`
+                            // (job_criteria), so Filament auto-fills `job_id` via
+                            // `$relationship->save($record)` but has no notion of the
+                            // tenant's `company_id` — it must be injected explicitly here.
+                            ->mutateRelationshipDataBeforeCreateUsing(function (array $data): array {
+                                $data['company_id'] = Filament::getTenant()?->id;
+
+                                return $data;
+                            })
+                            ->schema([
+                                Select::make('criterion_id')
+                                    ->label(__('jobs.criteria.criterion'))
+                                    ->relationship(
+                                        name: 'criterion',
+                                        titleAttribute: 'name',
+                                        modifyQueryUsing: fn (Builder $query): Builder => $query->where('company_id', Filament::getTenant()?->id),
+                                    )
+                                    ->required()
+                                    ->searchable()
+                                    ->preload()
+                                    ->disableOptionsWhenSelectedInSiblingRepeaterItems(),
+                                Slider::make('weight')
+                                    ->label(__('jobs.criteria.weight'))
+                                    ->range(minValue: 0, maxValue: 10)
+                                    ->step(1)
+                                    ->default(5)
+                                    ->required(),
+                            ])
+                            ->addActionLabel(__('jobs.criteria.add'))
+                            ->reorderable(false)
+                            ->columns(2),
                     ]),
             ]);
     }

@@ -14,6 +14,10 @@ return new class extends Migration
             $table->id();
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->string('name');
+            $table->text('description')->nullable();
+            $table->date('starts_at')->nullable();
+            $table->date('ends_at')->nullable();
+            $table->text('campaign_expectation')->nullable();
             $table->uuid('key')->unique();
             $table->timestamps();
         });
