@@ -66,7 +66,10 @@ it('presents every plan, highlights the current plan, and includes centralized u
         ->assertSeeHtml('data-testid="plan-card-starter"')
         ->assertSeeHtml('data-testid="plan-card-pro"')
         ->assertSeeHtml('data-testid="plan-card-business"')
-        ->assertSeeHtml('data-testid="current-usage"');
+        ->assertSeeHtml('data-testid="current-usage"')
+        ->assertSeeHtml('data-testid="choose-plan-pro"')
+        ->assertSeeHtml("wire:click=\"mountAction(&#039;changePlan&#039;, { plan: {$state['plans'][1]['id']} })\"")
+        ->assertDontSee('@js', escape: false);
 });
 
 it('changes plan immediately when it is selected and refreshes page state', function () {

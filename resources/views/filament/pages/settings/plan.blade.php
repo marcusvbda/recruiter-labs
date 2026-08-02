@@ -9,11 +9,13 @@
 
         <div class="relative max-w-3xl">
             <div class="flex flex-wrap items-center gap-2">
-                <span class="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold tracking-wide uppercase backdrop-blur-sm">
+                <span
+                    class="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold tracking-wide uppercase backdrop-blur-sm">
                     <x-filament::icon icon="heroicon-o-building-office-2" class="size-4" />
                     {{ __('settings.plan.eyebrow') }}
                 </span>
-                <span class="inline-flex items-center rounded-full bg-white px-3 py-1 text-xs font-bold text-primary-700 shadow-sm">
+                <span
+                    class="inline-flex items-center rounded-full bg-white px-3 py-1 text-xs font-bold text-primary-700 shadow-sm">
                     {{ $settings['current_plan']['name'] }}
                 </span>
             </div>
@@ -28,11 +30,8 @@
 
     <div class="rl-plan-grid">
         @foreach ($settings['plans'] as $plan)
-            <article
-                class="rl-plan-card"
-                data-current="{{ $plan['is_current'] ? 'true' : 'false' }}"
-                data-testid="plan-card-{{ $plan['slug'] }}"
-            >
+            <article class="rl-plan-card" data-current="{{ $plan['is_current'] ? 'true' : 'false' }}"
+                data-testid="plan-card-{{ $plan['slug'] }}">
                 @if ($plan['is_current'])
                     <div class="absolute inset-x-0 top-0 h-1 bg-linear-to-r from-primary-600 to-cyan-400"></div>
                 @endif
@@ -63,7 +62,8 @@
                             {{ $plan['description'] }}
                         </p>
                     </div>
-                    <span class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary-50 text-primary-600 dark:bg-primary-500/10 dark:text-primary-400">
+                    <span
+                        class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary-50 text-primary-600 dark:bg-primary-500/10 dark:text-primary-400">
                         <x-filament::icon :icon="$plan['icon']" class="size-6" />
                     </span>
                 </div>
@@ -94,7 +94,8 @@
                     <ul class="mt-3 grid gap-2.5">
                         @forelse ($plan['features'] as $feature)
                             <li class="flex items-start gap-2.5 text-sm text-gray-600 dark:text-gray-300">
-                                <span class="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-success-50 text-success-600 dark:bg-success-500/10 dark:text-success-400">
+                                <span
+                                    class="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-success-50 text-success-600 dark:bg-success-500/10 dark:text-success-400">
                                     <x-filament::icon icon="heroicon-m-check" class="size-3.5" />
                                 </span>
                                 {{ $feature }}
@@ -114,13 +115,9 @@
                             {{ __('settings.plan.current_plan') }}
                         </x-filament::button>
                     @else
-                        <x-filament::button
-                            :color="$plan['direction'] === 'upgrade' ? 'primary' : 'gray'"
-                            class="w-full"
-                            wire:click="mountAction('changePlan', @js(['plan' => $plan['id']]))"
-                            wire:loading.attr="disabled"
-                            wire:target="mountAction('changePlan')"
-                        >
+                        <x-filament::button :color="$plan['direction'] === 'upgrade' ? 'primary' : 'gray'" class="w-full"
+                            wire:click="mountAction('changePlan', { plan: {{ $plan['id'] }} })"
+                            wire:loading.attr="disabled" wire:target="mountAction" :data-testid="'choose-plan-' . $plan['slug']">
                             {{ __('settings.plan.select', ['plan' => $plan['name']]) }}
                         </x-filament::button>
                     @endif
@@ -131,7 +128,8 @@
 
     <section class="rl-settings-panel" aria-labelledby="current-usage-heading" data-testid="current-usage">
         <div class="flex items-start gap-3">
-            <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary-600 dark:bg-primary-500/10 dark:text-primary-400">
+            <span
+                class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary-600 dark:bg-primary-500/10 dark:text-primary-400">
                 <x-filament::icon icon="heroicon-o-chart-bar-square" class="size-5" />
             </span>
             <div>
@@ -146,13 +144,11 @@
 
         <div class="rl-usage-grid mt-5">
             @foreach ($settings['usage'] as $metric)
-                <article
-                    class="rl-usage-card"
-                    data-warning="{{ $metric['warning_state'] }}"
-                    data-testid="usage-{{ $metric['key'] }}"
-                >
+                <article class="rl-usage-card" data-warning="{{ $metric['warning_state'] }}"
+                    data-testid="usage-{{ $metric['key'] }}">
                     <div class="flex items-start justify-between gap-3">
-                        <span class="flex size-9 items-center justify-center rounded-xl bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-300">
+                        <span
+                            class="flex size-9 items-center justify-center rounded-xl bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-300">
                             <x-filament::icon :icon="$metric['icon']" class="size-5" />
                         </span>
                         <x-filament::badge :color="$metric['badge_color']" size="sm">
@@ -170,12 +166,8 @@
                             / {{ $metric['limit'] }}
                         </span>
                     </div>
-                    <progress
-                        class="rl-progress-track mt-4"
-                        max="100"
-                        value="{{ $metric['bar_percentage'] }}"
-                        aria-label="{{ $metric['percentage_label'] }}"
-                    ></progress>
+                    <progress class="rl-progress-track mt-4" max="100" value="{{ $metric['bar_percentage'] }}"
+                        aria-label="{{ $metric['percentage_label'] }}"></progress>
                     <div class="mt-2 flex items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400">
                         <span>{{ $metric['percentage_label'] }}</span>
                         <span class="truncate">{{ $metric['cycle_label'] }}</span>
@@ -185,7 +177,8 @@
         </div>
     </section>
 
-    <div class="flex items-start gap-3 rounded-2xl border border-primary-200 bg-primary-50/70 p-4 text-sm text-primary-800 dark:border-primary-500/20 dark:bg-primary-500/10 dark:text-primary-200">
+    <div
+        class="flex items-start gap-3 rounded-2xl border border-primary-200 bg-primary-50/70 p-4 text-sm text-primary-800 dark:border-primary-500/20 dark:bg-primary-500/10 dark:text-primary-200">
         <x-filament::icon icon="heroicon-o-information-circle" class="mt-0.5 size-5 shrink-0" />
         <div>
             <p class="font-semibold">{{ __('settings.plan.manual_notice_title') }}</p>
