@@ -62,9 +62,12 @@ it('shows the public application page with the job application data', function (
             ->where('translations.form.full_name', 'Full name')
             ->where('translations.steps.job_description', 'Job description')
             ->where('translations.steps.application_form', 'Application form')
-            ->where('translations.steps.success', 'Success')
+            ->missing('translations.steps.success')
             ->where('translations.form.submit_application', 'Submit application')
-            ->where('translations.success.title', 'Thank you for your interest!'));
+            ->where('translations.form.submitting', 'Submitting application...')
+            ->where('translations.form.upload_progress', 'Uploading documents')
+            ->where('translations.errors.duplicate', 'An application with this email has already been received for this role.')
+            ->where('translations.success.title', 'Thank you for applying!'));
 });
 
 it('uses the language configured on the job for all fixed application page copy', function (
@@ -72,6 +75,8 @@ it('uses the language configured on the job for all fixed application page copy'
     string $browserLocale,
     string $fullNameLabel,
     string $applyButton,
+    string $successTitle,
+    string $requiredValidation,
 ) {
     $job = Job::factory()->create([
         'application_locale' => $applicationLocale,
@@ -85,9 +90,11 @@ it('uses the language configured on the job for all fixed application page copy'
             ->where('job.application_locale', $applicationLocale->value)
             ->where('translations.locale', $browserLocale)
             ->where('translations.form.full_name', $fullNameLabel)
-            ->where('translations.hero.apply_for_role', $applyButton));
+            ->where('translations.hero.apply_for_role', $applyButton)
+            ->where('translations.success.title', $successTitle)
+            ->where('translations.validation.required', $requiredValidation));
 })->with([
-    'English' => [ApplicationLocale::English, 'en-US', 'Full name', 'Apply for this role'],
-    'Portuguese' => [ApplicationLocale::BrazilianPortuguese, 'pt-BR', 'Nome completo', 'Candidatar-se à vaga'],
-    'Spanish' => [ApplicationLocale::Spanish, 'es-ES', 'Nombre completo', 'Postularme al empleo'],
+    'English' => [ApplicationLocale::English, 'en-US', 'Full name', 'Apply for this role', 'Thank you for applying!', 'The :attribute field is required.'],
+    'Portuguese' => [ApplicationLocale::BrazilianPortuguese, 'pt-BR', 'Nome completo', 'Candidatar-se à vaga', 'Obrigado por se candidatar!', 'O campo :attribute é obrigatório.'],
+    'Spanish' => [ApplicationLocale::Spanish, 'es-ES', 'Nombre completo', 'Postularme al empleo', '¡Gracias por postularte!', 'El campo :attribute es obligatorio.'],
 ]);

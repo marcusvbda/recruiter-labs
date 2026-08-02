@@ -1,12 +1,14 @@
 <?php
 
+use App\Enums\ApplicationAnalysisStatus;
+use App\Enums\ApplicationCoverLetterType;
 use App\Enums\ApplicationQuestionType;
 use App\Enums\CoverLetterType;
 use App\Models\Job;
 use App\Models\User;
-use Database\Seeders\JobSeeder;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 uses(TestCase::class, RefreshDatabase::class);
@@ -48,9 +50,32 @@ it('seeds a complete full stack engineer job for local development', function ()
         ->and($job->jobCriteria)->toHaveCount(5)
         ->and($job->jobCriteria->max('weight'))->toBe(10);
 
-    $this->seed(JobSeeder::class);
+    $applications = $job->applications()->with(['answers', 'documents', 'referral'])->get();
+    $textCoverLetter = $applications->firstWhere('cover_letter_type', ApplicationCoverLetterType::Text);
+    $fileCoverLetter = $applications->firstWhere('cover_letter_type', ApplicationCoverLetterType::File);
+    $referredApplication = $applications->firstWhere('referral_id', '!==', null);
+
+    expect($applications->every(fn ($application): bool => $application->analysis_status === ApplicationAnalysisStatus::Pending))->toBeTrue()
+        ->and($applications->every(fn ($application): bool => $application->answers->count() === 4))->toBeTrue()
+        ->and($applications->every(fn ($application): bool => $application->documents->isNotEmpty()))->toBeTrue()
+        ->and($textCoverLetter)->not->toBeNull()
+        ->and($textCoverLetter?->cover_letter_text)->toContain('Gravity Labs')
+        ->and($fileCoverLetter?->documents)->toHaveCount(2)
+        ->and($referredApplication?->referral)->not->toBeNull();
+
+    foreach ($applications->flatMap->documents as $document) {
+        Storage::disk($document->disk)->assertExists($document->path);
+    }
+
+    $this->seed();
+
+    $seededJob = Job::query()->where('name', 'Senior Full Stack Engineer')->sole();
+    $seededApplications = $seededJob->applications()->with('answers')->get();
 
     expect(Job::query()->where('name', 'Senior Full Stack Engineer')->count())->toBe(1)
-        ->and($job->fresh()->applicationQuestions)->toHaveCount(4)
-        ->and($job->fresh()->jobCriteria)->toHaveCount(5);
+        ->and($seededJob->applicationQuestions)->toHaveCount(4)
+        ->and($seededJob->jobCriteria)->toHaveCount(5)
+        ->and($seededApplications)->toHaveCount(8)
+        ->and($seededApplications->every(fn ($application): bool => $application->answers->count() === 4))->toBeTrue()
+        ->and($seededApplications->flatMap->answers)->toHaveCount(32);
 });

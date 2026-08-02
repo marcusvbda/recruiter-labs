@@ -24,6 +24,12 @@ return [
     ],
     'application' => [
         'section_description' => 'Configure as informações e os documentos solicitados aos candidatos na página de candidatura.',
+        'intake_section' => 'Recebimento de candidaturas',
+        'intake_section_description' => 'Controle se esta vaga aceita envios e defina, opcionalmente, um limite próprio de candidaturas.',
+        'applications_paused' => 'Pausar novas candidaturas',
+        'applications_paused_helper' => 'Mantém a página pública da vaga visível, mas impede novos envios.',
+        'application_limit' => 'Limite de candidaturas',
+        'application_limit_helper' => 'Número máximo opcional de candidaturas para esta vaga. Deixe vazio para não aplicar um limite específico.',
         'cv_section' => 'Currículo',
         'cv_section_description' => 'Defina quais formatos de currículo os candidatos poderão enviar.',
         'accepted_cv_types' => 'Formatos de currículo aceitos',

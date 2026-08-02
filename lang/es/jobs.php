@@ -24,6 +24,12 @@ return [
     ],
     'application' => [
         'section_description' => 'Configura la información y los documentos solicitados a los candidatos en la página de postulación.',
+        'intake_section' => 'Recepción de postulaciones',
+        'intake_section_description' => 'Controla si este empleo acepta envíos y define, opcionalmente, su propio límite de postulaciones.',
+        'applications_paused' => 'Pausar nuevas postulaciones',
+        'applications_paused_helper' => 'Mantiene visible la página pública del empleo, pero impide nuevos envíos.',
+        'application_limit' => 'Límite de postulaciones',
+        'application_limit_helper' => 'Máximo opcional de postulaciones para este empleo. Déjalo vacío para no aplicar un límite específico.',
         'cv_section' => 'Currículum',
         'cv_section_description' => 'Define los formatos de currículum que podrán cargar los candidatos.',
         'accepted_cv_types' => 'Formatos de currículum aceptados',

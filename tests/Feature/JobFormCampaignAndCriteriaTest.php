@@ -135,6 +135,42 @@ it('changes the application page language from the job form', function () {
     expect($job->fresh()->application_locale)->toBe(ApplicationLocale::Spanish);
 });
 
+it('configures whether a job accepts applications and its individual limit', function () {
+    $company = Company::factory()->create();
+    $job = Job::factory()->for($company)->create();
+    $job->acceptedCvTypes()->sync(CvFileType::query()->pluck('id'));
+
+    actAsCompany($company);
+
+    Livewire::test(EditJob::class, ['record' => $job->getRouteKey()])
+        ->fillForm([
+            'applications_paused' => true,
+            'application_limit' => 75,
+            'jobCriteria' => [],
+        ])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($job->fresh()->applications_paused)->toBeTrue()
+        ->and($job->fresh()->application_limit)->toBe(75);
+});
+
+it('rejects a non-positive individual application limit', function () {
+    $company = Company::factory()->create();
+    $job = Job::factory()->for($company)->create();
+    $job->acceptedCvTypes()->sync(CvFileType::query()->pluck('id'));
+
+    actAsCompany($company);
+
+    Livewire::test(EditJob::class, ['record' => $job->getRouteKey()])
+        ->fillForm([
+            'application_limit' => 0,
+            'jobCriteria' => [],
+        ])
+        ->call('save')
+        ->assertHasFormErrors(['application_limit']);
+});
+
 it('rejects an unsupported application page language', function () {
     $company = Company::factory()->create();
     actAsCompany($company);

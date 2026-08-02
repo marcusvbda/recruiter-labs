@@ -21,8 +21,10 @@ class JobController extends Controller
 
         abort_if($job === null, 404);
 
-        $this->jobService->traceClick($job, $request);
-        App::setLocale($job->application_locale->value);
+        if (! $request->session()->pull('skip_application_click_trace', false)) {
+            $this->jobService->traceClick($job, $request);
+        }
+        App::setLocale((string) $job->getRawOriginal('application_locale'));
 
         $job->description = filled($job->description)
             ? RichContentRenderer::make($job->description)->toHtml()
@@ -45,7 +47,7 @@ class JobController extends Controller
 
         abort_if($job === null, 404);
 
-        App::setLocale($job->application_locale->value);
+        App::setLocale((string) $job->getRawOriginal('application_locale'));
 
         $job->description = filled($job->description)
             ? RichContentRenderer::make($job->description)->toHtml()

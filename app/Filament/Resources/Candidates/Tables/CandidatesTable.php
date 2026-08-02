@@ -27,7 +27,7 @@ class CandidatesTable
                     ->searchable(),
                 TextColumn::make('phone')
                     ->label(__('candidates.fields.phone'))
-                    ->formatStateUsing(fn(?string $state): ?string => PhoneCountry::formatInternational($state)),
+                    ->formatStateUsing(fn (?string $state): ?string => PhoneCountry::formatInternational($state)),
                 TextColumn::make('created_at')
                     ->label(__('candidates.fields.created_at'))
                     ->dateTime()
@@ -42,8 +42,8 @@ class CandidatesTable
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         return $query
-                            ->when($data['from'] ?? null, fn(Builder $query, string $date) => $query->whereDate('created_at', '>=', $date))
-                            ->when($data['until'] ?? null, fn(Builder $query, string $date) => $query->whereDate('created_at', '<=', $date));
+                            ->when($data['from'] ?? null, fn (Builder $query, string $date) => $query->whereDate('created_at', '>=', $date))
+                            ->when($data['until'] ?? null, fn (Builder $query, string $date) => $query->whereDate('created_at', '<=', $date));
                     }),
             ])
             ->recordActions([

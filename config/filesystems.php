@@ -15,6 +15,8 @@ return [
 
     'default' => env('FILESYSTEM_DISK', 'local'),
 
+    'application_documents_disk' => env('APPLICATION_DOCUMENTS_DISK', 'local'),
+
     /*
     |--------------------------------------------------------------------------
     | Filesystem Disks

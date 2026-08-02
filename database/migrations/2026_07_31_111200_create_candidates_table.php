@@ -16,6 +16,8 @@ return new class extends Migration
             $table->string('phone')->nullable();
             $table->json('socials')->nullable();
             $table->timestamps();
+
+            $table->unique(['company_id', 'email']);
         });
     }
 

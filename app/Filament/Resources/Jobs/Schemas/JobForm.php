@@ -55,6 +55,23 @@ class JobForm
                     ->columnSpanFull()
                     ->columns(1)
                     ->schema([
+                        Section::make(__('jobs.application.intake_section'))
+                            ->description(__('jobs.application.intake_section_description'))
+                            ->columns(2)
+                            ->schema([
+                                Toggle::make('applications_paused')
+                                    ->label(__('jobs.application.applications_paused'))
+                                    ->helperText(__('jobs.application.applications_paused_helper'))
+                                    ->inline(false)
+                                    ->default(false),
+                                TextInput::make('application_limit')
+                                    ->label(__('jobs.application.application_limit'))
+                                    ->helperText(__('jobs.application.application_limit_helper'))
+                                    ->numeric()
+                                    ->integer()
+                                    ->minValue(1)
+                                    ->nullable(),
+                            ]),
                         Section::make(__('jobs.application.cv_section'))
                             ->description(__('jobs.application.cv_section_description'))
                             ->schema([

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\Feature;
 use App\Enums\Limit;
+use Database\Factories\CompanyFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -15,13 +16,16 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 #[Fillable(['name', 'slug', 'plan_id'])]
 class Company extends Model
 {
+    /** @use HasFactory<CompanyFactory> */
     use HasFactory;
 
+    /** @return BelongsToMany<User, $this> */
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class)->withTimestamps();
     }
 
+    /** @return HasMany<Candidate, $this> */
     public function candidates(): HasMany
     {
         return $this->hasMany(Candidate::class);
@@ -33,31 +37,49 @@ class Company extends Model
         return $this->hasMany(Job::class);
     }
 
+    /** @return HasMany<Referral, $this> */
     public function referrals(): HasMany
     {
         return $this->hasMany(Referral::class);
     }
 
+    /** @return HasMany<Status, $this> */
     public function statuses(): HasMany
     {
         return $this->hasMany(Status::class);
     }
 
+    /** @return HasMany<EmailTemplate, $this> */
     public function emailTemplates(): HasMany
     {
         return $this->hasMany(EmailTemplate::class);
     }
 
+    /** @return HasMany<AutomationEvent, $this> */
     public function automationEvents(): HasMany
     {
         return $this->hasMany(AutomationEvent::class);
     }
 
+    /** @return HasMany<Application, $this> */
     public function applications(): HasMany
     {
         return $this->hasMany(Application::class);
     }
 
+    /** @return HasMany<ApplicationAnswer, $this> */
+    public function applicationAnswers(): HasMany
+    {
+        return $this->hasMany(ApplicationAnswer::class);
+    }
+
+    /** @return HasMany<ApplicationDocument, $this> */
+    public function applicationDocuments(): HasMany
+    {
+        return $this->hasMany(ApplicationDocument::class);
+    }
+
+    /** @return HasMany<JobCriterion, $this> */
     public function jobCriteria(): HasMany
     {
         return $this->hasMany(JobCriterion::class);
@@ -81,11 +103,13 @@ class Company extends Model
         return $this->hasMany(AiUsageRecord::class);
     }
 
+    /** @return HasMany<PlanChange, $this> */
     public function planChanges(): HasMany
     {
         return $this->hasMany(PlanChange::class);
     }
 
+    /** @return HasMany<CompanyAuditLog, $this> */
     public function auditLogs(): HasMany
     {
         return $this->hasMany(CompanyAuditLog::class);

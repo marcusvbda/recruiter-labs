@@ -13,6 +13,8 @@ use Illuminate\Support\Str;
 
 class JobService
 {
+    public function __construct(private readonly UtmParameterExtractor $utmParameterExtractor) {}
+
     public function traceClick(Job $job, Request $request, ?Referral $referral = null): JobClick
     {
         $referralId = $referral?->job_id === $job->getKey()
@@ -27,7 +29,7 @@ class JobService
                 'ip_address' => $request->ip(),
             ]);
 
-            $utmParameters = $this->extractUtmParameters($request);
+            $utmParameters = $this->utmParameterExtractor->extract($request->query());
 
             if ($utmParameters !== []) {
                 $click->utmParameters()->createMany($utmParameters);
@@ -74,33 +76,5 @@ class JobService
             'acceptedCvTypes:id,extension,sort',
             'coverLetterFileTypes:id,extension,sort',
         ];
-    }
-
-    /**
-     * @return list<array{name: string, value: string}>
-     */
-    private function extractUtmParameters(Request $request): array
-    {
-        $parameters = [];
-
-        foreach ($request->query() as $name => $value) {
-            $normalizedName = Str::lower((string) $name);
-
-            if (
-                count($parameters) >= 20
-                || ! preg_match('/^utm_[a-z0-9_]+$/', $normalizedName)
-                || ! is_scalar($value)
-                || blank((string) $value)
-            ) {
-                continue;
-            }
-
-            $parameters[] = [
-                'name' => Str::limit($normalizedName, 100, ''),
-                'value' => Str::limit((string) $value, 255, ''),
-            ];
-        }
-
-        return $parameters;
     }
 }

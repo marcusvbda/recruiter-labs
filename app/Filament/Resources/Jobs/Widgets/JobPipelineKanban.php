@@ -2,11 +2,13 @@
 
 namespace App\Filament\Resources\Jobs\Widgets;
 
+use App\Filament\Resources\Applications\ApplicationResource;
 use App\Filament\Resources\Jobs\JobResource;
 use App\Models\Application;
 use App\Models\Candidate;
 use App\Models\Job;
 use App\Models\Status;
+use Filament\Facades\Filament;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -90,7 +92,45 @@ class JobPipelineKanban extends StateKanbanBoard
 
         $candidate = $record->candidate;
 
-        return $candidate instanceof Candidate ? $candidate->email : null;
+        if (! $candidate instanceof Candidate) {
+            return null;
+        }
+
+        $email = $candidate->getAttribute('email');
+
+        return is_string($email) ? $email : null;
+    }
+
+    public function getApplicationUrl(Application $application): string
+    {
+        return ApplicationResource::getUrl('view', [
+            'record' => $application,
+        ], tenant: Filament::getTenant());
+    }
+
+    public function getAnalysisLabel(Application $application): string
+    {
+        $value = $this->enumValue($application->analysis_status);
+
+        return __("applications.admin.ai.states.{$value}.label");
+    }
+
+    public function getAnalysisColor(Application $application): string
+    {
+        $value = $this->enumValue($application->analysis_status);
+
+        return match ($value) {
+            'processing' => 'info',
+            'completed' => 'success',
+            'failed' => 'danger',
+            'pending_quota' => 'warning',
+            default => 'gray',
+        };
+    }
+
+    private function enumValue(mixed $value): string
+    {
+        return $value instanceof \BackedEnum ? (string) $value->value : (string) $value;
     }
 
     /** @return Builder<Application> */

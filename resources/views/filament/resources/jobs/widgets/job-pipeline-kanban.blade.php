@@ -106,9 +106,24 @@
                                     data-record-id="{{ $record->getKey() }}"
                                     class="fi-model-states-kanban__card fi-model-states-card"
                                 >
-                                    <p class="fi-model-states-kanban__card-title">
-                                        {{ $this->getCardTitle($record) }}
-                                    </p>
+                                    <div class="flex items-start justify-between gap-2">
+                                        <a
+                                            href="{{ $this->getApplicationUrl($record) }}"
+                                            wire:navigate
+                                            x-on:pointerdown.stop
+                                            x-on:click.stop
+                                            class="fi-model-states-kanban__card-title hover:text-primary-600 focus-visible:ring-primary-500 rounded-sm outline-none focus-visible:ring-2"
+                                            title="{{ __('applications.admin.actions.view_application') }}"
+                                        >
+                                            {{ $this->getCardTitle($record) }}
+                                        </a>
+                                        <x-filament::badge
+                                            :color="$this->getAnalysisColor($record)"
+                                            icon="heroicon-m-sparkles"
+                                        >
+                                            {{ $this->getAnalysisLabel($record) }}
+                                        </x-filament::badge>
+                                    </div>
                                     @if ($subtitle = $this->getCardSubtitle($record))
                                         <p class="fi-model-states-kanban__card-subtitle">
                                             {{ $subtitle }}

@@ -4,15 +4,14 @@ namespace App\Actions;
 
 use App\Data\AiCredentialTestResultData;
 use App\Enums\AiConfigurationEventType;
-use App\Enums\AiCredentialStatus;
 use App\Enums\Feature;
 use App\Exceptions\PlanFeatureUnavailableException;
 use App\Models\Company;
 use App\Models\CompanyAiSetting;
 use App\Models\CompanyAuditLog;
 use App\Models\User;
-use App\Services\OpenAiCredentialTester;
 use App\Services\CompanyTopbarSummary;
+use App\Services\OpenAiCredentialTester;
 use Illuminate\Support\Facades\Gate;
 use InvalidArgumentException;
 

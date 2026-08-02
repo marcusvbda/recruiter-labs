@@ -24,6 +24,12 @@ return [
     ],
     'application' => [
         'section_description' => 'Configure the information and documents requested from candidates on the application page.',
+        'intake_section' => 'Application intake',
+        'intake_section_description' => 'Control whether this job accepts submissions and optionally set its own application cap.',
+        'applications_paused' => 'Pause new applications',
+        'applications_paused_helper' => 'Keep the public job visible while preventing new submissions.',
+        'application_limit' => 'Application limit',
+        'application_limit_helper' => 'Optional maximum number of applications for this job. Leave empty for no job-specific limit.',
         'cv_section' => 'CV / resume',
         'cv_section_description' => 'Define which CV file formats candidates may upload.',
         'accepted_cv_types' => 'Accepted CV formats',

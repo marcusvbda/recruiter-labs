@@ -12,7 +12,7 @@ use App\Models\Application;
 use App\Models\Candidate;
 use App\Models\Company;
 use App\Models\Job;
-use App\Models\Status;
+use App\Services\ApplicationAvailabilityService;
 use App\Services\JobDashboardService;
 use App\Services\LimitManager;
 use Filament\Actions\Action;
@@ -33,6 +33,7 @@ use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
+use Illuminate\Validation\ValidationException;
 use LogicException;
 
 class ViewJob extends ViewRecord
@@ -41,13 +42,17 @@ class ViewJob extends ViewRecord
 
     protected JobDashboardService $jobDashboardService;
 
+    protected ApplicationAvailabilityService $applicationAvailabilityService;
+
     protected LimitManager $limitManager;
 
     public function boot(
         JobDashboardService $jobDashboardService,
+        ApplicationAvailabilityService $applicationAvailabilityService,
         LimitManager $limitManager,
     ): void {
         $this->jobDashboardService = $jobDashboardService;
+        $this->applicationAvailabilityService = $applicationAvailabilityService;
         $this->limitManager = $limitManager;
     }
 
@@ -169,12 +174,9 @@ class ViewJob extends ViewRecord
                     return;
                 }
 
-                $firstStatus = Status::query()
-                    ->where('company_id', $job->company_id)
-                    ->orderBy('order')
-                    ->first();
-
-                if (! $firstStatus) {
+                try {
+                    $firstStatus = $this->applicationAvailabilityService->initialStatus($job);
+                } catch (ValidationException) {
                     Notification::make()
                         ->title(__('applications.pipeline.no_statuses'))
                         ->danger()

@@ -2,6 +2,9 @@
 
 namespace Database\Factories;
 
+use App\Enums\ApplicationAnalysisStatus;
+use App\Enums\ApplicationCoverLetterType;
+use App\Enums\ApplicationSource;
 use App\Models\Application;
 use App\Models\Candidate;
 use App\Models\Company;
@@ -29,6 +32,12 @@ class ApplicationFactory extends Factory
             'job_id' => fn (array $attributes) => Job::factory()->create(['company_id' => $attributes['company_id']])->id,
             'candidate_id' => fn (array $attributes) => Candidate::factory()->create(['company_id' => $attributes['company_id']])->id,
             'status_id' => fn (array $attributes) => Status::factory()->create(['company_id' => $attributes['company_id']])->id,
+            'referral_id' => null,
+            'source' => ApplicationSource::Direct,
+            'analysis_status' => ApplicationAnalysisStatus::Pending,
+            'cover_letter_type' => ApplicationCoverLetterType::None,
+            'cover_letter_text' => null,
+            'submitted_ip' => $this->faker->ipv4(),
         ];
     }
 }

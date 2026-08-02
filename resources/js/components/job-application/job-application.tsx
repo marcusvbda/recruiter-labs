@@ -1,5 +1,7 @@
+import { useForm } from '@inertiajs/react';
 import { useRef, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
+import { store } from '@/actions/App/Http/Controllers/JobApplicationController';
 import type { Job } from '@/types/models/job';
 import type { Referral } from '@/types/models/referral';
 
@@ -46,7 +48,6 @@ export interface JobApplicationTranslations {
         label: string;
         job_description: string;
         application_form: string;
-        success: string;
     };
     form: {
         eyebrow: string;
@@ -69,13 +70,23 @@ export interface JobApplicationTranslations {
         role_questions: string;
         back_to_description: string;
         submit_application: string;
+        submitting: string;
+        upload_progress: string;
+        fix_errors: string;
         not_stored: string;
+        privacy_notice: string;
     };
     success: {
         eyebrow: string;
         title: string;
         description: string;
         back_to_description: string;
+    };
+    errors: {
+        general: string;
+        duplicate: string;
+        limit_reached: string;
+        job_unavailable: string;
     };
     sidebar: {
         title: string;
@@ -246,6 +257,25 @@ const JobDescription = ({
 const fieldClassName =
     'mt-2 block min-h-12 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-950 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500';
 
+const fieldErrorClassName =
+    'border-rose-400 focus:border-rose-500 focus:ring-rose-500/10 dark:border-rose-400/60';
+
+const FieldError = ({ id, message }: { id: string; message?: string }) => {
+    if (!message) {
+        return null;
+    }
+
+    return (
+        <span
+            id={id}
+            role="alert"
+            className="mt-2 block text-xs font-medium text-rose-600 dark:text-rose-300"
+        >
+            {message}
+        </span>
+    );
+};
+
 function acceptedFileTypes(fileTypes: Job['accepted_cv_types']): string {
     return fileTypes.map((fileType) => `.${fileType.extension}`).join(',');
 }
@@ -293,11 +323,47 @@ function countryOptionLabel(
     return `${countryFlag(country.value)} ${countryName} (${country.calling_code})`;
 }
 
+function sourceUtmParameters(): Record<string, string> {
+    if (typeof window === 'undefined') {
+        return {};
+    }
+
+    const utm: Record<string, string> = {};
+
+    for (const [key, value] of new URLSearchParams(window.location.search)) {
+        const normalizedKey = key.toLowerCase();
+
+        if (
+            Object.keys(utm).length < 20 &&
+            /^utm_[a-z0-9_]+$/.test(normalizedKey) &&
+            value !== ''
+        ) {
+            utm[normalizedKey] = value.slice(0, 255);
+        }
+    }
+
+    return utm;
+}
+
+interface ApplicationFormData {
+    name: string;
+    email: string;
+    phone_country: string;
+    phone: string;
+    cv: File | null;
+    cover_letter: string | File | null;
+    answers: Record<string, string>;
+    referral_key: string | null;
+    utm: Record<string, string>;
+}
+
 interface ApplicationFormProps {
     job: Job;
     onBack: () => void;
     onSubmit: () => void;
     phoneCountries: PhoneCountryOption[];
+    preview: boolean;
+    referral?: Referral;
     translations: JobApplicationTranslations;
 }
 
@@ -306,26 +372,86 @@ const ApplicationForm = ({
     onBack,
     onSubmit,
     phoneCountries,
+    preview,
+    referral,
     translations,
 }: ApplicationFormProps) => {
     const defaultPhoneCountry =
         phoneCountries.find((country) => country.value === 'BR') ??
         phoneCountries[0];
-    const [phoneCountry, setPhoneCountry] = useState(
-        defaultPhoneCountry?.value ?? '',
-    );
-    const [phone, setPhone] = useState('');
+    const submissionStartedRef = useRef(false);
+    const [requestError, setRequestError] = useState<string | null>(null);
+    const {
+        data,
+        setData,
+        submit,
+        processing,
+        progress,
+        errors,
+        hasErrors,
+        clearErrors,
+        reset,
+    } = useForm<ApplicationFormData>(() => ({
+        name: '',
+        email: '',
+        phone_country: defaultPhoneCountry?.value ?? '',
+        phone: '',
+        cv: null,
+        cover_letter: job.cover_letter_type === 'file' ? null : '',
+        answers: {},
+        referral_key: referral?.key ?? null,
+        utm: sourceUtmParameters(),
+    }));
     const selectedPhoneCountry =
-        phoneCountries.find((country) => country.value === phoneCountry) ??
-        defaultPhoneCountry;
+        phoneCountries.find(
+            (country) => country.value === data.phone_country,
+        ) ?? defaultPhoneCountry;
     const coverLetterFileTypes = job.cover_letter_file_types ?? [];
     const countryDisplayNames = new Intl.DisplayNames([translations.locale], {
         type: 'region',
     });
+    const serverErrors = errors as Record<string, string | undefined>;
+    const generalError = requestError ?? serverErrors._form;
 
     function handleSubmission(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        onSubmit();
+
+        if (preview || processing || submissionStartedRef.current) {
+            return;
+        }
+
+        submissionStartedRef.current = true;
+        setRequestError(null);
+        clearErrors();
+
+        submit(store({ key: job.key }), {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => {
+                reset();
+                onSubmit();
+            },
+            onError: () => {
+                window.requestAnimationFrame(() => {
+                    document
+                        .querySelector<HTMLElement>('[aria-invalid="true"]')
+                        ?.focus();
+                });
+            },
+            onHttpException: () => {
+                setRequestError(translations.errors.general);
+
+                return false;
+            },
+            onNetworkError: () => {
+                setRequestError(translations.errors.general);
+
+                return false;
+            },
+            onFinish: () => {
+                submissionStartedRef.current = false;
+            },
+        });
     }
 
     return (
@@ -353,9 +479,11 @@ const ApplicationForm = ({
                         {translations.form.description}
                     </p>
                 </div>
-                <span className="w-fit rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200 dark:bg-amber-400/10 dark:text-amber-300 dark:ring-amber-400/20">
-                    {translations.form.preview_only}
-                </span>
+                {preview && (
+                    <span className="w-fit rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200 dark:bg-amber-400/10 dark:text-amber-300 dark:ring-amber-400/20">
+                        {translations.form.preview_only}
+                    </span>
+                )}
             </div>
 
             <form
@@ -363,7 +491,16 @@ const ApplicationForm = ({
                 noValidate
                 className="mt-8 space-y-9"
             >
-                <fieldset>
+                {(generalError || (hasErrors && !generalError)) && (
+                    <div
+                        role="alert"
+                        className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-200"
+                    >
+                        {generalError ?? translations.form.fix_errors}
+                    </div>
+                )}
+
+                <fieldset disabled={processing}>
                     <legend className="text-base font-semibold text-slate-950 dark:text-white">
                         {translations.form.contact_information}
                     </legend>
@@ -376,32 +513,52 @@ const ApplicationForm = ({
                             <input
                                 type="text"
                                 name="name"
+                                value={data.name}
                                 required
                                 maxLength={255}
                                 autoComplete="name"
-                                className={fieldClassName}
+                                aria-invalid={Boolean(errors.name)}
+                                aria-describedby={
+                                    errors.name ? 'name-error' : undefined
+                                }
+                                onChange={(event) =>
+                                    setData('name', event.target.value)
+                                }
+                                className={`${fieldClassName} ${errors.name ? fieldErrorClassName : ''}`}
                                 placeholder={
                                     translations.form.full_name_placeholder
                                 }
                             />
+                            <FieldError id="name-error" message={errors.name} />
                         </label>
 
                         <label>
                             <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
                                 {translations.form.email_address}{' '}
-                                <span className="font-normal text-slate-400">
-                                    ({translations.form.optional})
-                                </span>
+                                <span className="text-rose-500">*</span>
                             </span>
                             <input
                                 type="email"
                                 name="email"
+                                value={data.email}
+                                required
                                 maxLength={255}
                                 autoComplete="email"
-                                className={fieldClassName}
+                                aria-invalid={Boolean(errors.email)}
+                                aria-describedby={
+                                    errors.email ? 'email-error' : undefined
+                                }
+                                onChange={(event) =>
+                                    setData('email', event.target.value)
+                                }
+                                className={`${fieldClassName} ${errors.email ? fieldErrorClassName : ''}`}
                                 placeholder={
                                     translations.form.email_placeholder
                                 }
+                            />
+                            <FieldError
+                                id="email-error"
+                                message={errors.email}
                             />
                         </label>
 
@@ -415,14 +572,23 @@ const ApplicationForm = ({
                             <div className="mt-2 grid grid-cols-[minmax(8.5rem,0.8fr)_minmax(0,1.2fr)] gap-2">
                                 <select
                                     name="phone_country"
-                                    value={phoneCountry}
+                                    value={data.phone_country}
                                     required
                                     aria-label={translations.form.phone_country}
+                                    aria-invalid={Boolean(errors.phone_country)}
+                                    aria-describedby={
+                                        errors.phone_country
+                                            ? 'phone-country-error'
+                                            : undefined
+                                    }
                                     onChange={(event) => {
-                                        setPhoneCountry(event.target.value);
-                                        setPhone('');
+                                        setData((currentData) => ({
+                                            ...currentData,
+                                            phone_country: event.target.value,
+                                            phone: '',
+                                        }));
                                     }}
-                                    className="min-h-12 min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-950 shadow-sm transition outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-white/10 dark:bg-slate-950 dark:text-white"
+                                    className={`min-h-12 min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-950 shadow-sm transition outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-white/10 dark:bg-slate-950 dark:text-white ${errors.phone_country ? fieldErrorClassName : ''}`}
                                 >
                                     {phoneCountries.map((country) => (
                                         <option
@@ -443,9 +609,15 @@ const ApplicationForm = ({
                                     <input
                                         type="tel"
                                         name="phone"
-                                        value={phone}
+                                        value={data.phone}
                                         inputMode="tel"
                                         autoComplete="tel-national"
+                                        aria-invalid={Boolean(errors.phone)}
+                                        aria-describedby={
+                                            errors.phone
+                                                ? 'phone-error'
+                                                : undefined
+                                        }
                                         maxLength={
                                             selectedPhoneCountry?.mask.length
                                         }
@@ -453,7 +625,8 @@ const ApplicationForm = ({
                                             selectedPhoneCountry?.placeholder
                                         }
                                         onChange={(event) =>
-                                            setPhone(
+                                            setData(
+                                                'phone',
                                                 formatPhone(
                                                     event.target.value,
                                                     selectedPhoneCountry?.mask ??
@@ -465,11 +638,22 @@ const ApplicationForm = ({
                                     />
                                 </div>
                             </div>
+                            <FieldError
+                                id="phone-country-error"
+                                message={errors.phone_country}
+                            />
+                            <FieldError
+                                id="phone-error"
+                                message={errors.phone}
+                            />
                         </div>
                     </div>
                 </fieldset>
 
-                <fieldset className="border-t border-slate-100 pt-8 dark:border-white/10">
+                <fieldset
+                    disabled={processing}
+                    className="border-t border-slate-100 pt-8 dark:border-white/10"
+                >
                     <legend className="text-base font-semibold text-slate-950 dark:text-white">
                         {translations.form.documents}
                     </legend>
@@ -483,10 +667,20 @@ const ApplicationForm = ({
                                 type="file"
                                 name="cv"
                                 required
+                                aria-invalid={Boolean(errors.cv)}
+                                aria-describedby={
+                                    errors.cv ? 'cv-error' : undefined
+                                }
                                 accept={acceptedFileTypes(
                                     job.accepted_cv_types ?? [],
                                 )}
-                                className={`${fieldClassName} cursor-pointer file:mr-4 file:rounded-lg file:border-0 file:bg-blue-50 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-400/10 dark:file:text-blue-300`}
+                                onChange={(event) =>
+                                    setData(
+                                        'cv',
+                                        event.target.files?.[0] ?? null,
+                                    )
+                                }
+                                className={`${fieldClassName} cursor-pointer file:mr-4 file:rounded-lg file:border-0 file:bg-blue-50 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-400/10 dark:file:text-blue-300 ${errors.cv ? fieldErrorClassName : ''}`}
                             />
                             <span className="mt-2 block text-xs text-slate-500 dark:text-slate-400">
                                 {translate(translations.form.accepted_formats, {
@@ -497,6 +691,7 @@ const ApplicationForm = ({
                                         .join(', '),
                                 })}
                             </span>
+                            <FieldError id="cv-error" message={errors.cv} />
                         </label>
 
                         {job.cover_letter_type === 'file' ? (
@@ -515,10 +710,22 @@ const ApplicationForm = ({
                                     type="file"
                                     name="cover_letter"
                                     required={job.cover_letter_required}
+                                    aria-invalid={Boolean(errors.cover_letter)}
+                                    aria-describedby={
+                                        errors.cover_letter
+                                            ? 'cover-letter-error'
+                                            : undefined
+                                    }
                                     accept={acceptedFileTypes(
                                         coverLetterFileTypes,
                                     )}
-                                    className={`${fieldClassName} cursor-pointer file:mr-4 file:rounded-lg file:border-0 file:bg-blue-50 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-400/10 dark:file:text-blue-300`}
+                                    onChange={(event) =>
+                                        setData(
+                                            'cover_letter',
+                                            event.target.files?.[0] ?? null,
+                                        )
+                                    }
+                                    className={`${fieldClassName} cursor-pointer file:mr-4 file:rounded-lg file:border-0 file:bg-blue-50 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-400/10 dark:file:text-blue-300 ${errors.cover_letter ? fieldErrorClassName : ''}`}
                                 />
                                 <span className="mt-2 block text-xs text-slate-500 dark:text-slate-400">
                                     {translate(
@@ -532,6 +739,10 @@ const ApplicationForm = ({
                                         },
                                     )}
                                 </span>
+                                <FieldError
+                                    id="cover-letter-error"
+                                    message={errors.cover_letter}
+                                />
                             </label>
                         ) : (
                             <label>
@@ -547,13 +758,35 @@ const ApplicationForm = ({
                                 </span>
                                 <textarea
                                     name="cover_letter"
+                                    value={
+                                        typeof data.cover_letter === 'string'
+                                            ? data.cover_letter
+                                            : ''
+                                    }
                                     required={job.cover_letter_required}
+                                    maxLength={10000}
                                     rows={6}
-                                    className={fieldClassName}
+                                    aria-invalid={Boolean(errors.cover_letter)}
+                                    aria-describedby={
+                                        errors.cover_letter
+                                            ? 'cover-letter-error'
+                                            : undefined
+                                    }
+                                    onChange={(event) =>
+                                        setData(
+                                            'cover_letter',
+                                            event.target.value,
+                                        )
+                                    }
+                                    className={`${fieldClassName} ${errors.cover_letter ? fieldErrorClassName : ''}`}
                                     placeholder={
                                         translations.form
                                             .cover_letter_placeholder
                                     }
+                                />
+                                <FieldError
+                                    id="cover-letter-error"
+                                    message={errors.cover_letter}
                                 />
                             </label>
                         )}
@@ -561,66 +794,152 @@ const ApplicationForm = ({
                 </fieldset>
 
                 {job.application_questions.length > 0 && (
-                    <fieldset className="border-t border-slate-100 pt-8 dark:border-white/10">
+                    <fieldset
+                        disabled={processing}
+                        className="border-t border-slate-100 pt-8 dark:border-white/10"
+                    >
                         <legend className="text-base font-semibold text-slate-950 dark:text-white">
                             {translations.form.role_questions}
                         </legend>
                         <div className="mt-5 grid gap-5">
-                            {job.application_questions.map((question) => (
-                                <label key={question.id}>
-                                    <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                                        {question.question}{' '}
-                                        {question.required ? (
-                                            <span className="text-rose-500">
-                                                *
-                                            </span>
+                            {job.application_questions.map((question) => {
+                                const answerKey = String(question.id);
+                                const errorId = `answer-${question.id}-error`;
+                                const answerError =
+                                    serverErrors[`answers.${question.id}`];
+
+                                return (
+                                    <label key={question.id}>
+                                        <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                                            {question.question}{' '}
+                                            {question.required ? (
+                                                <span className="text-rose-500">
+                                                    *
+                                                </span>
+                                            ) : (
+                                                <span className="font-normal text-slate-400">
+                                                    (
+                                                    {translations.form.optional}
+                                                    )
+                                                </span>
+                                            )}
+                                        </span>
+                                        {question.response_type ===
+                                        'textarea' ? (
+                                            <textarea
+                                                name={`answers[${question.id}]`}
+                                                value={
+                                                    data.answers[answerKey] ??
+                                                    ''
+                                                }
+                                                required={question.required}
+                                                maxLength={10000}
+                                                rows={5}
+                                                aria-invalid={Boolean(
+                                                    answerError,
+                                                )}
+                                                aria-describedby={
+                                                    answerError
+                                                        ? errorId
+                                                        : undefined
+                                                }
+                                                onChange={(event) =>
+                                                    setData('answers', {
+                                                        ...data.answers,
+                                                        [answerKey]:
+                                                            event.target.value,
+                                                    })
+                                                }
+                                                className={`${fieldClassName} ${answerError ? fieldErrorClassName : ''}`}
+                                            />
                                         ) : (
-                                            <span className="font-normal text-slate-400">
-                                                ({translations.form.optional})
+                                            <input
+                                                type={
+                                                    question.response_type ===
+                                                    'number'
+                                                        ? 'number'
+                                                        : 'text'
+                                                }
+                                                name={`answers[${question.id}]`}
+                                                value={
+                                                    data.answers[answerKey] ??
+                                                    ''
+                                                }
+                                                required={question.required}
+                                                maxLength={
+                                                    question.response_type ===
+                                                    'text'
+                                                        ? 1000
+                                                        : undefined
+                                                }
+                                                aria-invalid={Boolean(
+                                                    answerError,
+                                                )}
+                                                aria-describedby={
+                                                    answerError
+                                                        ? errorId
+                                                        : undefined
+                                                }
+                                                onChange={(event) =>
+                                                    setData('answers', {
+                                                        ...data.answers,
+                                                        [answerKey]:
+                                                            event.target.value,
+                                                    })
+                                                }
+                                                className={`${fieldClassName} ${answerError ? fieldErrorClassName : ''}`}
+                                            />
+                                        )}
+                                        {question.description && (
+                                            <span className="mt-2 block text-xs leading-5 text-slate-500 dark:text-slate-400">
+                                                {question.description}
                                             </span>
                                         )}
-                                    </span>
-                                    {question.response_type === 'textarea' ? (
-                                        <textarea
-                                            name={`question_${question.id}`}
-                                            required={question.required}
-                                            rows={5}
-                                            className={fieldClassName}
+                                        <FieldError
+                                            id={errorId}
+                                            message={answerError}
                                         />
-                                    ) : (
-                                        <input
-                                            type={
-                                                question.response_type ===
-                                                'number'
-                                                    ? 'number'
-                                                    : 'text'
-                                            }
-                                            name={`question_${question.id}`}
-                                            required={question.required}
-                                            className={fieldClassName}
-                                        />
-                                    )}
-                                    {question.description && (
-                                        <span className="mt-2 block text-xs leading-5 text-slate-500 dark:text-slate-400">
-                                            {question.description}
-                                        </span>
-                                    )}
-                                </label>
-                            ))}
+                                    </label>
+                                );
+                            })}
                         </div>
                     </fieldset>
                 )}
 
                 <div className="border-t border-slate-100 pt-7 dark:border-white/10">
+                    {progress && (
+                        <div className="mb-5" role="status" aria-live="polite">
+                            <div className="mb-2 flex items-center justify-between gap-4 text-xs font-medium text-slate-500 dark:text-slate-400">
+                                <span>{translations.form.upload_progress}</span>
+                                <span>{progress.percentage}%</span>
+                            </div>
+                            <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">
+                                <div
+                                    className="h-full rounded-full bg-linear-to-r from-blue-600 to-cyan-500 transition-[width]"
+                                    style={{ width: `${progress.percentage}%` }}
+                                />
+                            </div>
+                        </div>
+                    )}
                     <button
                         type="submit"
-                        className="group inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 sm:w-auto"
+                        disabled={preview || processing}
+                        aria-disabled={preview || processing}
+                        className="group inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 sm:w-auto"
                     >
-                        {translations.form.submit_application}
-                        <ArrowIcon className="size-4 transition group-hover:translate-x-0.5" />
+                        {processing
+                            ? translations.form.submitting
+                            : preview
+                              ? translations.form.preview_only
+                              : translations.form.submit_application}
+                        {!processing && !preview && (
+                            <ArrowIcon className="size-4 transition group-hover:translate-x-0.5" />
+                        )}
                     </button>
                     <p className="mt-3 text-xs leading-5 text-slate-400">
-                        {translations.form.not_stored}
+                        {preview
+                            ? translations.form.not_stored
+                            : translations.form.privacy_notice}
                     </p>
                 </div>
             </form>
@@ -698,9 +1017,11 @@ const StepNavigation = ({
 };
 
 const SuccessStep = ({
+    jobName,
     onBack,
     translations,
 }: {
+    jobName: string;
     onBack: () => void;
     translations: JobApplicationTranslations['success'];
 }) => {
@@ -716,7 +1037,7 @@ const SuccessStep = ({
                 {translations.title}
             </h2>
             <p className="mt-4 max-w-xl text-base leading-7 text-slate-500 dark:text-slate-400">
-                {translations.description}
+                {translate(translations.description, { job: jobName })}
             </p>
             <button
                 type="button"
@@ -739,6 +1060,7 @@ export const JobApplication = ({
 }: JobApplicationProps) => {
     const [currentStep, setCurrentStep] =
         useState<ApplicationStep>('description');
+    const [applicationSubmitted, setApplicationSubmitted] = useState(false);
     const applicationFlowRef = useRef<HTMLDivElement>(null);
     const companyName = job.company?.name ?? 'Recruiter Labs';
     const closingDate = formatDate(job.ends_at, translations.locale);
@@ -747,7 +1069,9 @@ export const JobApplication = ({
     const cvTypes = job.accepted_cv_types ?? [];
 
     function changeStep(step: ApplicationStep) {
-        setCurrentStep(step);
+        setCurrentStep(
+            applicationSubmitted && step === 'form' ? 'success' : step,
+        );
 
         window.requestAnimationFrame(() => {
             window.requestAnimationFrame(() => {
@@ -943,12 +1267,18 @@ export const JobApplication = ({
                                 <ApplicationForm
                                     job={job}
                                     onBack={() => changeStep('description')}
-                                    onSubmit={() => changeStep('success')}
+                                    onSubmit={() => {
+                                        setApplicationSubmitted(true);
+                                        changeStep('success');
+                                    }}
                                     phoneCountries={phoneCountries}
+                                    preview={preview}
+                                    referral={referral}
                                     translations={translations}
                                 />
                             ) : (
                                 <SuccessStep
+                                    jobName={job.name}
                                     onBack={() => changeStep('description')}
                                     translations={translations.success}
                                 />

@@ -21,7 +21,7 @@ class CandidateFactory extends Factory
         return [
             'company_id' => Company::factory(),
             'name' => $this->faker->name(),
-            'email' => $this->faker->safeEmail(),
+            'email' => mb_strtolower($this->faker->unique()->safeEmail()),
             'phone' => $this->faker->phoneNumber(),
             'socials' => [],
         ];

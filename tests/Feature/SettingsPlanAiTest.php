@@ -68,7 +68,7 @@ it('presents every plan, highlights the current plan, and includes centralized u
         ->assertSeeHtml('data-testid="plan-card-business"')
         ->assertSeeHtml('data-testid="current-usage"')
         ->assertSeeHtml('data-testid="choose-plan-pro"')
-        ->assertSeeHtml("wire:click=\"mountAction(&#039;changePlan&#039;, { plan: {$state['plans'][1]['id']} })\"")
+        ->assertSeeHtml("wire:click=\"mountAction('changePlan', { plan: {$state['plans'][1]['id']} })\"")
         ->assertDontSee('@js', escape: false);
 });
 

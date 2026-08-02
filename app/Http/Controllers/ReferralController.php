@@ -29,8 +29,10 @@ class ReferralController extends Controller
 
         abort_unless($job instanceof Job, 404);
 
-        $this->jobService->traceClick($job, $request, $referral);
-        App::setLocale($job->application_locale->value);
+        if (! $request->session()->pull('skip_application_click_trace', false)) {
+            $this->jobService->traceClick($job, $request, $referral);
+        }
+        App::setLocale((string) $job->getRawOriginal('application_locale'));
 
         $job->description = filled($job->description)
             ? RichContentRenderer::make($job->description)->toHtml()

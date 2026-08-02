@@ -8,7 +8,6 @@ use App\Enums\CoverLetterType;
 use App\Models\Company;
 use App\Models\CvFileType;
 use App\Models\Job;
-use App\Models\JobApplicationQuestion;
 use App\Models\JobCriterion;
 use App\Models\Plan;
 use App\Models\Referral;
@@ -97,8 +96,7 @@ HTML,
                 CvFileType::query()->orderBy('sort')->pluck('id'),
             );
 
-            JobApplicationQuestion::query()->whereBelongsTo($job)->delete();
-            $job->applicationQuestions()->createMany([
+            $questions = [
                 [
                     'company_id' => $company->id,
                     'question' => 'What name should we use when contacting you?',
@@ -131,7 +129,18 @@ HTML,
                     'required' => false,
                     'sort' => 4,
                 ],
-            ]);
+            ];
+
+            foreach ($questions as $question) {
+                $job->applicationQuestions()->updateOrCreate(
+                    ['sort' => $question['sort']],
+                    $question,
+                );
+            }
+
+            $job->applicationQuestions()
+                ->whereNotIn('sort', collect($questions)->pluck('sort'))
+                ->delete();
 
             JobCriterion::query()->whereBelongsTo($job)->delete();
             $job->jobCriteria()->createMany([

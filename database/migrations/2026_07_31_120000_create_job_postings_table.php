@@ -28,6 +28,8 @@ return new class extends Migration
             $table->text('campaign_expectation')->nullable();
             $table->uuid('key')->unique();
             $table->boolean('published')->default(false);
+            $table->boolean('applications_paused')->default(false);
+            $table->unsignedInteger('application_limit')->nullable();
             $table->boolean('cover_letter_required')->default(false);
             $table->string('cover_letter_type')->default('text');
             $table->timestamps();

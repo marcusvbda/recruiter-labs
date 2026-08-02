@@ -7,9 +7,9 @@ use App\Enums\Feature;
 class PlanComparisonData
 {
     /**
-     * @param list<PlanLimitChangeData> $limitChanges
-     * @param list<Feature> $addedFeatures
-     * @param list<Feature> $removedFeatures
+     * @param  list<PlanLimitChangeData>  $limitChanges
+     * @param  list<Feature>  $addedFeatures
+     * @param  list<Feature>  $removedFeatures
      */
     public function __construct(
         public readonly string $direction,
