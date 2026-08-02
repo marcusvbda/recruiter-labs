@@ -42,6 +42,12 @@ export interface JobApplicationTranslations {
         eyebrow: string;
         title: string;
     };
+    steps: {
+        label: string;
+        job_description: string;
+        application_form: string;
+        success: string;
+    };
     form: {
         eyebrow: string;
         title: string;
@@ -61,8 +67,15 @@ export interface JobApplicationTranslations {
         cover_letter: string;
         cover_letter_placeholder: string;
         role_questions: string;
-        submit_coming_soon: string;
+        back_to_description: string;
+        submit_application: string;
         not_stored: string;
+    };
+    success: {
+        eyebrow: string;
+        title: string;
+        description: string;
+        back_to_description: string;
     };
     sidebar: {
         title: string;
@@ -282,15 +295,17 @@ function countryOptionLabel(
 
 interface ApplicationFormProps {
     job: Job;
+    onBack: () => void;
+    onSubmit: () => void;
     phoneCountries: PhoneCountryOption[];
-    sectionRef: React.RefObject<HTMLElement | null>;
     translations: JobApplicationTranslations;
 }
 
 const ApplicationForm = ({
     job,
+    onBack,
+    onSubmit,
     phoneCountries,
-    sectionRef,
     translations,
 }: ApplicationFormProps) => {
     const defaultPhoneCountry =
@@ -308,18 +323,26 @@ const ApplicationForm = ({
         type: 'region',
     });
 
-    function preventSubmission(event: FormEvent<HTMLFormElement>) {
+    function handleSubmission(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
+        onSubmit();
     }
 
     return (
         <section
-            ref={sectionRef}
             id="application-form"
-            className="scroll-mt-6 rounded-3xl border border-blue-100 bg-white p-6 shadow-xl shadow-blue-950/5 sm:p-8 lg:p-10 dark:border-blue-400/20 dark:bg-slate-900"
+            className="rounded-3xl border border-blue-100 bg-white p-6 shadow-xl shadow-blue-950/5 sm:p-8 lg:p-10 dark:border-blue-400/20 dark:bg-slate-900"
         >
             <div className="flex flex-col gap-3 border-b border-slate-100 pb-7 sm:flex-row sm:items-start sm:justify-between dark:border-white/10">
                 <div>
+                    <button
+                        type="button"
+                        onClick={onBack}
+                        className="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-blue-600 transition hover:text-blue-800 focus-visible:rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:text-blue-300 dark:hover:text-blue-200"
+                    >
+                        <ArrowIcon className="size-4 rotate-180" />
+                        {translations.form.back_to_description}
+                    </button>
                     <p className="text-xs font-semibold tracking-widest text-blue-600 uppercase dark:text-blue-300">
                         {translations.form.eyebrow}
                     </p>
@@ -335,7 +358,11 @@ const ApplicationForm = ({
                 </span>
             </div>
 
-            <form onSubmit={preventSubmission} className="mt-8 space-y-9">
+            <form
+                onSubmit={handleSubmission}
+                noValidate
+                className="mt-8 space-y-9"
+            >
                 <fieldset>
                     <legend className="text-base font-semibold text-slate-950 dark:text-white">
                         {translations.form.contact_information}
@@ -587,16 +614,118 @@ const ApplicationForm = ({
                 <div className="border-t border-slate-100 pt-7 dark:border-white/10">
                     <button
                         type="submit"
-                        disabled
-                        className="inline-flex min-h-12 w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-slate-300 px-6 py-3 text-sm font-semibold text-slate-600 sm:w-auto dark:bg-white/10 dark:text-slate-400"
+                        className="group inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 sm:w-auto"
                     >
-                        {translations.form.submit_coming_soon}
+                        {translations.form.submit_application}
+                        <ArrowIcon className="size-4 transition group-hover:translate-x-0.5" />
                     </button>
                     <p className="mt-3 text-xs leading-5 text-slate-400">
                         {translations.form.not_stored}
                     </p>
                 </div>
             </form>
+        </section>
+    );
+};
+
+type ApplicationStep = 'description' | 'form' | 'success';
+type NavigationStep = Exclude<ApplicationStep, 'success'>;
+
+interface StepNavigationProps {
+    currentStep: ApplicationStep;
+    onStepChange: (step: NavigationStep) => void;
+    translations: JobApplicationTranslations['steps'];
+}
+
+const StepNavigation = ({
+    currentStep,
+    onStepChange,
+    translations,
+}: StepNavigationProps) => {
+    const steps: Array<{ id: NavigationStep; label: string }> = [
+        { id: 'description', label: translations.job_description },
+        { id: 'form', label: translations.application_form },
+    ];
+    const activeStep: NavigationStep =
+        currentStep === 'description' ? 'description' : 'form';
+    const currentStepIndex = steps.findIndex((step) => step.id === activeStep);
+
+    return (
+        <nav
+            aria-label={translations.label}
+            className="rounded-2xl border border-slate-200/80 bg-white p-2 shadow-sm dark:border-white/10 dark:bg-slate-900"
+        >
+            <ol className="grid grid-cols-2 gap-1.5">
+                {steps.map((step, index) => {
+                    const isActive = step.id === activeStep;
+                    const isCompleted = index < currentStepIndex;
+
+                    return (
+                        <li key={step.id}>
+                            <button
+                                type="button"
+                                aria-current={isActive ? 'step' : undefined}
+                                onClick={() => onStepChange(step.id)}
+                                className={`flex min-h-14 w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left transition sm:px-4 ${
+                                    isActive
+                                        ? 'bg-blue-600 text-white shadow-md shadow-blue-600/15'
+                                        : isCompleted
+                                          ? 'text-blue-700 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-400/10'
+                                          : 'text-slate-500 hover:bg-slate-50 hover:text-blue-700 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-blue-300'
+                                }`}
+                            >
+                                <span
+                                    className={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                                        isActive
+                                            ? 'bg-white text-blue-700'
+                                            : isCompleted
+                                              ? 'bg-blue-100 text-blue-700 dark:bg-blue-400/15 dark:text-blue-300'
+                                              : 'bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-slate-400'
+                                    }`}
+                                >
+                                    {isCompleted ? '✓' : index + 1}
+                                </span>
+                                <span className="hidden text-xs font-semibold sm:block lg:text-sm">
+                                    {step.label}
+                                </span>
+                            </button>
+                        </li>
+                    );
+                })}
+            </ol>
+        </nav>
+    );
+};
+
+const SuccessStep = ({
+    onBack,
+    translations,
+}: {
+    onBack: () => void;
+    translations: JobApplicationTranslations['success'];
+}) => {
+    return (
+        <section className="flex min-h-[30rem] flex-col items-center justify-center rounded-3xl border border-emerald-200 bg-white px-6 py-12 text-center shadow-xl shadow-emerald-950/5 sm:px-10 dark:border-emerald-400/20 dark:bg-slate-900">
+            <span className="flex size-20 items-center justify-center rounded-full bg-emerald-100 text-4xl font-bold text-emerald-600 ring-8 ring-emerald-50 dark:bg-emerald-400/15 dark:text-emerald-300 dark:ring-emerald-400/5">
+                ✓
+            </span>
+            <p className="mt-8 text-xs font-semibold tracking-[0.2em] text-emerald-600 uppercase dark:text-emerald-300">
+                {translations.eyebrow}
+            </p>
+            <h2 className="mt-3 max-w-xl text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl dark:text-white">
+                {translations.title}
+            </h2>
+            <p className="mt-4 max-w-xl text-base leading-7 text-slate-500 dark:text-slate-400">
+                {translations.description}
+            </p>
+            <button
+                type="button"
+                onClick={onBack}
+                className="mt-8 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-blue-400/10 dark:hover:text-blue-200"
+            >
+                <ArrowIcon className="size-4 rotate-180" />
+                {translations.back_to_description}
+            </button>
         </section>
     );
 };
@@ -608,20 +737,21 @@ export const JobApplication = ({
     translations,
     preview = false,
 }: JobApplicationProps) => {
-    const [showApplicationForm, setShowApplicationForm] = useState(false);
-    const applicationFormRef = useRef<HTMLElement>(null);
+    const [currentStep, setCurrentStep] =
+        useState<ApplicationStep>('description');
+    const applicationFlowRef = useRef<HTMLDivElement>(null);
     const companyName = job.company?.name ?? 'Recruiter Labs';
     const closingDate = formatDate(job.ends_at, translations.locale);
     const openingDate = formatDate(job.starts_at, translations.locale);
     const questions = job.application_questions ?? [];
     const cvTypes = job.accepted_cv_types ?? [];
 
-    function openApplicationForm() {
-        setShowApplicationForm(true);
+    function changeStep(step: ApplicationStep) {
+        setCurrentStep(step);
 
         window.requestAnimationFrame(() => {
             window.requestAnimationFrame(() => {
-                applicationFormRef.current?.scrollIntoView({
+                applicationFlowRef.current?.scrollIntoView({
                     behavior: 'smooth',
                     block: 'start',
                 });
@@ -713,14 +843,26 @@ export const JobApplication = ({
                             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
                                 <button
                                     type="button"
-                                    onClick={openApplicationForm}
+                                    onClick={() =>
+                                        changeStep(
+                                            currentStep === 'description'
+                                                ? 'form'
+                                                : 'description',
+                                        )
+                                    }
                                     className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-blue-700 shadow-lg shadow-blue-950/15 transition hover:-translate-y-0.5 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
                                 >
-                                    {showApplicationForm
+                                    {currentStep === 'description'
                                         ? translations.hero
                                               .view_application_form
-                                        : translations.hero.apply_for_role}
-                                    <ArrowIcon className="size-4 transition group-hover:translate-x-0.5" />
+                                        : translations.form.back_to_description}
+                                    <ArrowIcon
+                                        className={`size-4 transition ${
+                                            currentStep === 'description'
+                                                ? 'group-hover:translate-x-0.5'
+                                                : 'rotate-180 group-hover:-translate-x-0.5'
+                                        }`}
+                                    />
                                 </button>
                                 <span className="inline-flex items-center justify-center gap-2 text-sm text-blue-100 sm:justify-start">
                                     <CalendarIcon className="size-4" />
@@ -756,149 +898,200 @@ export const JobApplication = ({
                     </div>
                 </section>
 
-                <div className="mt-7 grid items-start gap-7 lg:grid-cols-[minmax(0,1fr)_22rem]">
-                    <div className="flex min-w-0 flex-col gap-7">
-                        <section className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm sm:p-8 lg:p-10 dark:border-white/10 dark:bg-slate-900">
-                            <div className="mb-8 flex items-center gap-4 border-b border-slate-100 pb-6 dark:border-white/10">
-                                <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-400/10 dark:text-blue-300">
-                                    <BriefcaseIcon className="size-6" />
-                                </span>
-                                <div>
-                                    <p className="text-xs font-semibold tracking-widest text-blue-600 uppercase dark:text-blue-300">
-                                        {translations.opportunity.eyebrow}
-                                    </p>
-                                    <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">
-                                        {translations.opportunity.title}
-                                    </h2>
-                                </div>
-                            </div>
+                <div ref={applicationFlowRef} className="mt-7 scroll-mt-5">
+                    <StepNavigation
+                        currentStep={currentStep}
+                        onStepChange={changeStep}
+                        translations={translations.steps}
+                    />
 
-                            <JobDescription
-                                description={job.description}
-                                emptyMessage={translations.description_empty}
-                            />
-                        </section>
-
-                        {showApplicationForm && (
-                            <ApplicationForm
-                                job={job}
-                                phoneCountries={phoneCountries}
-                                sectionRef={applicationFormRef}
-                                translations={translations}
-                            />
-                        )}
-                    </div>
-
-                    <aside className="lg:sticky lg:top-6">
-                        <div className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-xl shadow-slate-900/5 dark:border-white/10 dark:bg-slate-900 dark:shadow-black/20">
-                            <div className="bg-linear-to-br from-slate-950 to-slate-800 p-6 text-white dark:from-blue-700 dark:to-cyan-600">
-                                <span className="flex size-11 items-center justify-center rounded-2xl bg-white/10 text-cyan-200 ring-1 ring-white/15">
-                                    <DocumentIcon className="size-6" />
-                                </span>
-                                <h2 className="mt-5 text-xl font-semibold tracking-tight">
-                                    {translations.sidebar.title}
-                                </h2>
-                                <p className="mt-2 text-sm leading-6 text-slate-300 dark:text-blue-50">
-                                    {translations.sidebar.description}
-                                </p>
-                            </div>
-
-                            <div className="flex flex-col gap-5 p-6">
-                                <div className="flex items-start gap-3">
-                                    <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600 dark:bg-violet-400/10 dark:text-violet-300">
-                                        <SparklesIcon className="size-5" />
-                                    </span>
-                                    <div>
-                                        <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                                            {translate(
-                                                questions.length === 1
-                                                    ? translations.sidebar
-                                                          .question_singular
-                                                    : translations.sidebar
-                                                          .question_plural,
-                                                { count: questions.length },
-                                            )}
-                                        </p>
-                                        <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                                            {
-                                                translations.sidebar
-                                                    .questions_description
-                                            }
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-start gap-3">
-                                    <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600 dark:bg-cyan-400/10 dark:text-cyan-300">
-                                        <DocumentIcon className="size-5" />
-                                    </span>
-                                    <div className="min-w-0">
-                                        <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                                            {
-                                                translations.sidebar
-                                                    .resume_formats
-                                            }
-                                        </p>
-                                        <div className="mt-2 flex flex-wrap gap-1.5">
-                                            {cvTypes.map((fileType) => (
-                                                <span
-                                                    key={fileType.id}
-                                                    className="rounded-lg bg-slate-100 px-2 py-1 text-[11px] font-bold tracking-wide text-slate-600 uppercase dark:bg-white/10 dark:text-slate-300"
-                                                >
-                                                    {fileType.extension}
-                                                </span>
-                                            ))}
+                    <div
+                        className={`mt-5 grid items-start gap-7 ${
+                            currentStep === 'description'
+                                ? 'lg:grid-cols-[minmax(0,1fr)_22rem]'
+                                : 'grid-cols-1'
+                        }`}
+                    >
+                        <div className="flex min-w-0 flex-col gap-7">
+                            {currentStep === 'description' ? (
+                                <section className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm sm:p-8 lg:p-10 dark:border-white/10 dark:bg-slate-900">
+                                    <div className="mb-8 flex items-center gap-4 border-b border-slate-100 pb-6 dark:border-white/10">
+                                        <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-400/10 dark:text-blue-300">
+                                            <BriefcaseIcon className="size-6" />
+                                        </span>
+                                        <div>
+                                            <p className="text-xs font-semibold tracking-widest text-blue-600 uppercase dark:text-blue-300">
+                                                {
+                                                    translations.opportunity
+                                                        .eyebrow
+                                                }
+                                            </p>
+                                            <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">
+                                                {translations.opportunity.title}
+                                            </h2>
                                         </div>
                                     </div>
-                                </div>
 
-                                <div className="flex items-start gap-3">
-                                    <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-400/10 dark:text-amber-300">
-                                        <CalendarIcon className="size-5" />
-                                    </span>
-                                    <div>
-                                        <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                                            {closingDate
-                                                ? translate(
-                                                      translations.sidebar
-                                                          .closes,
-                                                      { date: closingDate },
-                                                  )
-                                                : translations.sidebar
-                                                      .open_ended}
+                                    <JobDescription
+                                        description={job.description}
+                                        emptyMessage={
+                                            translations.description_empty
+                                        }
+                                    />
+                                </section>
+                            ) : currentStep === 'form' ? (
+                                <ApplicationForm
+                                    job={job}
+                                    onBack={() => changeStep('description')}
+                                    onSubmit={() => changeStep('success')}
+                                    phoneCountries={phoneCountries}
+                                    translations={translations}
+                                />
+                            ) : (
+                                <SuccessStep
+                                    onBack={() => changeStep('description')}
+                                    translations={translations.success}
+                                />
+                            )}
+                        </div>
+
+                        {currentStep === 'description' && (
+                            <aside className="lg:sticky lg:top-6">
+                                <div className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-xl shadow-slate-900/5 dark:border-white/10 dark:bg-slate-900 dark:shadow-black/20">
+                                    <div className="bg-linear-to-br from-slate-950 to-slate-800 p-6 text-white dark:from-blue-700 dark:to-cyan-600">
+                                        <span className="flex size-11 items-center justify-center rounded-2xl bg-white/10 text-cyan-200 ring-1 ring-white/15">
+                                            <DocumentIcon className="size-6" />
+                                        </span>
+                                        <h2 className="mt-5 text-xl font-semibold tracking-tight">
+                                            {translations.sidebar.title}
+                                        </h2>
+                                        <p className="mt-2 text-sm leading-6 text-slate-300 dark:text-blue-50">
+                                            {translations.sidebar.description}
                                         </p>
-                                        <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                                            {openingDate
-                                                ? translate(
-                                                      translations.sidebar
-                                                          .applications_opened,
-                                                      { date: openingDate },
-                                                  )
-                                                : translations.sidebar
-                                                      .applications_open_now}
+                                    </div>
+
+                                    <div className="flex flex-col gap-5 p-6">
+                                        <div className="flex items-start gap-3">
+                                            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600 dark:bg-violet-400/10 dark:text-violet-300">
+                                                <SparklesIcon className="size-5" />
+                                            </span>
+                                            <div>
+                                                <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                                                    {translate(
+                                                        questions.length === 1
+                                                            ? translations
+                                                                  .sidebar
+                                                                  .question_singular
+                                                            : translations
+                                                                  .sidebar
+                                                                  .question_plural,
+                                                        {
+                                                            count: questions.length,
+                                                        },
+                                                    )}
+                                                </p>
+                                                <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                                                    {
+                                                        translations.sidebar
+                                                            .questions_description
+                                                    }
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-start gap-3">
+                                            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600 dark:bg-cyan-400/10 dark:text-cyan-300">
+                                                <DocumentIcon className="size-5" />
+                                            </span>
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                                                    {
+                                                        translations.sidebar
+                                                            .resume_formats
+                                                    }
+                                                </p>
+                                                <div className="mt-2 flex flex-wrap gap-1.5">
+                                                    {cvTypes.map((fileType) => (
+                                                        <span
+                                                            key={fileType.id}
+                                                            className="rounded-lg bg-slate-100 px-2 py-1 text-[11px] font-bold tracking-wide text-slate-600 uppercase dark:bg-white/10 dark:text-slate-300"
+                                                        >
+                                                            {fileType.extension}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-start gap-3">
+                                            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-400/10 dark:text-amber-300">
+                                                <CalendarIcon className="size-5" />
+                                            </span>
+                                            <div>
+                                                <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                                                    {closingDate
+                                                        ? translate(
+                                                              translations
+                                                                  .sidebar
+                                                                  .closes,
+                                                              {
+                                                                  date: closingDate,
+                                                              },
+                                                          )
+                                                        : translations.sidebar
+                                                              .open_ended}
+                                                </p>
+                                                <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                                                    {openingDate
+                                                        ? translate(
+                                                              translations
+                                                                  .sidebar
+                                                                  .applications_opened,
+                                                              {
+                                                                  date: openingDate,
+                                                              },
+                                                          )
+                                                        : translations.sidebar
+                                                              .applications_open_now}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="h-px bg-slate-100 dark:bg-white/10" />
+
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                changeStep(
+                                                    currentStep ===
+                                                        'description'
+                                                        ? 'form'
+                                                        : 'description',
+                                                )
+                                            }
+                                            className="group inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+                                        >
+                                            {currentStep === 'description'
+                                                ? translations.sidebar.apply_now
+                                                : translations.form
+                                                      .back_to_description}
+                                            <ArrowIcon
+                                                className={`size-4 transition ${
+                                                    currentStep ===
+                                                    'description'
+                                                        ? 'group-hover:translate-x-0.5'
+                                                        : 'rotate-180 group-hover:-translate-x-0.5'
+                                                }`}
+                                            />
+                                        </button>
+                                        <p className="text-center text-xs leading-5 text-slate-400">
+                                            {translations.sidebar.privacy}
                                         </p>
                                     </div>
                                 </div>
-
-                                <div className="h-px bg-slate-100 dark:bg-white/10" />
-
-                                <button
-                                    type="button"
-                                    onClick={openApplicationForm}
-                                    className="group inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
-                                >
-                                    {showApplicationForm
-                                        ? translations.hero
-                                              .view_application_form
-                                        : translations.sidebar.apply_now}
-                                    <ArrowIcon className="size-4 transition group-hover:translate-x-0.5" />
-                                </button>
-                                <p className="text-center text-xs leading-5 text-slate-400">
-                                    {translations.sidebar.privacy}
-                                </p>
-                            </div>
-                        </div>
-                    </aside>
+                            </aside>
+                        )}
+                    </div>
                 </div>
             </main>
 

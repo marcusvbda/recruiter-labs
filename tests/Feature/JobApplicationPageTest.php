@@ -59,7 +59,12 @@ it('shows the public application page with the job application data', function (
             ->where('job.application_questions.0.response_type', 'textarea')
             ->has('phoneCountries', count(PhoneCountry::cases()))
             ->where('translations.locale', 'en-US')
-            ->where('translations.form.full_name', 'Full name'));
+            ->where('translations.form.full_name', 'Full name')
+            ->where('translations.steps.job_description', 'Job description')
+            ->where('translations.steps.application_form', 'Application form')
+            ->where('translations.steps.success', 'Success')
+            ->where('translations.form.submit_application', 'Submit application')
+            ->where('translations.success.title', 'Thank you for your interest!'));
 });
 
 it('uses the language configured on the job for all fixed application page copy', function (
