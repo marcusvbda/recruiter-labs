@@ -139,7 +139,8 @@ class JobPipelineKanban extends StateKanbanBoard
         return Application::query()
             ->whereBelongsTo($this->record, 'job')
             ->where('company_id', $this->record->company_id)
-            ->with('candidate');
+            ->with('candidate')
+            ->withCount(['answers', 'documents']);
     }
 
     /**

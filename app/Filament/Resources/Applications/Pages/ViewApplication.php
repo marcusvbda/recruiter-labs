@@ -21,6 +21,7 @@ use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
+use Filament\Support\Colors\Color;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Carbon;
@@ -69,11 +70,8 @@ class ViewApplication extends ViewRecord
                 ->schema([
                     Select::make('status_id')
                         ->label(__('applications.admin.actions.choose_status'))
-                        ->options(fn (): array => Status::query()
-                            ->where('company_id', $application->company_id)
-                            ->orderBy('order')
-                            ->pluck('name', 'id')
-                            ->all())
+                        ->options(fn (): array => $this->statusOptions($application->company_id))
+                        ->allowHtml()
                         ->default($application->status_id)
                         ->native(false)
                         ->required(),
@@ -118,6 +116,21 @@ class ViewApplication extends ViewRecord
         ];
     }
 
+    /** @return array<int, string> */
+    private function statusOptions(int $companyId): array
+    {
+        return Status::query()
+            ->where('company_id', $companyId)
+            ->orderBy('order')
+            ->get()
+            ->mapWithKeys(fn (Status $status): array => [
+                $status->getKey() => view('filament.resources.applications.components.status-option', [
+                    'status' => $status,
+                ])->render(),
+            ])
+            ->all();
+    }
+
     public function content(Schema $schema): Schema
     {
         $application = $this->getApplication();
@@ -158,9 +171,7 @@ class ViewApplication extends ViewRecord
         ]);
     }
 
-    /**
-     * @return array<string, string>
-     */
+    /** @return array<string, mixed> */
     private function headerData(Application $application): array
     {
         $analysisStatus = $this->enumValue($application->analysis_status);
@@ -179,6 +190,7 @@ class ViewApplication extends ViewRecord
                 ?? __('applications.admin.not_provided'),
             'job' => $application->job->name,
             'status' => $application->status->name,
+            'status_color' => Color::hex($application->status->color),
             'applied_at' => $application->created_at->translatedFormat('M j, Y · H:i'),
             'source' => (string) __("applications.admin.sources.{$source}"),
             'referral' => $application->referral?->user->name ?? (string) __('applications.admin.not_applicable'),

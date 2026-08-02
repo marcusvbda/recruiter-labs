@@ -129,6 +129,34 @@
                                             {{ $subtitle }}
                                         </p>
                                     @endif
+
+                                    <div class="rl-pipeline-card-summary">
+                                        <div class="rl-pipeline-card-summary__meta">
+                                            <span>
+                                                <x-filament::icon icon="heroicon-m-calendar-days" class="size-3.5" />
+                                                {{ __('applications.pipeline.kanban.applied_on', ['date' => $record->created_at->translatedFormat('M j')]) }}
+                                            </span>
+                                            <span>
+                                                <x-filament::icon icon="heroicon-m-chat-bubble-left-right" class="size-3.5" />
+                                                {{ trans_choice('applications.pipeline.kanban.answers', $record->answers_count, ['count' => $record->answers_count]) }}
+                                            </span>
+                                            <span>
+                                                <x-filament::icon icon="heroicon-m-paper-clip" class="size-3.5" />
+                                                {{ trans_choice('applications.pipeline.kanban.documents', $record->documents_count, ['count' => $record->documents_count]) }}
+                                            </span>
+                                        </div>
+
+                                        <a
+                                            href="{{ $this->getApplicationUrl($record) }}"
+                                            wire:navigate
+                                            x-on:pointerdown.stop
+                                            x-on:click.stop
+                                            class="rl-pipeline-card-summary__link"
+                                        >
+                                            {{ __('applications.pipeline.kanban.view_details') }}
+                                            <x-filament::icon icon="heroicon-m-arrow-right" class="size-3.5" />
+                                        </a>
+                                    </div>
                                 </div>
                             @empty
                                 <p class="fi-model-states-kanban__empty-column">

@@ -66,7 +66,6 @@ class JobDashboardService
             ->whereHas('jobClick', fn (Builder $query): Builder => $query->where('job_id', $job->getKey()))
             ->groupBy(['name', 'value'])
             ->orderByDesc('clicks')
-            ->limit(10)
             ->get()
             ->map(fn (JobClickUtmParameter $parameter): array => [
                 'name' => $parameter->name,

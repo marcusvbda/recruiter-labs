@@ -1,5 +1,6 @@
 <?php
 
+use App\Filament\Resources\Applications\ApplicationResource;
 use App\Filament\Resources\Jobs\JobResource;
 use App\Filament\Resources\Jobs\Pages\ViewJob;
 use App\Filament\Resources\Jobs\Widgets\JobPipelineKanban;
@@ -129,6 +130,50 @@ it('shows only candidates linked to the bound job on the kanban board', function
     Livewire::test(JobPipelineKanban::class, ['record' => $job])
         ->assertSee($includedCandidate->name)
         ->assertDontSee($excludedCandidate->name);
+});
+
+it('shows a compact application summary and an explicit details link on each pipeline card', function () {
+    $company = Company::factory()->create();
+    $job = Job::factory()->for($company)->create();
+    $status = Status::factory()->for($company)->create();
+    $candidate = Candidate::factory()->for($company)->create();
+    $application = Application::factory()->for($company)->create([
+        'job_id' => $job->id,
+        'candidate_id' => $candidate->id,
+        'status_id' => $status->id,
+    ]);
+
+    $application->answers()->create([
+        'company_id' => $company->id,
+        'question_snapshot' => 'Why do you want this role?',
+        'response_type' => 'text',
+        'value_text' => 'A thoughtful answer.',
+    ]);
+    $application->documents()->create([
+        'company_id' => $company->id,
+        'type' => 'cv',
+        'disk' => 'local',
+        'path' => 'applications/test-cv.pdf',
+        'original_name' => 'test-cv.pdf',
+        'mime_type' => 'application/pdf',
+        'extension' => 'pdf',
+        'size' => 100,
+        'checksum' => hash('sha256', 'test'),
+        'uploaded_at' => now(),
+    ]);
+
+    actAsCompany($company);
+
+    Livewire::test(JobPipelineKanban::class, ['record' => $job])
+        ->assertSee(__('applications.pipeline.kanban.applied_on', [
+            'date' => $application->created_at->translatedFormat('M j'),
+        ]))
+        ->assertSee(trans_choice('applications.pipeline.kanban.answers', 1, ['count' => 1]))
+        ->assertSee(trans_choice('applications.pipeline.kanban.documents', 1, ['count' => 1]))
+        ->assertSee(__('applications.pipeline.kanban.view_details'))
+        ->assertSeeHtml('href="'.ApplicationResource::getUrl('view', [
+            'record' => $application,
+        ], tenant: $company).'"');
 });
 
 it('renders the job pipeline as a kanban inside the job view', function () {

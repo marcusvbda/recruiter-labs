@@ -89,6 +89,24 @@ it('builds the job dashboard metrics and rankings', function () {
         ]);
 });
 
+it('shows every tracked UTM value even when the ranking has more than ten entries', function () {
+    $company = Company::factory()->create();
+    $job = Job::factory()->for($company)->create();
+
+    foreach (range(1, 11) as $position) {
+        $click = JobClick::factory()->for($company)->for($job)->create();
+        $click->utmParameters()->create([
+            'name' => 'utm_source',
+            'value' => "campaign-{$position}",
+        ]);
+    }
+
+    $utmRanking = app(JobDashboardService::class)->get($job)['utm_ranking'];
+
+    expect($utmRanking)->toHaveCount(11)
+        ->and(collect($utmRanking)->pluck('value'))->toContain('campaign-11');
+});
+
 it('renders dashboard and pipeline tabs on the job view page', function () {
     $company = Company::factory()->create();
     $job = Job::factory()->for($company)->create(['name' => 'Platform Engineer']);

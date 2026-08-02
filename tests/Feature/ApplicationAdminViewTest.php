@@ -19,6 +19,10 @@ use App\Models\Referral;
 use App\Models\Status;
 use App\Models\User;
 use Database\Seeders\PlanSeeder;
+use Filament\Actions\Action;
+use Filament\Forms\Components\Select;
+use Filament\Schemas\Schema;
+use Filament\Support\Colors\Color;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Lang;
@@ -31,10 +35,13 @@ beforeEach(function () {
     $this->seed(PlanSeeder::class);
 });
 
-it('renders complete application details without exposing private storage paths', function () {
+it('renders complete application details with the current status color without exposing private storage paths', function () {
     $company = Company::factory()->create();
     $job = Job::factory()->for($company)->create(['name' => 'Senior Platform Engineer']);
-    $status = Status::factory()->for($company)->create(['name' => 'Screening']);
+    $status = Status::factory()->for($company)->create([
+        'name' => 'Screening',
+        'color' => '#f59e0b',
+    ]);
     $candidate = Candidate::factory()->for($company)->create([
         'name' => 'Ada Lovelace',
         'email' => 'ada@example.com',
@@ -102,6 +109,7 @@ it('renders complete application details without exposing private storage paths'
         ->assertSee('Ada Lovelace')
         ->assertSee('Senior Platform Engineer')
         ->assertSee('Screening')
+        ->assertSee(Color::hex('#f59e0b')[600], escape: false)
         ->assertSee('Grace Hopper')
         ->assertSee('utm_source')
         ->assertSee('linkedin')
@@ -160,6 +168,46 @@ it('moves an application only to a status from its own company', function () {
         ->callAction('moveStatus', ['status_id' => $foreignStatus->id]);
 
     expect($application->fresh()->status_id)->toBe($nextStatus->id);
+});
+
+it('shows each pipeline status color beside its name in the move status action', function () {
+    $company = Company::factory()->create();
+    $currentStatus = Status::factory()->for($company)->create([
+        'name' => 'Applied',
+        'color' => '#3b82f6',
+        'order' => 1,
+    ]);
+    Status::factory()->for($company)->create([
+        'name' => 'Interview',
+        'color' => '#8b5cf6',
+        'order' => 2,
+    ]);
+    $application = Application::factory()->for($company)->create([
+        'status_id' => $currentStatus->id,
+    ]);
+
+    actAsCompany($company);
+
+    Livewire::test(ViewApplication::class, ['record' => $application->getRouteKey()])
+        ->assertActionExists('moveStatus', function (Action $action) use ($currentStatus): bool {
+            $livewire = $action->getLivewire();
+
+            if (! $livewire instanceof ViewApplication) {
+                return false;
+            }
+
+            $statusField = $action->getSchema(Schema::make($livewire))
+                ?->getComponent('status_id', withHidden: true);
+
+            if (! $statusField instanceof Select || ! $statusField->isHtmlAllowed()) {
+                return false;
+            }
+
+            $options = $statusField->getOptions();
+
+            return str_contains($options[$currentStatus->id], 'fill="#3b82f6"')
+                && str_contains(implode('', $options), 'fill="#8b5cf6"');
+        });
 });
 
 it('links kanban cards to the tenant-scoped application page and shows compact AI state', function () {
