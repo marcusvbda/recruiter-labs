@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
@@ -65,5 +66,15 @@ class User extends Authenticatable implements FilamentUser, HasTenants
     public function canAccessTenant(Model $tenant): bool
     {
         return $this->companies()->whereKey($tenant)->exists();
+    }
+
+    public function planChanges(): HasMany
+    {
+        return $this->hasMany(PlanChange::class, 'changed_by_id');
+    }
+
+    public function aiUsageRecords(): HasMany
+    {
+        return $this->hasMany(AiUsageRecord::class);
     }
 }

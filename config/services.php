@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    'openai' => [
+        'base_url' => env('OPENAI_BASE_URL', 'https://api.openai.com'),
+        'api_key' => env('OPENAI_API_KEY'),
+        'model' => env('OPENAI_MODEL', 'gpt-4o-mini'),
+        'connect_timeout' => (int) env('OPENAI_CONNECT_TIMEOUT', 3),
+        'timeout' => (int) env('OPENAI_TIMEOUT', 8),
+    ],
+
 ];

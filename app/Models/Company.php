@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable(['name', 'slug', 'plan_id'])]
 class Company extends Model
@@ -26,6 +27,7 @@ class Company extends Model
         return $this->hasMany(Candidate::class);
     }
 
+    /** @return HasMany<Job, $this> */
     public function jobs(): HasMany
     {
         return $this->hasMany(Job::class);
@@ -61,9 +63,32 @@ class Company extends Model
         return $this->hasMany(JobCriterion::class);
     }
 
+    /** @return BelongsTo<Plan, $this> */
     public function plan(): BelongsTo
     {
         return $this->belongsTo(Plan::class);
+    }
+
+    /** @return HasOne<CompanyAiSetting, $this> */
+    public function aiSetting(): HasOne
+    {
+        return $this->hasOne(CompanyAiSetting::class);
+    }
+
+    /** @return HasMany<AiUsageRecord, $this> */
+    public function aiUsageRecords(): HasMany
+    {
+        return $this->hasMany(AiUsageRecord::class);
+    }
+
+    public function planChanges(): HasMany
+    {
+        return $this->hasMany(PlanChange::class);
+    }
+
+    public function auditLogs(): HasMany
+    {
+        return $this->hasMany(CompanyAuditLog::class);
     }
 
     public function hasFeature(Feature $feature): bool
@@ -76,5 +101,10 @@ class Company extends Model
         $max = $this->plan->getLimit($limit);
 
         return $max !== null && $currentCount >= $max;
+    }
+
+    public function getLimit(Limit $limit): ?int
+    {
+        return $this->plan->getLimit($limit);
     }
 }

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable(['company_id', 'job_id', 'candidate_id', 'status_id'])]
 class Application extends Model
@@ -30,5 +31,10 @@ class Application extends Model
     public function status(): BelongsTo
     {
         return $this->belongsTo(Status::class);
+    }
+
+    public function aiUsageRecords(): HasMany
+    {
+        return $this->hasMany(AiUsageRecord::class);
     }
 }

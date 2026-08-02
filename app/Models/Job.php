@@ -6,6 +6,7 @@ use App\Enums\ApplicationLocale;
 use App\Enums\CoverLetterType;
 use App\Models\Concerns\HasUniqueKey;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -39,6 +40,24 @@ class Job extends Model
             'cover_letter_required' => 'boolean',
             'cover_letter_type' => CoverLetterType::class,
         ];
+    }
+
+    /**
+     * @param  Builder<Job>  $query
+     * @return Builder<Job>
+     */
+    public function scopeCurrentlyActive(Builder $query): Builder
+    {
+        $today = today();
+
+        return $query
+            ->where('published', true)
+            ->where(fn (Builder $query): Builder => $query
+                ->whereNull('starts_at')
+                ->orWhereDate('starts_at', '<=', $today))
+            ->where(fn (Builder $query): Builder => $query
+                ->whereNull('ends_at')
+                ->orWhereDate('ends_at', '>=', $today));
     }
 
     public function company(): BelongsTo

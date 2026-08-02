@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\Job;
+use App\Services\CompanyTopbarSummary;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Date;
@@ -18,7 +19,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->scoped(CompanyTopbarSummary::class);
     }
 
     /**

@@ -12,6 +12,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('slug')->unique();
+            $table->unsignedSmallInteger('sort_order')->default(0)->index();
             $table->json('features');
             $table->json('limits');
             $table->timestamps();

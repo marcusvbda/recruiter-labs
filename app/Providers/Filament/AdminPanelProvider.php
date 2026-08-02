@@ -2,6 +2,10 @@
 
 namespace App\Providers\Filament;
 
+use App\Data\CompanyTopbarSummaryData;
+use App\Enums\AiProvider;
+use App\Enums\Limit;
+use App\Enums\UsageWarningState;
 use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\Settings;
 use App\Filament\Pages\Tenancy\EditCompanyProfile;
@@ -9,6 +13,7 @@ use App\Filament\Pages\Tenancy\RegisterCompany;
 use App\Http\Middleware\ApplyTenantScopes;
 use App\Http\Middleware\SetLocale;
 use App\Models\Company;
+use App\Services\CompanyTopbarSummary;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Http\Middleware\Authenticate;
@@ -25,6 +30,8 @@ use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\Number;
+use Illuminate\Support\Str;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class AdminPanelProvider extends PanelProvider
@@ -70,6 +77,10 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->renderHook(
                 PanelsRenderHook::USER_MENU_BEFORE,
+                fn (): string => $this->renderCompanyTopbarSummary(),
+            )
+            ->renderHook(
+                PanelsRenderHook::USER_MENU_BEFORE,
                 fn (): string => view('filament.language-switcher', [
                     'locales' => [
                         'en' => ['label' => 'English', 'flag' => '🇺🇸'],
@@ -94,5 +105,94 @@ class AdminPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ]);
+    }
+
+    private function renderCompanyTopbarSummary(): string
+    {
+        $company = Filament::getTenant();
+
+        if (! $company instanceof Company || ! Filament::auth()->check()) {
+            return '';
+        }
+
+        $summary = app(CompanyTopbarSummary::class)->for($company);
+
+        return view('filament.topbar-company-usage', [
+            'summary' => $this->topbarViewData($summary),
+        ])->render();
+    }
+
+    /** @return array<string, int|string> */
+    private function topbarViewData(CompanyTopbarSummaryData $summary): array
+    {
+        $usage = $summary->aiUsage;
+        $limit = $usage->isUnlimited
+            ? __('settings.topbar.unlimited')
+            : Number::format($usage->limitValue ?? 0);
+        $remaining = $usage->isUnlimited
+            ? __('settings.topbar.unlimited')
+            : Number::format($usage->remaining ?? 0);
+        $percentage = $usage->isUnlimited
+            ? __('settings.topbar.unlimited')
+            : Number::percentage($usage->percentage);
+        $provider = $summary->provider === AiProvider::Own
+            ? __('settings.ai.own_key.name')
+            : __('settings.ai.platform.name');
+        $warningState = $usage->warningState->value;
+        $statusLabel = match ($usage->warningState) {
+            UsageWarningState::Attention => __('settings.topbar.warning'),
+            UsageWarningState::Critical => __('settings.topbar.critical'),
+            UsageWarningState::Reached => __('settings.topbar.reached'),
+            default => __('settings.topbar.normal'),
+        };
+
+        $planLines = [
+            __('settings.topbar.current_plan', ['plan' => $summary->planName]),
+            '',
+            ...collect(Limit::cases())
+                ->map(fn (Limit $planLimit): string => __("settings.limits.{$planLimit->value}").': '.(
+                    $summary->planLimits[$planLimit->value] === null
+                        ? __('settings.topbar.unlimited')
+                        : Number::format($summary->planLimits[$planLimit->value])
+                ))
+                ->all(),
+            '',
+            __('settings.topbar.manage_plan'),
+        ];
+        $aiLines = [
+            __('settings.topbar.ai_analyses'),
+            '',
+            __('settings.topbar.used', ['count' => Number::format($usage->used)]),
+            __('settings.topbar.remaining', ['count' => $remaining]),
+            __('settings.topbar.consumed', ['percentage' => $percentage]),
+            '',
+            __('settings.topbar.cycle', [
+                'start' => $usage->cycleStart?->translatedFormat('d M Y') ?? '—',
+                'end' => $usage->cycleEnd?->translatedFormat('d M Y') ?? '—',
+            ]),
+            __('settings.topbar.provider', ['provider' => $provider]),
+            $statusLabel,
+            '',
+            __('settings.topbar.manage_ai'),
+        ];
+
+        return [
+            'plan_name' => $summary->planName,
+            'plan_initial' => Str::substr($summary->planName, 0, 1),
+            'plan_url' => Settings::getUrl(['section' => 'plan']),
+            'plan_tooltip' => implode("\n", $planLines),
+            'ai_url' => Settings::getUrl(['section' => 'ai']),
+            'ai_tooltip' => implode("\n", $aiLines),
+            'used' => Number::format($usage->used),
+            'limit' => $limit,
+            'percentage_label' => $percentage,
+            'bar_percentage' => min(100, max(0, $usage->percentage)),
+            'warning_state' => $warningState,
+            'status_label' => $statusLabel,
+            'status_icon' => match ($usage->warningState) {
+                UsageWarningState::Reached => 'heroicon-m-no-symbol',
+                default => 'heroicon-m-exclamation-triangle',
+            },
+        ];
     }
 }

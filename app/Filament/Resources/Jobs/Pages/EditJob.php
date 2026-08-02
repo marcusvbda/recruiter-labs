@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Jobs\Pages;
 
 use App\Filament\Resources\Jobs\JobResource;
+use App\Filament\Resources\Jobs\Pages\Concerns\GuardsJobPlanLimit;
 use App\Models\Job;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
@@ -11,9 +12,12 @@ use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Database\Eloquent\Model;
 
 class EditJob extends EditRecord
 {
+    use GuardsJobPlanLimit;
+
     protected static string $resource = JobResource::class;
 
     public string $activeJobEditTab = 'edit';
@@ -49,6 +53,16 @@ class EditJob extends EditRecord
                     ->columnSpanFull(),
                 $this->getRelationManagersContentComponent(),
             ]);
+    }
+
+    /** @param array<string, mixed> $data */
+    protected function handleRecordUpdate(Model $record, array $data): Model
+    {
+        abort_unless($record instanceof Job, 404);
+
+        $this->ensureJobCanBeSaved($data, $record);
+
+        return parent::handleRecordUpdate($record, $data);
     }
 
     private function getPreviewUrl(): string

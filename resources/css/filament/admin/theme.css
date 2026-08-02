@@ -2,3 +2,107 @@
 
 @source '../../../../app/Filament/**/*';
 @source '../../../../resources/views/filament/**/*';
+
+@layer components {
+    .rl-settings-hero {
+        @apply from-primary-700 via-primary-600 shadow-primary-900/10 relative isolate overflow-hidden rounded-3xl bg-linear-to-br to-cyan-500 px-6 py-7 text-white shadow-xl sm:px-8;
+    }
+
+    .rl-settings-panel {
+        @apply rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6 dark:border-white/10 dark:bg-gray-900;
+    }
+
+    .rl-plan-grid {
+        @apply grid gap-4 lg:grid-cols-3;
+    }
+
+    .rl-plan-card {
+        @apply hover:border-primary-300 hover:shadow-primary-900/5 dark:hover:border-primary-500/50 relative flex min-h-full flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-lg sm:p-6 dark:border-white/10 dark:bg-gray-900;
+    }
+
+    .rl-plan-card[data-current='true'] {
+        @apply border-primary-500 ring-primary-500/15 dark:border-primary-400 dark:ring-primary-400/15 ring-2;
+    }
+
+    .rl-usage-grid {
+        @apply grid gap-4 sm:grid-cols-2 xl:grid-cols-4;
+    }
+
+    .rl-usage-card {
+        @apply rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-gray-900;
+    }
+
+    .rl-progress-track {
+        @apply block h-2 w-full overflow-hidden rounded-full border-0 bg-gray-100 dark:bg-white/10;
+        appearance: none;
+    }
+
+    .rl-progress-track::-webkit-progress-bar {
+        @apply rounded-full bg-gray-100 dark:bg-white/10;
+    }
+
+    .rl-progress-track::-webkit-progress-value {
+        @apply bg-primary-500 rounded-full;
+    }
+
+    .rl-progress-track::-moz-progress-bar {
+        @apply bg-primary-500 rounded-full;
+    }
+
+    [data-warning='attention'] .rl-progress-track::-webkit-progress-value {
+        @apply bg-amber-500;
+    }
+
+    [data-warning='attention'] .rl-progress-track::-moz-progress-bar {
+        @apply bg-amber-500;
+    }
+
+    [data-warning='critical'] .rl-progress-track::-webkit-progress-value {
+        @apply bg-orange-500;
+    }
+
+    [data-warning='critical'] .rl-progress-track::-moz-progress-bar {
+        @apply bg-orange-500;
+    }
+
+    [data-warning='reached'] .rl-progress-track::-webkit-progress-value,
+    [data-warning='exceeded'] .rl-progress-track::-webkit-progress-value {
+        @apply bg-danger-500;
+    }
+
+    [data-warning='reached'] .rl-progress-track::-moz-progress-bar,
+    [data-warning='exceeded'] .rl-progress-track::-moz-progress-bar {
+        @apply bg-danger-500;
+    }
+
+    .rl-company-summary {
+        @apply flex shrink-0 items-center gap-1 rounded-xl border border-gray-200 bg-white/80 p-1 shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-gray-900/80;
+    }
+
+    .rl-company-summary-link {
+        @apply focus-visible:ring-primary-500 flex min-h-8 items-center rounded-lg px-2 text-xs font-semibold text-gray-700 transition outline-none hover:bg-gray-100 focus-visible:ring-2 dark:text-gray-200 dark:hover:bg-white/10;
+    }
+
+    .rl-company-summary-plan {
+        @apply gap-1.5 tracking-wide uppercase;
+    }
+
+    .rl-company-summary-ai {
+        @apply min-w-28 flex-col items-stretch gap-1 px-2.5 py-1 sm:min-w-36;
+    }
+
+    .rl-company-summary-divider {
+        @apply h-6 w-px bg-gray-200 dark:bg-white/10;
+    }
+}
+
+@media (max-width: 639px) {
+    .rl-company-summary-ai {
+        min-width: 5.25rem;
+    }
+
+    .rl-company-summary-ai .rl-company-summary-percentage,
+    .rl-company-summary-plan-label {
+        display: none;
+    }
+}

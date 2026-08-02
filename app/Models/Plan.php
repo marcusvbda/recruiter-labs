@@ -9,7 +9,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['name', 'slug', 'features', 'limits'])]
+/**
+ * @property string $name
+ * @property string $slug
+ * @property int $sort_order
+ * @property list<string> $features
+ * @property array<string, int|null> $limits
+ */
+#[Fillable(['name', 'slug', 'sort_order', 'features', 'limits'])]
 class Plan extends Model
 {
     use HasFactory;
@@ -39,6 +46,6 @@ class Plan extends Model
 
     public static function default(): self
     {
-        return static::query()->where('slug', 'default')->firstOrFail();
+        return static::query()->where('slug', 'starter')->firstOrFail();
     }
 }
