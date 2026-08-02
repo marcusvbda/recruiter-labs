@@ -1297,9 +1297,6 @@ export const JobApplication = ({
                                         <h2 className="mt-5 text-xl font-semibold tracking-tight">
                                             {translations.sidebar.title}
                                         </h2>
-                                        <p className="mt-2 text-sm leading-6 text-slate-300 dark:text-blue-50">
-                                            {translations.sidebar.description}
-                                        </p>
                                     </div>
 
                                     <div className="flex flex-col gap-5 p-6">

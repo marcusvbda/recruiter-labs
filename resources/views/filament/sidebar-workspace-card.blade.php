@@ -18,11 +18,6 @@
 
             <span class="rl-sidebar-workspace-card__plan">{{ $planName }}</span>
         </div>
-
-        <p class="mt-4 text-xs leading-5 text-blue-100/80">
-            {{ __('settings.sidebar.description') }}
-        </p>
-
         <div class="mt-4 grid gap-2">
             <a href="{{ $newJobUrl }}" class="rl-sidebar-workspace-card__primary-action">
                 <x-filament::icon icon="heroicon-m-plus" class="size-4" />

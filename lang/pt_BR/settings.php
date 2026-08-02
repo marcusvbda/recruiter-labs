@@ -6,7 +6,6 @@ return [
     'subtitle' => 'Gerencie seu perfil, o plano da empresa e a configuração de IA.',
     'sidebar' => [
         'workspace' => 'Ambiente',
-        'description' => 'Mantenha seu recrutamento avançando com um próximo passo claro.',
         'new_job' => 'Criar nova vaga',
         'manage_workspace' => 'Gerenciar ambiente',
     ],
