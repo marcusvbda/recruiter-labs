@@ -61,7 +61,7 @@ it('counts only currently active public jobs towards the job limit', function ()
         'starts_at' => null,
         'ends_at' => '2026-08-14',
     ]);
-    Job::factory()->count(3)->for($company)->create([
+    Job::factory()->for($company)->create([
         'published' => true,
         'starts_at' => '2026-08-01',
         'ends_at' => '2026-08-31',
@@ -69,8 +69,8 @@ it('counts only currently active public jobs towards the job limit', function ()
 
     $metric = app(CompanyUsageService::class)->usageFor($company, Limit::Jobs);
 
-    expect($metric->used)->toBe(3)
-        ->and($metric->limitValue)->toBe(3)
+    expect($metric->used)->toBe(1)
+        ->and($metric->limitValue)->toBe(1)
         ->and($metric->remaining)->toBe(0)
         ->and($metric->percentage)->toBe(100)
         ->and($metric->isReached)->toBeTrue();
@@ -135,7 +135,7 @@ it('blocks new actions when usage is already above a downgraded limit without de
     $company = Company::factory()->create([
         'plan_id' => Plan::query()->where('slug', 'starter')->sole()->id,
     ]);
-    Job::factory()->count(4)->for($company)->create([
+    Job::factory()->count(2)->for($company)->create([
         'published' => true,
         'starts_at' => null,
         'ends_at' => null,
@@ -143,11 +143,11 @@ it('blocks new actions when usage is already above a downgraded limit without de
 
     $metric = app(CompanyUsageService::class)->usageFor($company, Limit::Jobs);
 
-    expect($metric->used)->toBe(4)
-        ->and($metric->limitValue)->toBe(3)
+    expect($metric->used)->toBe(2)
+        ->and($metric->limitValue)->toBe(1)
         ->and($metric->remaining)->toBe(0)
         ->and($metric->percentage)->toBeGreaterThan(100)
-        ->and($company->jobs()->count())->toBe(4);
+        ->and($company->jobs()->count())->toBe(2);
 
     expect(fn () => app(LimitManager::class)->ensureCanCreateJob($company))
         ->toThrow(PlanLimitExceededException::class);

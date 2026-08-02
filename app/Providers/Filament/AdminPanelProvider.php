@@ -42,8 +42,9 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
-            ->favicon(asset('assets/image/favicon.png').'?v=2')
+            ->favicon(asset('assets/image/favicon.png') . '?v=2')
             ->brandLogo(asset('assets/image/logo.png'))
+            ->darkModeBrandLogo(asset('assets/image/logo-white.png'))
             ->brandLogoHeight('3rem')
             ->viteTheme('resources/css/filament/admin/theme.css')
             ->maxContentWidth(Width::Full)
@@ -69,19 +70,19 @@ class AdminPanelProvider extends PanelProvider
             ->userMenuItems([
                 [
                     Action::make('settings')
-                        ->label(fn (): string => __('settings.navigation_label'))
+                        ->label(fn(): string => __('settings.navigation_label'))
                         ->icon('heroicon-o-cog-6-tooth')
-                        ->visible(fn (): bool => Filament::getTenant() !== null)
-                        ->url(fn (): string => Filament::getTenant() ? Settings::getUrl() : '#'),
+                        ->visible(fn(): bool => Filament::getTenant() !== null)
+                        ->url(fn(): string => Filament::getTenant() ? Settings::getUrl() : '#'),
                 ],
             ])
             ->renderHook(
                 PanelsRenderHook::USER_MENU_BEFORE,
-                fn (): string => $this->renderCompanyTopbarSummary(),
+                fn(): string => $this->renderCompanyTopbarSummary(),
             )
             ->renderHook(
                 PanelsRenderHook::USER_MENU_BEFORE,
-                fn (): string => view('filament.language-switcher', [
+                fn(): string => view('filament.language-switcher', [
                     'locales' => [
                         'en' => ['label' => 'English', 'flag' => '🇺🇸'],
                         'pt_BR' => ['label' => 'Português (Brasil)', 'flag' => '🇧🇷'],
@@ -150,10 +151,10 @@ class AdminPanelProvider extends PanelProvider
             __('settings.topbar.current_plan', ['plan' => $summary->planName]),
             '',
             ...collect(Limit::cases())
-                ->map(fn (Limit $planLimit): string => __("settings.limits.{$planLimit->value}").': '.(
+                ->map(fn(Limit $planLimit): string => __("settings.limits.{$planLimit->value}") . ': ' . (
                     $summary->planLimits[$planLimit->value] === null
-                        ? __('settings.topbar.unlimited')
-                        : Number::format($summary->planLimits[$planLimit->value])
+                    ? __('settings.topbar.unlimited')
+                    : Number::format($summary->planLimits[$planLimit->value])
                 ))
                 ->all(),
             '',

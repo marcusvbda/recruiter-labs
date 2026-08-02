@@ -65,9 +65,9 @@ it('summarizes the monthly AI usage and provider split for one company', functio
 
     expect($summary->planSlug)->toBe('starter')
         ->and($metric->used)->toBe(3)
-        ->and($metric->limitValue)->toBe(100)
-        ->and($metric->remaining)->toBe(97)
-        ->and($metric->percentage)->toBe(3)
+        ->and($metric->limitValue)->toBe(20)
+        ->and($metric->remaining)->toBe(17)
+        ->and($metric->percentage)->toBe(15)
         ->and($metric->cycleStart?->toDateString())->toBe('2026-08-01')
         ->and($metric->cycleEnd?->toDateString())->toBe('2026-08-31')
         ->and($summary->platformAiAnalyses)->toBe(2)

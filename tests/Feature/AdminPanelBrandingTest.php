@@ -11,6 +11,7 @@ it('configures the Filament panel branding assets', function () {
 
     expect($panel->getFavicon())->toBe(asset('assets/image/favicon.png').'?v=2')
         ->and($panel->getBrandLogo())->toBe(asset('assets/image/logo.png'))
+        ->and($panel->getDarkModeBrandLogo())->toBe(asset('assets/image/logo-white.png'))
         ->and($panel->getBrandLogoHeight())->toBe('3rem')
         ->and($panel->getMaxContentWidth())->toBe(Width::Full);
 });

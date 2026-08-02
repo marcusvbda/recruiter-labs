@@ -29,9 +29,9 @@ it('seeds the development plans and uses starter as the default plan', function 
         ->toEqualCanonicalizing(['starter', 'pro', 'business'])
         ->and(Plan::default()->is($starter))->toBeTrue()
         ->and($starter->getLimit(Limit::Users))->toBe(2)
-        ->and($starter->getLimit(Limit::Jobs))->toBe(3)
-        ->and($starter->getLimit(Limit::Applications))->toBe(100)
-        ->and($starter->getLimit(Limit::AiAnalyses))->toBe(100)
+        ->and($starter->getLimit(Limit::Jobs))->toBe(1)
+        ->and($starter->getLimit(Limit::Applications))->toBe(30)
+        ->and($starter->getLimit(Limit::AiAnalyses))->toBe(20)
         ->and($starter->hasFeature(Feature::OwnAiKey))->toBeFalse()
         ->and($pro->getLimit(Limit::Users))->toBe(10)
         ->and($pro->getLimit(Limit::Jobs))->toBe(20)
@@ -84,7 +84,7 @@ it('preserves existing data while a downgrade applies lower limits immediately',
     app(ChangeCompanyPlan::class)->run($company, $starter, $user);
 
     expect($company->fresh()->jobs)->toHaveCount(4)
-        ->and($company->fresh()->getLimit(Limit::Jobs))->toBe(3);
+        ->and($company->fresh()->getLimit(Limit::Jobs))->toBe(1);
 });
 
 it('rejects a plan change by a user outside the company', function () {

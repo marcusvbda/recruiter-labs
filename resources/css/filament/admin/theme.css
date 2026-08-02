@@ -4,6 +4,11 @@
 @source '../../../../resources/views/filament/**/*';
 
 @layer components {
+    .dark .fi-tenant-avatar,
+    .dark .fi-user-avatar {
+        @apply invert;
+    }
+
     .rl-settings-hero {
         @apply from-primary-700 via-primary-600 shadow-primary-900/10 relative isolate overflow-hidden rounded-3xl bg-linear-to-br to-cyan-500 px-6 py-7 text-white shadow-xl sm:px-8;
     }
