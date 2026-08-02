@@ -29,7 +29,11 @@ trait GuardsJobPlanLimit
         abort_unless($company instanceof Company, 404);
 
         try {
-            $this->limitManager->ensureCanSaveJob($company, $attributes, $job);
+            if ($job === null) {
+                $this->limitManager->ensureCanCreateJob($company);
+            } else {
+                $this->limitManager->ensureCanSaveJob($company, $attributes, $job);
+            }
         } catch (PlanLimitExceededException) {
             Notification::make()
                 ->title(__('settings.plan.limit_reached'))

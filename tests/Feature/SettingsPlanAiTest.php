@@ -17,6 +17,28 @@ beforeEach(function () {
     $this->seed(PlanSeeder::class);
 });
 
+it('opens the settings section requested by the topbar link', function (string $section) {
+    $company = Company::factory()->create([
+        'plan_id' => Plan::query()->where('slug', 'starter')->sole()->id,
+    ]);
+    actAsCompany($company);
+
+    Livewire::withQueryParams(['section' => $section])
+        ->test(Settings::class)
+        ->assertSet('activeSettingsTab', $section);
+})->with(['plan', 'ai']);
+
+it('falls back to general settings for an unknown section', function () {
+    $company = Company::factory()->create([
+        'plan_id' => Plan::query()->where('slug', 'starter')->sole()->id,
+    ]);
+    actAsCompany($company);
+
+    Livewire::withQueryParams(['section' => 'unknown'])
+        ->test(Settings::class)
+        ->assertSet('activeSettingsTab', 'general');
+});
+
 it('presents every plan, highlights the current plan, and includes centralized usage', function () {
     $company = Company::factory()->create([
         'plan_id' => Plan::query()->where('slug', 'starter')->sole()->id,
@@ -47,7 +69,7 @@ it('presents every plan, highlights the current plan, and includes centralized u
         ->assertSeeHtml('data-testid="current-usage"');
 });
 
-it('changes plan through the dedicated settings action and refreshes page state', function () {
+it('changes plan immediately when it is selected and refreshes page state', function () {
     $starter = Plan::query()->where('slug', 'starter')->sole();
     $pro = Plan::query()->where('slug', 'pro')->sole();
     $company = Company::factory()->create(['plan_id' => $starter->id]);
@@ -55,7 +77,7 @@ it('changes plan through the dedicated settings action and refreshes page state'
 
     $component = Livewire::withQueryParams(['section' => 'plan'])
         ->test(Settings::class)
-        ->callAction('changePlan', arguments: ['plan' => $pro->id])
+        ->mountAction('changePlan', ['plan' => $pro->id])
         ->assertDispatched('refresh-topbar');
 
     expect($company->fresh()->plan->is($pro))->toBeTrue()

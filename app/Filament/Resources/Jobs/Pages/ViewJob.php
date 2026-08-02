@@ -2,15 +2,19 @@
 
 namespace App\Filament\Resources\Jobs\Pages;
 
+use App\Exceptions\PlanLimitExceededException;
+use App\Filament\Pages\Settings;
 use App\Filament\Resources\Jobs\JobResource;
 use App\Filament\Resources\Jobs\Widgets\JobApplicationStatusChart;
 use App\Filament\Resources\Jobs\Widgets\JobOverviewStats;
 use App\Filament\Resources\Jobs\Widgets\JobPipelineKanban;
 use App\Models\Application;
 use App\Models\Candidate;
+use App\Models\Company;
 use App\Models\Job;
 use App\Models\Status;
 use App\Services\JobDashboardService;
+use App\Services\LimitManager;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
@@ -24,6 +28,7 @@ use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
 use Filament\Support\Enums\Alignment;
+use Filament\Support\Exceptions\Halt;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
@@ -36,9 +41,14 @@ class ViewJob extends ViewRecord
 
     protected JobDashboardService $jobDashboardService;
 
-    public function boot(JobDashboardService $jobDashboardService): void
-    {
+    protected LimitManager $limitManager;
+
+    public function boot(
+        JobDashboardService $jobDashboardService,
+        LimitManager $limitManager,
+    ): void {
         $this->jobDashboardService = $jobDashboardService;
+        $this->limitManager = $limitManager;
     }
 
     public function getTitle(): string|Htmlable
@@ -106,7 +116,9 @@ class ViewJob extends ViewRecord
                             ->schema([
                                 Actions::make([
                                     $this->makeAddCandidateAction(),
-                                ])->alignment(Alignment::End),
+                                ])
+                                    ->key('pipeline-actions')
+                                    ->alignment(Alignment::End),
                                 Livewire::make(JobPipelineKanban::class, ['record' => $job])
                                     ->key("job-pipeline-{$job->getKey()}"),
                             ]),
@@ -137,6 +149,8 @@ class ViewJob extends ViewRecord
             ])
             ->action(function (array $data): void {
                 $job = $this->getJob();
+                $this->ensureCanAddApplication($job);
+
                 $candidate = Candidate::query()
                     ->where('company_id', $job->company_id)
                     ->whereKey($data['candidate_id'])
@@ -192,6 +206,31 @@ class ViewJob extends ViewRecord
 
                 $this->dispatch('pipeline-updated')->to(JobPipelineKanban::class);
             });
+    }
+
+    private function ensureCanAddApplication(Job $job): void
+    {
+        $company = $job->company;
+
+        abort_unless($company instanceof Company, 404);
+
+        try {
+            $this->limitManager->ensureCanReceiveApplication($company);
+        } catch (PlanLimitExceededException $exception) {
+            Notification::make()
+                ->title(__('settings.plan.limit_reached'))
+                ->body($exception->getMessage())
+                ->warning()
+                ->actions([
+                    Action::make('managePlan')
+                        ->label(__('settings.topbar.manage_plan'))
+                        ->url(Settings::getUrl(['section' => 'plan'], tenant: $company))
+                        ->button(),
+                ])
+                ->send();
+
+            throw new Halt;
+        }
     }
 
     private function getJob(): Job

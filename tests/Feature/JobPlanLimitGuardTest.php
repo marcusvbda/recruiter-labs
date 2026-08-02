@@ -1,14 +1,20 @@
 <?php
 
+use App\Enums\Limit;
 use App\Filament\Pages\Settings;
 use App\Filament\Resources\Jobs\Pages\CreateJob;
+use App\Filament\Resources\Jobs\Pages\ViewJob;
+use App\Models\Application;
+use App\Models\Candidate;
 use App\Models\Company;
 use App\Models\CvFileType;
 use App\Models\Job;
 use App\Models\Plan;
+use App\Models\Status;
 use Database\Seeders\CvFileTypeSeeder;
 use Database\Seeders\PlanSeeder;
 use Filament\Actions\Action;
+use Filament\Actions\Testing\TestAction;
 use Filament\Notifications\Notification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -51,7 +57,7 @@ it('halts job creation at the active job limit and offers a link to manage the p
     Livewire::test(CreateJob::class)
         ->fillForm([
             'name' => 'Blocked by plan limit',
-            'published' => true,
+            'published' => false,
             'jobCriteria' => [],
             'acceptedCvTypes' => [CvFileType::query()->firstOrFail()->id],
         ])
@@ -60,4 +66,47 @@ it('halts job creation at the active job limit and offers a link to manage the p
         ->assertNotified($expectedNotification);
 
     expect(Job::query()->where('name', 'Blocked by plan limit')->exists())->toBeFalse();
+});
+
+it('halts a pipeline application when the monthly application limit is reached', function () {
+    $plan = Plan::query()->where('slug', 'starter')->sole();
+    $plan->update([
+        'limits' => [...$plan->limits, Limit::Applications->value => 1],
+    ]);
+
+    $company = Company::factory()->create(['plan_id' => $plan->id]);
+    $job = Job::factory()->for($company)->create();
+    $status = Status::factory()->for($company)->create(['order' => 0]);
+    $existingCandidate = Candidate::factory()->for($company)->create();
+    $blockedCandidate = Candidate::factory()->for($company)->create();
+
+    Application::factory()->for($company)->create([
+        'job_id' => $job->id,
+        'candidate_id' => $existingCandidate->id,
+        'status_id' => $status->id,
+    ]);
+
+    actAsCompany($company);
+
+    $expectedNotification = Notification::make()
+        ->title(__('settings.plan.limit_reached'))
+        ->body(__('settings.errors.plan_limit_reached', [
+            'limit' => Limit::Applications->label(),
+        ]))
+        ->warning()
+        ->actions([
+            Action::make('managePlan')
+                ->label(__('settings.topbar.manage_plan'))
+                ->url(Settings::getUrl(['section' => 'plan'], tenant: $company))
+                ->button(),
+        ]);
+
+    Livewire::test(ViewJob::class, ['record' => $job->getRouteKey()])
+        ->callAction(
+            TestAction::make('addCandidate')->schemaComponent('pipeline-actions', 'content'),
+            ['candidate_id' => $blockedCandidate->id],
+        )
+        ->assertNotified($expectedNotification);
+
+    expect(Application::query()->where('candidate_id', $blockedCandidate->id)->exists())->toBeFalse();
 });

@@ -8,7 +8,6 @@ use App\Actions\TestCompanyAiCredentials;
 use App\Actions\UpdateCompanyAiSettings;
 use App\Concerns\PasswordValidationRules;
 use App\Concerns\ProfileValidationRules;
-use App\Data\PlanLimitChangeData;
 use App\Data\UsageMetricData;
 use App\Enums\AiCredentialStatus;
 use App\Enums\AiProvider;
@@ -37,10 +36,9 @@ use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\View as ViewComponent;
 use Filament\Schemas\Schema;
-use Filament\Support\Enums\Width;
-use Illuminate\Contracts\View\View;
 use Illuminate\Support\Number;
 use Illuminate\Validation\Rules\Password;
+use Livewire\Attributes\Url;
 
 /**
  * @property-read Schema $form
@@ -59,6 +57,7 @@ class Settings extends Page
     /** @var array<string, mixed> */
     public array $aiSettings = [];
 
+    #[Url(as: 'section', except: 'general')]
     public string $activeSettingsTab = 'general';
 
     public function getTitle(): string
@@ -86,6 +85,10 @@ class Settings extends Page
         PlanComparisonService $comparisonService,
         AiCredentialsResolver $credentialsResolver,
     ): void {
+        if (! in_array($this->activeSettingsTab, ['general', 'authentication', 'plan', 'ai', 'integrations'], strict: true)) {
+            $this->activeSettingsTab = 'general';
+        }
+
         $user = $this->getRecord();
 
         $this->form->fill($user->only(['name', 'email', 'locale']));
@@ -121,7 +124,6 @@ class Settings extends Page
                 Tabs::make('settings')
                     ->id('settings-tabs')
                     ->livewireProperty('activeSettingsTab')
-                    ->persistTabInQueryString('section')
                     ->contained(false)
                     ->tabs([
                         'general' => Tab::make(__('settings.tabs.general'))
@@ -194,20 +196,6 @@ class Settings extends Page
     public function changePlanAction(): Action
     {
         return Action::make('changePlan')
-            ->modal()
-            ->requiresConfirmation()
-            ->modalHeading(__('settings.plan.change.heading'))
-            ->modalDescription(__('settings.plan.change.description'))
-            ->modalIcon('heroicon-o-arrows-right-left')
-            ->modalWidth(Width::Large)
-            ->modalContent(fn (array $arguments, PlanComparisonService $comparisonService): View => view(
-                'filament.pages.settings.change-plan',
-                ['comparison' => $this->planComparisonViewData($arguments, $comparisonService)],
-            ))
-            ->modalSubmitActionLabel(fn (array $arguments): string => __('settings.plan.change.confirm', [
-                'plan' => $this->resolvePlan($arguments)->name,
-            ]))
-            ->modalCancelActionLabel(__('settings.plan.change.cancel'))
             ->action(function (
                 array $arguments,
                 ChangeCompanyPlan $changeCompanyPlan,
@@ -495,30 +483,6 @@ class Settings extends Page
                     },
                 ])
                 ->all(),
-        ];
-    }
-
-    /**
-     * @param  array<string, mixed>  $arguments
-     * @return array<string, mixed>
-     */
-    private function planComparisonViewData(array $arguments, PlanComparisonService $comparisonService): array
-    {
-        $company = $this->getCompany();
-        $plan = $this->resolvePlan($arguments);
-        $comparison = $comparisonService->compare($company, $plan);
-
-        return [
-            'current_plan' => $company->plan->name,
-            'new_plan' => $plan->name,
-            'direction' => $comparison->direction,
-            'limit_changes' => array_map(fn (PlanLimitChangeData $change): array => [
-                'label' => __("settings.limits.{$change->limit->value}"),
-                'from' => $this->formatLimit($change->from),
-                'to' => $this->formatLimit($change->to),
-            ], $comparison->limitChanges),
-            'added_features' => array_map(fn (Feature $feature): string => $feature->label(), $comparison->addedFeatures),
-            'removed_features' => array_map(fn (Feature $feature): string => $feature->label(), $comparison->removedFeatures),
         ];
     }
 

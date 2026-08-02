@@ -30,6 +30,11 @@ class EmailTemplatesResource extends Resource
         return __('email-templates.label');
     }
 
+    public static function getNavigationBadge(): ?string
+    {
+        return static::getModel()::count();
+    }
+
     public static function getPluralModelLabel(): string
     {
         return __('email-templates.plural_label');

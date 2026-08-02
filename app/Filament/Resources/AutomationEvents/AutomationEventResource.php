@@ -32,6 +32,11 @@ class AutomationEventResource extends Resource
         return __('event-hooks.label');
     }
 
+    public static function getNavigationBadge(): ?string
+    {
+        return static::getModel()::count();
+    }
+
     public static function getPluralModelLabel(): string
     {
         return __('event-hooks.plural_label');
