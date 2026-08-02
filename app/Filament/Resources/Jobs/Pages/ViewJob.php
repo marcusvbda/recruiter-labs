@@ -78,6 +78,8 @@ class ViewJob extends ViewRecord
                 Tabs::make('job-view-tabs')
                     ->tabs([
                         Tab::make(__('jobs.view_tabs.dashboard'))
+                            ->id('dashboard')
+                            ->key('dashboard')
                             ->icon(Heroicon::OutlinedPresentationChartBar)
                             ->schema([
                                 View::make('filament.resources.jobs.components.dashboard-introduction')
@@ -117,6 +119,8 @@ class ViewJob extends ViewRecord
                                     ]),
                             ]),
                         Tab::make(__('jobs.view_tabs.pipeline'))
+                            ->id('pipeline')
+                            ->key('pipeline')
                             ->icon(Heroicon::OutlinedViewColumns)
                             ->schema([
                                 Actions::make([

@@ -7,6 +7,7 @@ use App\Enums\ApplicationQuestionType;
 use App\Enums\ApplicationSource;
 use App\Filament\Resources\Applications\ApplicationResource;
 use App\Filament\Resources\Applications\Pages\ViewApplication;
+use App\Filament\Resources\Jobs\JobResource;
 use App\Filament\Resources\Jobs\Widgets\JobPipelineKanban;
 use App\Models\Application;
 use App\Models\ApplicationAnswer;
@@ -227,6 +228,21 @@ it('links kanban cards to the tenant-scoped application page and shows compact A
     Livewire::test(JobPipelineKanban::class, ['record' => $job])
         ->assertSee($url, escape: false)
         ->assertSee(__('applications.admin.ai.states.pending.label'));
+});
+
+it('links back to the pipeline tab from the application view', function () {
+    $company = Company::factory()->create();
+    $application = Application::factory()->for($company)->create();
+
+    actAsCompany($company);
+
+    $expectedUrl = JobResource::getUrl('view', [
+        'record' => $application->job,
+        'section' => 'pipeline',
+    ], tenant: $company);
+
+    Livewire::test(ViewApplication::class, ['record' => $application->getRouteKey()])
+        ->assertActionExists('backToPipeline', fn (Action $action): bool => $action->getUrl() === $expectedUrl);
 });
 
 it('provides every admin application status translation', function (string $locale) {

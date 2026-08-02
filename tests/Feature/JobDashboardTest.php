@@ -124,6 +124,21 @@ it('renders dashboard and pipeline tabs on the job view page', function () {
         ->assertSeeLivewire(JobPipelineKanban::class);
 });
 
+it('selects the pipeline tab from the section query string', function () {
+    $company = Company::factory()->create();
+    $job = Job::factory()->for($company)->create();
+
+    actAsCompany($company);
+
+    $this->get(JobResource::getUrl('view', [
+        'record' => $job,
+        'section' => 'pipeline',
+    ], tenant: $company))
+        ->assertSuccessful()
+        ->assertSee('activeTab: 2', escape: false)
+        ->assertSee('data-tab-key="pipeline"', escape: false);
+});
+
 it('replaces the pipeline list action with the job view action', function () {
     $company = Company::factory()->create();
     Job::factory()->for($company)->create();
