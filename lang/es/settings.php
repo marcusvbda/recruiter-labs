@@ -4,6 +4,12 @@ return [
     'navigation_label' => 'Configuración',
     'title' => 'Configuración',
     'subtitle' => 'Gestiona tu perfil, el plan de la empresa y la configuración de IA.',
+    'sidebar' => [
+        'workspace' => 'Espacio',
+        'description' => 'Mantén tu proceso de selección avanzando con un próximo paso claro.',
+        'new_job' => 'Crear nueva vacante',
+        'manage_workspace' => 'Gestionar espacio',
+    ],
     'tabs' => [
         'general' => 'General',
         'auth' => 'Autenticación',

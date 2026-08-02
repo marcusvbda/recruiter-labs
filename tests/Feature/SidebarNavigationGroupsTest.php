@@ -2,6 +2,8 @@
 
 use App\Filament\Clusters\Automation\AutomationCluster;
 use App\Filament\Clusters\Recruitment\RecruitmentCluster;
+use App\Filament\Pages\Dashboard;
+use App\Filament\Pages\Settings;
 use App\Filament\Resources\AutomationEvents\AutomationEventResource;
 use App\Filament\Resources\Candidates\CandidateResource;
 use App\Filament\Resources\EmailTemplates\EmailTemplatesResource;
@@ -60,9 +62,22 @@ it('renders clusters instead of individual resources in the main sidebar', funct
         ->map(fn ($item): string => $item->getLabel());
 
     expect($labels)
-        ->toContain('Recruitment', 'Automation');
+        ->toContain('Recruitment', 'Automation', __('settings.navigation_label'));
 
     expect($labels)->not->toContain('Candidates', 'Statuses', 'Jobs', 'Referrals', 'Email Templates', 'Event Hooks');
+});
+
+it('renders useful workspace shortcuts at the bottom of the sidebar', function () {
+    $company = Company::factory()->create(['name' => 'Gravity Labs']);
+    actAsCompany($company);
+
+    $this->get(Dashboard::getUrl(tenant: $company))
+        ->assertSuccessful()
+        ->assertSee('data-testid="sidebar-workspace-card"', escape: false)
+        ->assertSee('Gravity Labs')
+        ->assertSee(JobResource::getUrl('create', tenant: $company), escape: false)
+        ->assertSee(Settings::getUrl(tenant: $company), escape: false)
+        ->assertSee(__('settings.sidebar.new_job'));
 });
 
 it('translates cluster labels and breadcrumbs', function (string $locale, array $labels) {

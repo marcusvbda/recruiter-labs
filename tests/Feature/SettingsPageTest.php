@@ -4,6 +4,7 @@ use App\Filament\Pages\Settings;
 use App\Models\Company;
 use App\Models\Plan;
 use Database\Seeders\PlanSeeder;
+use Filament\Support\Icons\Heroicon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -17,8 +18,10 @@ beforeEach(function () {
     $this->seed(PlanSeeder::class);
 });
 
-it('does not register the settings page in the sidebar navigation', function () {
-    expect(Settings::shouldRegisterNavigation())->toBeFalse();
+it('registers the settings page in the sidebar with its own icon', function () {
+    expect(Settings::shouldRegisterNavigation())->toBeTrue()
+        ->and(Settings::getNavigationIcon())->toBe(Heroicon::OutlinedCog6Tooth)
+        ->and(Settings::getNavigationSort())->toBe(3);
 });
 
 it('still resolves the settings page route for direct/topbar access', function () {

@@ -115,7 +115,6 @@ class ViewJob extends ViewRecord
                                 View::make('filament.resources.jobs.components.dashboard-rankings')
                                     ->viewData([
                                         'utmRanking' => $dashboard['utm_ranking'],
-                                        'ipRanking' => $dashboard['ip_ranking'],
                                     ]),
                             ]),
                         Tab::make(__('jobs.view_tabs.pipeline'))

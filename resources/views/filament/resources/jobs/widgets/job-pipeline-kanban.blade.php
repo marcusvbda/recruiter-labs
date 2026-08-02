@@ -11,22 +11,16 @@
     @filamentStyles(['filament-model-states'])
 
     <x-filament::section :heading="__('applications.pipeline.kanban.heading')">
-        <div
-            x-data="kanbanBoard({
-                transitions: @js($transitions),
-                labels: @js($columnLabels),
-                confirmBeforeMove: @js($this->shouldConfirmBeforeMove()),
-            })"
-            x-on:kanban-move-accepted.window="handleMoveAccepted($event.detail)"
-            x-on:kanban-move-rejected.window="handleMoveRejected()"
-        >
+        <div x-data="kanbanBoard({
+            transitions: @js($transitions),
+            labels: @js($columnLabels),
+            confirmBeforeMove: @js($this->shouldConfirmBeforeMove()),
+        })" x-on:kanban-move-accepted.window="handleMoveAccepted($event.detail)"
+            x-on:kanban-move-rejected.window="handleMoveRejected()">
             <div class="fi-model-states-kanban__toolbar">
                 <div class="fi-model-states-kanban__search">
                     <x-filament::input.wrapper prefix-icon="heroicon-m-magnifying-glass">
-                        <x-filament::input
-                            wire:model.live.debounce.500ms="search"
-                            :placeholder="__('applications.pipeline.kanban.search_placeholder')"
-                        />
+                        <x-filament::input wire:model.live.debounce.500ms="search" :placeholder="__('applications.pipeline.kanban.search_placeholder')" />
                     </x-filament::input.wrapper>
                 </div>
 
@@ -53,10 +47,8 @@
                 </p>
             </div>
 
-            <div
-                class="fi-model-states-kanban"
-                style="grid-template-columns: repeat({{ count($boardColumns) }}, minmax(15rem, 1fr));"
-            >
+            <div class="fi-model-states-kanban"
+                style="grid-template-columns: repeat({{ count($boardColumns) }}, minmax(15rem, 1fr));">
                 @foreach ($boardColumns as $column)
                     @php
                         $columnKey = $column['key'];
@@ -65,23 +57,25 @@
                         $outgoing = $this->getOutgoingTransitions($columnKey);
                     @endphp
 
-                    <div class="fi-model-states-kanban__column" data-column="{{ $columnKey }}">
+                    <div class="fi-model-states-kanban__column rl-pipeline-status-column"
+                        style="--rl-status-color: {{ $this->getColumnHexColor($columnKey) }};"
+                        data-column="{{ $columnKey }}">
                         <div class="fi-model-states-kanban__column-header">
                             <span class="fi-model-states-kanban__column-title">
                                 {{ $this->getColumnLabel($columnKey) }}
                             </span>
                             <x-filament::badge :color="$color">
                                 <span data-count-column="{{ $columnKey }}">
-                                    {{ $column['shown'] }}@if ($column['has_more']) / {{ $column['total'] }}@endif
+                                    {{ $column['shown'] }}@if ($column['has_more'])
+                                        / {{ $column['total'] }}
+                                    @endif
                                 </span>
                             </x-filament::badge>
                         </div>
 
                         @if (count($outgoing))
-                            <div
-                                class="fi-model-states-kanban__transitions"
-                                title="{{ __('applications.pipeline.kanban.allowed_transitions_from', ['status' => $this->getColumnLabel($columnKey)]) }}"
-                            >
+                            <div class="fi-model-states-kanban__transitions"
+                                title="{{ __('applications.pipeline.kanban.allowed_transitions_from', ['status' => $this->getColumnLabel($columnKey)]) }}">
                                 <span class="fi-model-states-kanban__transitions-label">
                                     {{ __('applications.pipeline.kanban.can_move_to') }}
                                 </span>
@@ -97,39 +91,28 @@
                             </p>
                         @endif
 
-                        <div
-                            class="fi-model-states-kanban__column-body fi-model-states-column"
-                            data-column="{{ $columnKey }}"
-                        >
+                        <div class="fi-model-states-kanban__column-body fi-model-states-column"
+                            data-column="{{ $columnKey }}">
                             @forelse ($records as $record)
-                                <div
-                                    data-record-id="{{ $record->getKey() }}"
-                                    class="fi-model-states-kanban__card fi-model-states-card"
-                                >
-                                    <div class="flex items-start justify-between gap-2">
-                                        <a
-                                            href="{{ $this->getApplicationUrl($record) }}"
-                                            wire:navigate
-                                            x-on:pointerdown.stop
-                                            x-on:click.stop
-                                            class="fi-model-states-kanban__card-title hover:text-primary-600 focus-visible:ring-primary-500 rounded-sm outline-none focus-visible:ring-2"
-                                            title="{{ __('applications.admin.actions.view_application') }}"
-                                        >
-                                            {{ $this->getCardTitle($record) }}
-                                        </a>
-                                        <x-filament::badge
-                                            :color="$this->getAnalysisColor($record)"
-                                            icon="heroicon-m-sparkles"
-                                        >
-                                            {{ $this->getAnalysisLabel($record) }}
-                                        </x-filament::badge>
-                                    </div>
+                                @php
+                                    $isReferral = $this->isReferralApplication($record);
+                                @endphp
+                                <div data-record-id="{{ $record->getKey() }}"
+                                    data-referral="{{ $isReferral ? 'true' : 'false' }}" @class([
+                                        'fi-model-states-kanban__card fi-model-states-card',
+                                        'rl-pipeline-referral-card' => $isReferral,
+                                    ])>
+                                    <a href="{{ $this->getApplicationUrl($record) }}" wire:navigate
+                                        x-on:pointerdown.stop x-on:click.stop
+                                        class="fi-model-states-kanban__card-title hover:text-primary-600 focus-visible:ring-primary-500 rounded-sm outline-none focus-visible:ring-2"
+                                        title="{{ __('applications.admin.actions.view_application') }}">
+                                        {{ $this->getCardTitle($record) }}
+                                    </a>
                                     @if ($subtitle = $this->getCardSubtitle($record))
                                         <p class="fi-model-states-kanban__card-subtitle">
                                             {{ $subtitle }}
                                         </p>
                                     @endif
-
                                     <div class="rl-pipeline-card-summary">
                                         <div class="rl-pipeline-card-summary__meta">
                                             <span>
@@ -137,7 +120,8 @@
                                                 {{ __('applications.pipeline.kanban.applied_on', ['date' => $record->created_at->translatedFormat('M j')]) }}
                                             </span>
                                             <span>
-                                                <x-filament::icon icon="heroicon-m-chat-bubble-left-right" class="size-3.5" />
+                                                <x-filament::icon icon="heroicon-m-chat-bubble-left-right"
+                                                    class="size-3.5" />
                                                 {{ trans_choice('applications.pipeline.kanban.answers', $record->answers_count, ['count' => $record->answers_count]) }}
                                             </span>
                                             <span>
@@ -146,13 +130,18 @@
                                             </span>
                                         </div>
 
-                                        <a
-                                            href="{{ $this->getApplicationUrl($record) }}"
-                                            wire:navigate
-                                            x-on:pointerdown.stop
-                                            x-on:click.stop
-                                            class="rl-pipeline-card-summary__link"
-                                        >
+                                        @if ($isReferral)
+                                            <div class="flex my-2">
+                                                <span class="rl-pipeline-referral-badge"
+                                                    title="{{ __('applications.pipeline.kanban.referral') }}">
+                                                    <x-filament::icon icon="heroicon-m-user-plus" class="size-2" />
+                                                    {{ __('applications.pipeline.kanban.referral') }}
+                                                </span>
+                                            </div>
+                                        @endif
+                                        <a href="{{ $this->getApplicationUrl($record) }}" wire:navigate
+                                            x-on:pointerdown.stop x-on:click.stop
+                                            class="rl-pipeline-card-summary__link">
                                             {{ __('applications.pipeline.kanban.view_details') }}
                                             <x-filament::icon icon="heroicon-m-arrow-right" class="size-3.5" />
                                         </a>
@@ -167,11 +156,9 @@
 
                         @if ($column['has_more'])
                             <p class="fi-model-states-kanban__more-note">
-                                {{ trans_choice(
-                                    'applications.pipeline.kanban.more_applications',
-                                    $column['total'] - $column['shown'],
-                                    ['count' => number_format($column['total'] - $column['shown'])],
-                                ) }}
+                                {{ trans_choice('applications.pipeline.kanban.more_applications', $column['total'] - $column['shown'], [
+                                    'count' => number_format($column['total'] - $column['shown']),
+                                ]) }}
                             </p>
                         @endif
                     </div>
@@ -179,19 +166,9 @@
             </div>
 
             <template x-teleport="body">
-                <div
-                    x-show="showConfirm"
-                    x-cloak
-                    x-transition.opacity
-                    class="fi-model-states-kanban__confirm-overlay"
-                    role="dialog"
-                    aria-modal="true"
-                    x-on:keydown.escape.window="cancelMove()"
-                >
-                    <div
-                        class="fi-model-states-kanban__confirm-dialog"
-                        x-on:click.outside="cancelMove()"
-                    >
+                <div x-show="showConfirm" x-cloak x-transition.opacity class="fi-model-states-kanban__confirm-overlay"
+                    role="dialog" aria-modal="true" x-on:keydown.escape.window="cancelMove()">
+                    <div class="fi-model-states-kanban__confirm-dialog" x-on:click.outside="cancelMove()">
                         <h3 class="fi-model-states-kanban__confirm-title">
                             {{ __('applications.pipeline.kanban.confirm_title') }}
                         </h3>

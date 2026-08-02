@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Jobs\Widgets;
 
+use App\Enums\ApplicationSource;
 use App\Filament\Resources\Applications\ApplicationResource;
 use App\Filament\Resources\Jobs\JobResource;
 use App\Models\Application;
@@ -59,9 +60,7 @@ class JobPipelineKanban extends StateKanbanBoard
 
     protected function getColumnColor(string $key): string
     {
-        $status = $this->findStatus($key);
-
-        return match (Str::lower($status === null ? '' : $status->color)) {
+        return match (Str::lower($this->getColumnHexColor($key))) {
             '#3b82f6', '#8b5cf6' => 'primary',
             '#f59e0b' => 'warning',
             '#06b6d4' => 'info',
@@ -69,6 +68,15 @@ class JobPipelineKanban extends StateKanbanBoard
             '#ef4444' => 'danger',
             default => 'gray',
         };
+    }
+
+    protected function getColumnHexColor(string $key): string
+    {
+        $color = $this->findStatus($key)?->color;
+
+        return is_string($color) && preg_match('/^#[0-9a-f]{6}$/i', $color)
+            ? Str::lower($color)
+            : '#94a3b8';
     }
 
     protected function getCardTitle(Model $record): string
@@ -106,6 +114,11 @@ class JobPipelineKanban extends StateKanbanBoard
         return ApplicationResource::getUrl('view', [
             'record' => $application,
         ], tenant: Filament::getTenant());
+    }
+
+    public function isReferralApplication(Application $application): bool
+    {
+        return $application->source === ApplicationSource::Referral;
     }
 
     public function getAnalysisLabel(Application $application): string

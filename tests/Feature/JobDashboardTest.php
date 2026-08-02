@@ -82,18 +82,14 @@ it('builds the job dashboard metrics and rankings', function () {
             'name' => 'utm_source',
             'value' => 'linkedin',
             'clicks' => 3,
-        ])
-        ->and($dashboard['ip_ranking'][0])->toBe([
-            'ip_address' => '203.0.113.10',
-            'clicks' => 3,
         ]);
 });
 
-it('shows every tracked UTM value even when the ranking has more than ten entries', function () {
+it('paginates the UTM ranking with fifteen entries per page', function () {
     $company = Company::factory()->create();
     $job = Job::factory()->for($company)->create();
 
-    foreach (range(1, 11) as $position) {
+    foreach (range(1, 16) as $position) {
         $click = JobClick::factory()->for($company)->for($job)->create();
         $click->utmParameters()->create([
             'name' => 'utm_source',
@@ -101,10 +97,26 @@ it('shows every tracked UTM value even when the ranking has more than ten entrie
         ]);
     }
 
-    $utmRanking = app(JobDashboardService::class)->get($job)['utm_ranking'];
+    actAsCompany($company);
 
-    expect($utmRanking)->toHaveCount(11)
-        ->and(collect($utmRanking)->pluck('value'))->toContain('campaign-11');
+    $this->get(JobResource::getUrl('view', ['record' => $job], tenant: $company))
+        ->assertSuccessful()
+        ->assertSee('utmPage=2', escape: false)
+        ->assertDontSee('IP ranking');
+
+    $firstPage = app(JobDashboardService::class)->get($job)['utm_ranking'];
+
+    request()->query->set('utmPage', 2);
+
+    $secondPage = app(JobDashboardService::class)->get($job)['utm_ranking'];
+
+    expect($firstPage)->toHaveCount(15)
+        ->and($firstPage->perPage())->toBe(15)
+        ->and($firstPage->total())->toBe(16)
+        ->and($secondPage)->toHaveCount(1)
+        ->and($secondPage->currentPage())->toBe(2)
+        ->and($firstPage->getCollection()->concat($secondPage->getCollection())->pluck('value')->all())
+        ->toContain('campaign-16');
 });
 
 it('renders dashboard and pipeline tabs on the job view page', function () {

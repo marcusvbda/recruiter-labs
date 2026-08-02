@@ -28,6 +28,7 @@ return [
             'applied_on' => 'Enviada el :date',
             'answers' => '{0} Sin respuestas|{1} :count respuesta|[2,*] :count respuestas',
             'documents' => '{0} Sin archivos|{1} :count archivo|[2,*] :count archivos',
+            'referral' => 'Referencia',
             'view_details' => 'Ver detalles',
             'no_matching_applications' => 'No se encontraron postulaciones',
             'more_applications' => '{1} +:count postulación más — refina la búsqueda para encontrarla|[2,*] +:count postulaciones más — refina la búsqueda para encontrarlas',

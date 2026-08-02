@@ -3,11 +3,11 @@
 namespace App\Services;
 
 use App\Models\Job;
-use App\Models\JobClick;
 use App\Models\JobClickUtmParameter;
 use App\Models\Status;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class JobDashboardService
 {
@@ -20,8 +20,7 @@ class JobDashboardService
      *     remaining_days: int|null,
      *     has_ended: bool,
      *     status_distribution: list<array{name: string, color: string, count: int}>,
-     *     utm_ranking: list<array{name: string, value: string, clicks: int}>,
-     *     ip_ranking: list<array{ip_address: string, clicks: int}>
+     *     utm_ranking: LengthAwarePaginator<int, array{name: string, value: string, clicks: int}>
      * }
      */
     public function get(Job $job): array
@@ -60,34 +59,21 @@ class JobDashboardService
             ->whereHas('status', fn (Builder $query): Builder => $query->where('is_hired', true))
             ->count();
 
-        $utmRanking = array_values(JobClickUtmParameter::query()
+        $utmRanking = JobClickUtmParameter::query()
             ->select(['name', 'value'])
             ->selectRaw('COUNT(*) as clicks')
             ->whereHas('jobClick', fn (Builder $query): Builder => $query->where('job_id', $job->getKey()))
             ->groupBy(['name', 'value'])
             ->orderByDesc('clicks')
-            ->get()
-            ->map(fn (JobClickUtmParameter $parameter): array => [
+            ->orderBy('name')
+            ->orderBy('value')
+            ->paginate(perPage: 15, pageName: 'utmPage')
+            ->withQueryString()
+            ->through(fn (JobClickUtmParameter $parameter): array => [
                 'name' => $parameter->name,
                 'value' => $parameter->value,
                 'clicks' => (int) $parameter->getAttribute('clicks'),
-            ])
-            ->all());
-
-        $ipRanking = array_values(JobClick::query()
-            ->select('ip_address')
-            ->selectRaw('COUNT(*) as clicks')
-            ->whereBelongsTo($job)
-            ->whereNotNull('ip_address')
-            ->groupBy('ip_address')
-            ->orderByDesc('clicks')
-            ->limit(10)
-            ->get()
-            ->map(fn (JobClick $click): array => [
-                'ip_address' => (string) $click->ip_address,
-                'clicks' => (int) $click->getAttribute('clicks'),
-            ])
-            ->all());
+            ]);
 
         return [
             'clicks_count' => (int) $job->clicks_count,
@@ -98,7 +84,6 @@ class JobDashboardService
             'has_ended' => $hasEnded,
             'status_distribution' => $statusDistribution,
             'utm_ranking' => $utmRanking,
-            'ip_ranking' => $ipRanking,
         ];
     }
 }

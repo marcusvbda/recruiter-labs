@@ -257,6 +257,8 @@ const JobDescription = ({
 const fieldClassName =
     'mt-2 block min-h-12 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-950 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500';
 
+const fileFieldClassName = `${fieldClassName} cursor-pointer file:mr-4 file:cursor-pointer file:rounded-lg file:border-0 file:bg-blue-600 file:px-4 file:py-2 file:text-xs file:font-semibold file:text-white file:transition-colors hover:file:bg-blue-500 dark:file:bg-blue-500 dark:hover:file:bg-blue-400`;
+
 const fieldErrorClassName =
     'border-rose-400 focus:border-rose-500 focus:ring-rose-500/10 dark:border-rose-400/60';
 
@@ -680,7 +682,7 @@ const ApplicationForm = ({
                                         event.target.files?.[0] ?? null,
                                     )
                                 }
-                                className={`${fieldClassName} cursor-pointer file:mr-4 file:rounded-lg file:border-0 file:bg-blue-50 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-400/10 dark:file:text-blue-300 ${errors.cv ? fieldErrorClassName : ''}`}
+                                className={`${fileFieldClassName} ${errors.cv ? fieldErrorClassName : ''}`}
                             />
                             <span className="mt-2 block text-xs text-slate-500 dark:text-slate-400">
                                 {translate(translations.form.accepted_formats, {
@@ -725,7 +727,7 @@ const ApplicationForm = ({
                                             event.target.files?.[0] ?? null,
                                         )
                                     }
-                                    className={`${fieldClassName} cursor-pointer file:mr-4 file:rounded-lg file:border-0 file:bg-blue-50 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-400/10 dark:file:text-blue-300 ${errors.cover_letter ? fieldErrorClassName : ''}`}
+                                    className={`${fileFieldClassName} ${errors.cover_letter ? fieldErrorClassName : ''}`}
                                 />
                                 <span className="mt-2 block text-xs text-slate-500 dark:text-slate-400">
                                     {translate(

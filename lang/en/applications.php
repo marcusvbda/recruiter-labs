@@ -28,6 +28,7 @@ return [
             'applied_on' => 'Applied :date',
             'answers' => '{0} No answers|{1} :count answer|[2,*] :count answers',
             'documents' => '{0} No files|{1} :count file|[2,*] :count files',
+            'referral' => 'Referral',
             'view_details' => 'View details',
             'no_matching_applications' => 'No matching applications',
             'more_applications' => '{1} +:count more application — refine the search to find it|[2,*] +:count more applications — refine the search to find them',

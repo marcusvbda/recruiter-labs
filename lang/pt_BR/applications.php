@@ -28,6 +28,7 @@ return [
             'applied_on' => 'Enviada em :date',
             'answers' => '{0} Sem respostas|{1} :count resposta|[2,*] :count respostas',
             'documents' => '{0} Sem arquivos|{1} :count arquivo|[2,*] :count arquivos',
+            'referral' => 'Indicação',
             'view_details' => 'Ver detalhes',
             'no_matching_applications' => 'Nenhuma candidatura encontrada',
             'more_applications' => '{1} +:count candidatura adicional — refine a busca para encontrá-la|[2,*] +:count candidaturas adicionais — refine a busca para encontrá-las',

@@ -1,4 +1,4 @@
-<div class="grid gap-4 xl:grid-cols-2">
+<div>
     <section class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-gray-900">
         <div class="flex items-center gap-3 border-b border-gray-200 px-5 py-4 dark:border-white/10">
             <span class="flex size-10 items-center justify-center rounded-xl bg-primary-50 text-primary-600 dark:bg-primary-500/10 dark:text-primary-400">
@@ -10,7 +10,7 @@
             </div>
         </div>
 
-        @if ($utmRanking === [])
+        @if ($utmRanking->isEmpty())
             <p class="px-5 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
                 {{ __('jobs.dashboard.utm_ranking.empty') }}
             </p>
@@ -28,7 +28,7 @@
                         @foreach ($utmRanking as $position => $item)
                             <tr>
                                 <td class="px-5 py-3 font-medium text-gray-950 dark:text-white">
-                                    <span class="mr-2 text-xs text-gray-400">#{{ $position + 1 }}</span>{{ $item['name'] }}
+                                    <span class="mr-2 text-xs text-gray-400">#{{ $utmRanking->firstItem() + $position }}</span>{{ $item['name'] }}
                                 </td>
                                 <td class="max-w-52 truncate px-5 py-3 text-gray-600 dark:text-gray-300">{{ $item['value'] }}</td>
                                 <td class="px-5 py-3 text-right font-semibold text-primary-600 dark:text-primary-400">{{ number_format($item['clicks']) }}</td>
@@ -37,45 +37,12 @@
                     </tbody>
                 </table>
             </div>
-        @endif
-    </section>
 
-    <section class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-gray-900">
-        <div class="flex items-center gap-3 border-b border-gray-200 px-5 py-4 dark:border-white/10">
-            <span class="flex size-10 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600 dark:bg-cyan-500/10 dark:text-cyan-400">
-                <x-filament::icon icon="heroicon-o-globe-alt" class="size-5" />
-            </span>
-            <div>
-                <h3 class="font-semibold text-gray-950 dark:text-white">{{ __('jobs.dashboard.ip_ranking.title') }}</h3>
-                <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('jobs.dashboard.ip_ranking.description') }}</p>
-            </div>
-        </div>
-
-        @if ($ipRanking === [])
-            <p class="px-5 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
-                {{ __('jobs.dashboard.ip_ranking.empty') }}
-            </p>
-        @else
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm">
-                    <thead class="bg-gray-50 text-xs font-semibold tracking-wide text-gray-500 uppercase dark:bg-white/5 dark:text-gray-400">
-                        <tr>
-                            <th class="px-5 py-3">{{ __('jobs.dashboard.ip_ranking.ip') }}</th>
-                            <th class="px-5 py-3 text-right">{{ __('jobs.dashboard.clicks') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-100 dark:divide-white/5">
-                        @foreach ($ipRanking as $position => $item)
-                            <tr>
-                                <td class="px-5 py-3 font-medium text-gray-950 dark:text-white">
-                                    <span class="mr-2 text-xs text-gray-400">#{{ $position + 1 }}</span>{{ $item['ip_address'] }}
-                                </td>
-                                <td class="px-5 py-3 text-right font-semibold text-cyan-600 dark:text-cyan-400">{{ number_format($item['clicks']) }}</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
+            @if ($utmRanking->hasPages())
+                <div class="border-t border-gray-200 px-5 py-4 dark:border-white/10">
+                    {{ $utmRanking->onEachSide(1)->links() }}
+                </div>
+            @endif
         @endif
     </section>
 </div>

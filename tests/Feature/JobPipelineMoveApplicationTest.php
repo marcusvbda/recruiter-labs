@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\ApplicationSource;
 use App\Filament\Resources\Applications\ApplicationResource;
 use App\Filament\Resources\Jobs\JobResource;
 use App\Filament\Resources\Jobs\Pages\ViewJob;
@@ -8,6 +9,7 @@ use App\Models\Application;
 use App\Models\Candidate;
 use App\Models\Company;
 use App\Models\Job;
+use App\Models\Referral;
 use App\Models\Status;
 use Database\Seeders\PlanSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -174,6 +176,54 @@ it('shows a compact application summary and an explicit details link on each pip
         ->assertSeeHtml('href="'.ApplicationResource::getUrl('view', [
             'record' => $application,
         ], tenant: $company).'"');
+});
+
+it('visually identifies only referral applications on pipeline cards', function () {
+    $company = Company::factory()->create();
+    $job = Job::factory()->for($company)->create();
+    $status = Status::factory()->for($company)->create();
+    $referral = Referral::factory()->for($company)->for($job)->create();
+    $referralApplication = Application::factory()->for($company)->create([
+        'job_id' => $job->id,
+        'status_id' => $status->id,
+        'referral_id' => $referral->id,
+        'source' => ApplicationSource::Referral,
+    ]);
+    $directApplication = Application::factory()->for($company)->create([
+        'job_id' => $job->id,
+        'status_id' => $status->id,
+        'source' => ApplicationSource::Direct,
+    ]);
+
+    actAsCompany($company);
+
+    $html = Livewire::test(JobPipelineKanban::class, ['record' => $job])
+        ->assertSee(__('applications.pipeline.kanban.referral'))
+        ->html();
+
+    expect($html)
+        ->toMatch('/data-record-id="'.$referralApplication->getKey().'"\s+data-referral="true"/')
+        ->toMatch('/data-record-id="'.$directApplication->getKey().'"\s+data-referral="false"/');
+});
+
+it('tints each pipeline column with its validated status color', function () {
+    $company = Company::factory()->create();
+    $job = Job::factory()->for($company)->create();
+    Status::factory()->for($company)->create([
+        'color' => '#8B5CF6',
+        'order' => 1,
+    ]);
+    Status::factory()->for($company)->create([
+        'color' => 'red; display: none',
+        'order' => 2,
+    ]);
+
+    actAsCompany($company);
+
+    Livewire::test(JobPipelineKanban::class, ['record' => $job])
+        ->assertSee('--rl-status-color: #8b5cf6', escape: false)
+        ->assertSee('--rl-status-color: #94a3b8', escape: false)
+        ->assertDontSee('red; display: none', escape: false);
 });
 
 it('renders the job pipeline as a kanban inside the job view', function () {

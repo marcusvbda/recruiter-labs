@@ -22,6 +22,7 @@ use App\Models\User;
 use App\Services\AiCredentialsResolver;
 use App\Services\CompanyUsageService;
 use App\Services\PlanComparisonService;
+use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
@@ -36,6 +37,7 @@ use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\View as ViewComponent;
 use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Number;
 use Illuminate\Validation\Rules\Password;
 use Livewire\Attributes\Url;
@@ -47,6 +49,10 @@ class Settings extends Page
 {
     use PasswordValidationRules;
     use ProfileValidationRules;
+
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCog6Tooth;
+
+    protected static ?int $navigationSort = 3;
 
     /** @var array<string, mixed> */
     public array $data = [];
@@ -73,11 +79,6 @@ class Settings extends Page
     public static function getNavigationLabel(): string
     {
         return __('settings.navigation_label');
-    }
-
-    public static function shouldRegisterNavigation(): bool
-    {
-        return false;
     }
 
     public function mount(

@@ -118,11 +118,5 @@ return [
             'parameter' => 'Parámetro',
             'value' => 'Valor',
         ],
-        'ip_ranking' => [
-            'title' => 'Ranking de IP',
-            'description' => 'Direcciones con más visitas a la página.',
-            'empty' => 'Aún no se registraron direcciones IP.',
-            'ip' => 'Dirección IP',
-        ],
     ],
 ];

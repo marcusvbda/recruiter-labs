@@ -4,6 +4,12 @@ return [
     'navigation_label' => 'Settings',
     'title' => 'Settings',
     'subtitle' => 'Manage your profile, workspace plan and AI configuration.',
+    'sidebar' => [
+        'workspace' => 'Workspace',
+        'description' => 'Keep your hiring flow moving with a focused next step.',
+        'new_job' => 'Create new job',
+        'manage_workspace' => 'Manage workspace',
+    ],
     'tabs' => [
         'general' => 'General',
         'auth' => 'Authentication',
