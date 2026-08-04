@@ -117,7 +117,7 @@ return [
         ],
         'usage' => [
             'heading' => 'AI usage',
-            'description' => 'Monthly analysis activity, independent of which credential is used.',
+            'description' => 'Monthly analyses billed to your plan. Analyses run with your own key do not count against this limit.',
             'used' => ':count used',
             'remaining' => ':count remaining',
             'consumed' => ':percentage% consumed',

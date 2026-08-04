@@ -52,8 +52,9 @@ it('scopes tenant-owned models without resources on panel requests', function ()
     $jobCriterion = JobCriterion::query()->create([
         'company_id' => $company->id,
         'job_id' => $job->id,
-        'prompt' => 'Evaluate communication skills.',
+        'criterion' => 'Communication skills',
         'weight' => 5,
+        'reason' => 'Clear communication is required.',
     ]);
     $application = Application::factory()->for($company)->create();
 
@@ -61,8 +62,9 @@ it('scopes tenant-owned models without resources on panel requests', function ()
     JobCriterion::query()->create([
         'company_id' => $otherCompany->id,
         'job_id' => $otherJob->id,
-        'prompt' => 'Evaluate leadership skills.',
+        'criterion' => 'Leadership skills',
         'weight' => 5,
+        'reason' => 'Leadership is required.',
     ]);
     Application::factory()->for($otherCompany)->create();
 

@@ -117,7 +117,7 @@ return [
         ],
         'usage' => [
             'heading' => 'Uso de IA',
-            'description' => 'Atividade mensal de análises, independentemente da credencial utilizada.',
+            'description' => 'Análises mensais cobradas do seu plano. Análises feitas com sua própria chave não contam neste limite.',
             'used' => ':count utilizadas',
             'remaining' => ':count restantes',
             'consumed' => ':percentage% consumido',

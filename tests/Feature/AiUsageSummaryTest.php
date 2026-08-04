@@ -64,10 +64,10 @@ it('summarizes the monthly AI usage and provider split for one company', functio
     $metric = $summary->metric(Limit::AiAnalyses);
 
     expect($summary->planSlug)->toBe('starter')
-        ->and($metric->used)->toBe(3)
+        ->and($metric->used)->toBe(2)
         ->and($metric->limitValue)->toBe(20)
-        ->and($metric->remaining)->toBe(17)
-        ->and($metric->percentage)->toBe(15)
+        ->and($metric->remaining)->toBe(18)
+        ->and($metric->percentage)->toBe(10)
         ->and($metric->cycleStart?->toDateString())->toBe('2026-08-01')
         ->and($metric->cycleEnd?->toDateString())->toBe('2026-08-31')
         ->and($summary->platformAiAnalyses)->toBe(2)
@@ -124,7 +124,7 @@ it('reports unlimited AI usage while retaining provider analytics', function () 
     $summary = app(CompanyUsageService::class)->summary($company);
     $metric = $summary->metric(Limit::AiAnalyses);
 
-    expect($metric->used)->toBe(2)
+    expect($metric->used)->toBe(1)
         ->and($metric->limitValue)->toBeNull()
         ->and($metric->remaining)->toBeNull()
         ->and($metric->isUnlimited)->toBeTrue()

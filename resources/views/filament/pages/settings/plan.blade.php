@@ -48,8 +48,10 @@
                                 </x-filament::badge>
                             @elseif ($plan['direction'] === 'upgrade')
                                 <x-filament::badge color="success" size="sm">
-                                    <x-filament::icon icon="heroicon-m-arrow-trending-up" class="mr-1 size-3.5" />
-                                    {{ __('settings.plan.upgrade') }}
+                                    <span class="flex items-center gap-1">
+                                        {{ __('settings.plan.upgrade') }}
+                                        <x-filament::icon icon="heroicon-m-arrow-trending-up" class="size-3.5" />
+                                    </span>
                                 </x-filament::badge>
                             @else
                                 <x-filament::badge color="gray" size="sm">

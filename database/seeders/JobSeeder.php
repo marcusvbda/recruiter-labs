@@ -146,28 +146,33 @@ HTML,
             $job->jobCriteria()->createMany([
                 [
                     'company_id' => $company->id,
-                    'prompt' => 'Assess depth of PHP and Laravel experience, including APIs, queues, Eloquent, testing, and maintainable backend design.',
+                    'criterion' => 'PHP and Laravel expertise',
                     'weight' => 10,
+                    'reason' => 'The role requires deep experience with APIs, queues, Eloquent, testing, and maintainable backend design.',
                 ],
                 [
                     'company_id' => $company->id,
-                    'prompt' => 'Assess React and TypeScript experience, attention to user experience, accessibility, and frontend code quality.',
+                    'criterion' => 'React and TypeScript expertise',
                     'weight' => 9,
+                    'reason' => 'The role requires strong frontend implementation, user experience, accessibility, and code quality.',
                 ],
                 [
                     'company_id' => $company->id,
-                    'prompt' => 'Assess system design, relational database knowledge, performance awareness, and pragmatic technical decision-making.',
+                    'criterion' => 'System design',
                     'weight' => 8,
+                    'reason' => 'The role requires relational database knowledge, performance awareness, and pragmatic technical decisions.',
                 ],
                 [
                     'company_id' => $company->id,
-                    'prompt' => 'Assess written communication, collaboration, ownership, and ability to explain trade-offs clearly.',
+                    'criterion' => 'Communication and collaboration',
                     'weight' => 8,
+                    'reason' => 'The team needs clear written communication, ownership, collaboration, and thoughtful trade-off explanations.',
                 ],
                 [
                     'company_id' => $company->id,
-                    'prompt' => 'Assess product thinking and evidence of delivering valuable features from discovery through production.',
+                    'criterion' => 'Product delivery',
                     'weight' => 7,
+                    'reason' => 'The role benefits from product thinking and evidence of delivering valuable features through production.',
                 ],
             ]);
 

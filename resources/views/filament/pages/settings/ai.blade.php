@@ -92,8 +92,10 @@
                             size="sm">{{ __('settings.ai.status.active') }}</x-filament::badge>
                     @elseif (!$settings['own_key_allowed'])
                         <x-filament::badge color="warning" size="sm">
-                            <x-filament::icon icon="heroicon-m-lock-closed" class="mr-1 size-3.5" />
-                            {{ __('settings.ai.own_key.required_plan', ['plan' => $settings['own_key_required_plan']]) }}
+                            <span class="flex items-center gap-1">
+                                <x-filament::icon icon="heroicon-m-lock-closed" class="size-3.5" />
+                                {{ __('settings.ai.own_key.required_plan', ['plan' => $settings['own_key_required_plan']]) }}
+                            </span>
                         </x-filament::badge>
                     @endif
                 </div>

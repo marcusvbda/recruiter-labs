@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\ApplicationLocale;
 use App\Enums\CoverLetterType;
+use App\Enums\JobCriteriaProcessingStatus;
 use App\Models\Concerns\HasUniqueKey;
 use Carbon\CarbonImmutable;
 use Database\Factories\JobFactory;
@@ -16,7 +17,24 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
-#[Fillable(['company_id', 'name', 'application_locale', 'description', 'starts_at', 'ends_at', 'campaign_expectation', 'published', 'applications_paused', 'application_limit', 'cover_letter_required', 'cover_letter_type'])]
+/**
+ * @property int $id
+ * @property int $company_id
+ * @property string $name
+ * @property ApplicationLocale $application_locale
+ * @property string|null $description
+ * @property CarbonImmutable|null $starts_at
+ * @property CarbonImmutable|null $ends_at
+ * @property string|null $campaign_expectation
+ * @property bool $published
+ * @property bool $applications_paused
+ * @property int|null $application_limit
+ * @property bool $cover_letter_required
+ * @property CoverLetterType $cover_letter_type
+ * @property JobCriteriaProcessingStatus $criteria_processing_status
+ * @property int $criteria_generation
+ */
+#[Fillable(['company_id', 'name', 'application_locale', 'description', 'starts_at', 'ends_at', 'campaign_expectation', 'published', 'applications_paused', 'application_limit', 'cover_letter_required', 'cover_letter_type', 'criteria_processing_status', 'criteria_generation'])]
 class Job extends Model
 {
     /** @use HasFactory<JobFactory> */
@@ -32,6 +50,8 @@ class Job extends Model
         'applications_paused' => false,
         'cover_letter_required' => false,
         'cover_letter_type' => CoverLetterType::Text->value,
+        'criteria_processing_status' => JobCriteriaProcessingStatus::NotStarted->value,
+        'criteria_generation' => 0,
     ];
 
     protected function casts(): array
@@ -45,6 +65,8 @@ class Job extends Model
             'application_limit' => 'integer',
             'cover_letter_required' => 'boolean',
             'cover_letter_type' => CoverLetterType::class,
+            'criteria_processing_status' => JobCriteriaProcessingStatus::class,
+            'criteria_generation' => 'integer',
         ];
     }
 
@@ -88,6 +110,12 @@ class Job extends Model
     public function jobCriteria(): HasMany
     {
         return $this->hasMany(JobCriterion::class);
+    }
+
+    /** @return HasMany<AiUsageRecord, $this> */
+    public function aiUsageRecords(): HasMany
+    {
+        return $this->hasMany(AiUsageRecord::class);
     }
 
     /** @return HasMany<Application, $this> */

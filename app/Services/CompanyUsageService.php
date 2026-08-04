@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Data\CompanyUsageSummaryData;
 use App\Data\UsageMetricData;
+use App\Enums\AiUsageStatus;
 use App\Enums\Limit;
 use App\Enums\UsageWarningState;
 use App\Models\AiUsageRecord;
@@ -21,22 +22,23 @@ class CompanyUsageService
         $cycleEnd = $cycleStart->endOfMonth();
 
         $aiUsageQuery = $company->aiUsageRecords()
-            ->whereBetween('created_at', [$cycleStart, $cycleEnd]);
-        $aiAnalyses = (clone $aiUsageQuery)->count();
+            ->whereBetween('created_at', [$cycleStart, $cycleEnd])
+            ->where('status', '!=', AiUsageStatus::Failed);
         $ownAiAnalyses = (clone $aiUsageQuery)->where('used_own_key', true)->count();
+        $platformAiAnalyses = (clone $aiUsageQuery)->where('used_own_key', false)->count();
 
         $metrics = [
             Limit::Users->value => $this->usageFor($company, Limit::Users),
             Limit::Jobs->value => $this->usageFor($company, Limit::Jobs),
             Limit::Applications->value => $this->usageFor($company, Limit::Applications),
-            Limit::AiAnalyses->value => $this->makeMetric($company, Limit::AiAnalyses, $aiAnalyses, $cycleStart, $cycleEnd),
+            Limit::AiAnalyses->value => $this->makeMetric($company, Limit::AiAnalyses, $platformAiAnalyses, $cycleStart, $cycleEnd),
         ];
 
         return new CompanyUsageSummaryData(
             planName: $company->plan->name,
             planSlug: $company->plan->slug,
             metrics: $metrics,
-            platformAiAnalyses: $aiAnalyses - $ownAiAnalyses,
+            platformAiAnalyses: $platformAiAnalyses,
             ownAiAnalyses: $ownAiAnalyses,
             cycleStart: $cycleStart,
             cycleEnd: $cycleEnd,
@@ -57,6 +59,8 @@ class CompanyUsageService
                 ->count(),
             Limit::AiAnalyses => $company->aiUsageRecords()
                 ->whereBetween('created_at', [$cycleStart, $cycleEnd])
+                ->where('used_own_key', false)
+                ->where('status', '!=', AiUsageStatus::Failed)
                 ->count(),
         };
 

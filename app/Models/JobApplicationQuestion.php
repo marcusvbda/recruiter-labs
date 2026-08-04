@@ -10,6 +10,16 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property int $id
+ * @property int $company_id
+ * @property int $job_id
+ * @property string $question
+ * @property ApplicationQuestionType $response_type
+ * @property string|null $description
+ * @property bool $required
+ * @property int $sort
+ */
 #[Fillable(['company_id', 'job_id', 'question', 'response_type', 'description', 'required', 'sort'])]
 class JobApplicationQuestion extends Model
 {

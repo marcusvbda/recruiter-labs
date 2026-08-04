@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property AiProvider $provider
  * @property AiUsageStatus $status
  */
-#[Fillable(['company_id', 'user_id', 'application_id', 'operation', 'provider', 'model', 'input_tokens', 'output_tokens', 'cached_tokens', 'estimated_cost', 'duration_ms', 'status', 'used_own_key'])]
+#[Fillable(['company_id', 'user_id', 'application_id', 'job_id', 'execution_id', 'attempt', 'operation', 'provider', 'ai_provider', 'model', 'input_tokens', 'output_tokens', 'total_tokens', 'cached_tokens', 'estimated_cost', 'duration_ms', 'status', 'used_own_key'])]
 class AiUsageRecord extends Model
 {
     /** @use HasFactory<AiUsageRecordFactory> */
@@ -23,7 +23,9 @@ class AiUsageRecord extends Model
     protected $attributes = [
         'input_tokens' => 0,
         'output_tokens' => 0,
+        'total_tokens' => 0,
         'cached_tokens' => 0,
+        'attempt' => 1,
         'status' => AiUsageStatus::Pending->value,
         'used_own_key' => false,
     ];
@@ -54,5 +56,11 @@ class AiUsageRecord extends Model
     public function application(): BelongsTo
     {
         return $this->belongsTo(Application::class);
+    }
+
+    /** @return BelongsTo<Job, $this> */
+    public function job(): BelongsTo
+    {
+        return $this->belongsTo(Job::class);
     }
 }

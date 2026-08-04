@@ -3,8 +3,10 @@
 use App\Enums\ApplicationLocale;
 use App\Enums\ApplicationQuestionType;
 use App\Enums\CoverLetterType;
+use App\Enums\JobCriteriaProcessingStatus;
 use App\Filament\Resources\Jobs\Pages\CreateJob;
 use App\Filament\Resources\Jobs\Pages\EditJob;
+use App\Jobs\AnalyzeJobCriteria;
 use App\Models\Company;
 use App\Models\CvFileType;
 use App\Models\Job;
@@ -15,6 +17,7 @@ use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Toggle;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -65,20 +68,6 @@ it('stacks the required response toggle beside the response type field', functio
     expect($requiredToggle->isInline())->toBeFalse();
 });
 
-it('aligns the criteria weight slider and fills its selected track', function () {
-    $company = Company::factory()->create();
-    actAsCompany($company);
-
-    Livewire::test(CreateJob::class)
-        ->fillForm([
-            'jobCriteria' => [
-                ['prompt' => 'Evaluate communication clarity.', 'weight' => 5],
-            ],
-        ])
-        ->assertSeeHtml('margin-block: 0.625rem;')
-        ->assertSeeHtml("fillTrack: JSON.parse('[true,false]')");
-});
-
 it('changes the published status from the job form', function () {
     $company = Company::factory()->create();
     actAsCompany($company);
@@ -87,7 +76,6 @@ it('changes the published status from the job form', function () {
         ->fillForm([
             'name' => 'Published Job',
             'published' => true,
-            'jobCriteria' => [],
         ])
         ->call('create')
         ->assertHasNoFormErrors();
@@ -99,7 +87,6 @@ it('changes the published status from the job form', function () {
     Livewire::test(EditJob::class, ['record' => $job->getRouteKey()])
         ->fillForm([
             'published' => false,
-            'jobCriteria' => [],
         ])
         ->call('save')
         ->assertHasNoFormErrors();
@@ -115,7 +102,6 @@ it('changes the application page language from the job form', function () {
         ->fillForm([
             'name' => 'Localized Job',
             'application_locale' => ApplicationLocale::BrazilianPortuguese->value,
-            'jobCriteria' => [],
         ])
         ->call('create')
         ->assertHasNoFormErrors();
@@ -127,7 +113,6 @@ it('changes the application page language from the job form', function () {
     Livewire::test(EditJob::class, ['record' => $job->getRouteKey()])
         ->fillForm([
             'application_locale' => ApplicationLocale::Spanish->value,
-            'jobCriteria' => [],
         ])
         ->call('save')
         ->assertHasNoFormErrors();
@@ -146,7 +131,6 @@ it('configures whether a job accepts applications and its individual limit', fun
         ->fillForm([
             'applications_paused' => true,
             'application_limit' => 75,
-            'jobCriteria' => [],
         ])
         ->call('save')
         ->assertHasNoFormErrors();
@@ -165,7 +149,6 @@ it('rejects a non-positive individual application limit', function () {
     Livewire::test(EditJob::class, ['record' => $job->getRouteKey()])
         ->fillForm([
             'application_limit' => 0,
-            'jobCriteria' => [],
         ])
         ->call('save')
         ->assertHasFormErrors(['application_limit']);
@@ -179,13 +162,12 @@ it('rejects an unsupported application page language', function () {
         ->fillForm([
             'name' => 'Unsupported Locale Job',
             'application_locale' => 'fr',
-            'jobCriteria' => [],
         ])
         ->call('create')
         ->assertHasFormErrors(['application_locale']);
 });
 
-it('creates a job with campaign fields and job criteria repeater rows', function () {
+it('creates a job with campaign fields and application questions', function () {
     $company = Company::factory()->create();
     actAsCompany($company);
 
@@ -226,10 +208,6 @@ it('creates a job with campaign fields and job criteria repeater rows', function
                     'required' => false,
                 ],
             ],
-            'jobCriteria' => [
-                ['prompt' => 'Evaluate how clearly the candidate communicates.', 'weight' => 4],
-                ['prompt' => 'Evaluate the candidate\'s ability to design reliable APIs.', 'weight' => 9],
-            ],
         ])
         ->call('create')
         ->assertHasNoFormErrors();
@@ -268,19 +246,6 @@ it('creates a job with campaign fields and job criteria repeater rows', function
         ->and($applicationQuestions[2]->required)->toBeFalse()
         ->and($applicationQuestions[2]->sort)->toBe(3);
 
-    $pivotRows = JobCriterion::query()->where('job_id', $job->id)->get();
-
-    expect($pivotRows)->toHaveCount(2);
-
-    $rowForA = $pivotRows->firstWhere('prompt', 'Evaluate how clearly the candidate communicates.');
-    $rowForB = $pivotRows->firstWhere('prompt', 'Evaluate the candidate\'s ability to design reliable APIs.');
-
-    expect($rowForA)->not->toBeNull()
-        ->and($rowForA->company_id)->toBe($company->id)
-        ->and($rowForA->weight)->toBe(4)
-        ->and($rowForB)->not->toBeNull()
-        ->and($rowForB->company_id)->toBe($company->id)
-        ->and($rowForB->weight)->toBe(9);
 });
 
 it('requires a supported CV format and valid response field types', function () {
@@ -299,7 +264,6 @@ it('requires a supported CV format and valid response field types', function () 
                     'required' => true,
                 ],
             ],
-            'jobCriteria' => [],
         ])
         ->call('create')
         ->assertHasFormErrors([
@@ -318,52 +282,83 @@ it('requires an accepted cover letter format when file upload is selected', func
             'acceptedCvTypes' => CvFileType::query()->pluck('id')->all(),
             'cover_letter_type' => CoverLetterType::File->value,
             'coverLetterFileTypes' => [],
-            'jobCriteria' => [],
         ])
         ->call('create')
         ->assertHasFormErrors(['coverLetterFileTypes']);
 });
 
-it('rejects a job criteria weight outside the 0-10 range', function () {
+it('shows the AI analysis state while criteria are processing', function () {
     $company = Company::factory()->create();
+    $job = Job::factory()->for($company)->create();
+    $job->updateQuietly([
+        'criteria_processing_status' => JobCriteriaProcessingStatus::Processing,
+    ]);
     actAsCompany($company);
 
-    Livewire::test(CreateJob::class)
-        ->fillForm([
-            'name' => 'Product Designer',
-            'jobCriteria' => [
-                ['prompt' => 'Evaluate product design ability.', 'weight' => 15],
-            ],
-        ])
-        ->call('create')
-        ->assertHasFormErrors(['jobCriteria.0.weight']);
+    Livewire::test(EditJob::class, ['record' => $job->getRouteKey()])
+        ->set('activeJobEditTab', 'ai-criteria')
+        ->assertSee(__('jobs.criteria.processing_title'))
+        ->assertSee(__('jobs.criteria.status_processing'))
+        ->assertDontSee(__('jobs.criteria.section_title'));
 });
 
-it('rejects a job criteria prompt longer than 150 characters', function () {
+it('shows an honest terminal state for jobs created before AI criteria analysis', function () {
     $company = Company::factory()->create();
+    $job = Job::factory()->for($company)->create();
+    $job->updateQuietly([
+        'criteria_processing_status' => JobCriteriaProcessingStatus::NotStarted,
+    ]);
     actAsCompany($company);
 
-    Livewire::test(CreateJob::class)
+    Livewire::test(EditJob::class, ['record' => $job->getRouteKey()])
+        ->set('activeJobEditTab', 'ai-criteria')
+        ->assertSee(__('jobs.criteria.not_started_title'))
+        ->assertDontSee(__('jobs.criteria.section_title'));
+});
+
+it('rejects invalid AI criteria fields', function () {
+    $company = Company::factory()->create();
+    $job = Job::factory()->for($company)->create();
+    $job->updateQuietly([
+        'criteria_processing_status' => JobCriteriaProcessingStatus::Completed,
+    ]);
+    actAsCompany($company);
+
+    Livewire::test(EditJob::class, ['record' => $job->getRouteKey()])
+        ->set('activeJobEditTab', 'ai-criteria')
         ->fillForm([
-            'name' => 'Product Designer',
             'jobCriteria' => [
-                ['prompt' => str_repeat('a', 151), 'weight' => 5],
+                ['criterion' => str_repeat('a', 151), 'weight' => 15, 'reason' => ''],
             ],
         ])
-        ->call('create')
-        ->assertHasFormErrors(['jobCriteria.0.prompt' => 'max']);
+        ->call('save')
+        ->assertHasFormErrors([
+            'jobCriteria.0.criterion' => 'max',
+            'jobCriteria.0.weight',
+            'jobCriteria.0.reason' => 'required',
+        ]);
 });
 
 it('adds job criteria rows to an existing job through the edit form', function () {
     $company = Company::factory()->create();
     $job = Job::factory()->for($company)->create();
+    $job->updateQuietly([
+        'criteria_processing_status' => JobCriteriaProcessingStatus::Completed,
+    ]);
+    $generationBeforeManualEdit = $job->refresh()->criteria_generation;
+    $job->acceptedCvTypes()->sync(CvFileType::query()->pluck('id'));
     actAsCompany($company);
+    Queue::fake();
 
     Livewire::test(EditJob::class, ['record' => $job->getRouteKey()])
+        ->set('activeJobEditTab', 'ai-criteria')
         ->fillForm([
-            'acceptedCvTypes' => CvFileType::query()->pluck('id')->all(),
             'jobCriteria' => [
-                ['prompt' => 'Evaluate the candidate\'s leadership skills.', 'weight' => 7],
+                [
+                    'criterion' => 'Leadership',
+                    'weight' => 7,
+                    'reason' => 'The role requires leading a multidisciplinary team.',
+                ],
             ],
         ])
         ->call('save')
@@ -372,6 +367,75 @@ it('adds job criteria rows to an existing job through the edit form', function (
     $pivotRow = JobCriterion::query()->where('job_id', $job->id)->sole();
 
     expect($pivotRow->company_id)->toBe($company->id)
-        ->and($pivotRow->prompt)->toBe('Evaluate the candidate\'s leadership skills.')
-        ->and($pivotRow->weight)->toBe(7);
+        ->and($pivotRow->criterion)->toBe('Leadership')
+        ->and($pivotRow->weight)->toBe(7)
+        ->and($pivotRow->reason)->toBe('The role requires leading a multidisciplinary team.')
+        ->and($job->fresh()->criteria_processing_status)->toBe(JobCriteriaProcessingStatus::Completed)
+        ->and($job->fresh()->criteria_generation)->toBe($generationBeforeManualEdit + 1);
+
+    Queue::assertNotPushed(AnalyzeJobCriteria::class);
 });
+
+it('does not queue a new analysis when accepted CV formats change', function () {
+    $company = Company::factory()->create();
+    $job = Job::factory()->for($company)->create([
+        'description' => '<p>Job description.</p>',
+    ]);
+    $job->updateQuietly([
+        'criteria_processing_status' => JobCriteriaProcessingStatus::Completed,
+    ]);
+
+    $acceptedCvTypeIds = CvFileType::query()->orderBy('sort')->pluck('id');
+    $job->acceptedCvTypes()->sync([$acceptedCvTypeIds->first()]);
+
+    actAsCompany($company);
+    Queue::fake();
+
+    Livewire::test(EditJob::class, ['record' => $job->getRouteKey()])
+        ->fillForm([
+            'acceptedCvTypes' => $acceptedCvTypeIds->all(),
+        ])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($job->fresh()->criteria_processing_status)->toBe(JobCriteriaProcessingStatus::Completed);
+
+    Queue::assertNothingPushed();
+});
+
+it('persists edits made on the editing tab even when the AI Criteria tab is active on save', function () {
+    $company = Company::factory()->create();
+    $job = Job::factory()->for($company)->create(['name' => 'Original Name']);
+    $job->acceptedCvTypes()->sync(CvFileType::query()->pluck('id'));
+    actAsCompany($company);
+
+    Livewire::test(EditJob::class, ['record' => $job->getRouteKey()])
+        ->set('activeJobEditTab', 'ai-criteria')
+        ->fillForm(['name' => 'Updated Name'])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($job->fresh()->name)->toBe('Updated Name');
+});
+
+it('does not invalidate the criteria generation when saving while an analysis is not completed', function (JobCriteriaProcessingStatus $status) {
+    $company = Company::factory()->create();
+    $job = Job::factory()->for($company)->create();
+    $job->acceptedCvTypes()->sync(CvFileType::query()->pluck('id'));
+    $job->updateQuietly(['criteria_processing_status' => $status]);
+    $generationBeforeSave = $job->refresh()->criteria_generation;
+    actAsCompany($company);
+
+    Livewire::test(EditJob::class, ['record' => $job->getRouteKey()])
+        ->set('activeJobEditTab', 'ai-criteria')
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($job->fresh()->criteria_processing_status)->toBe($status)
+        ->and($job->fresh()->criteria_generation)->toBe($generationBeforeSave);
+})->with([
+    'not started' => [JobCriteriaProcessingStatus::NotStarted],
+    'pending' => [JobCriteriaProcessingStatus::Pending],
+    'processing' => [JobCriteriaProcessingStatus::Processing],
+    'failed' => [JobCriteriaProcessingStatus::Failed],
+]);

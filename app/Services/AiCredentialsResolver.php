@@ -6,9 +6,55 @@ use App\Data\AiProviderConfigurationData;
 use App\Enums\AiProvider;
 use App\Models\Company;
 use App\Models\CompanyAiSetting;
+use Laravel\Ai\Ai;
 
 class AiCredentialsResolver
 {
+    /**
+     * Register a temporary, company-scoped AI provider for the given configuration and
+     * return its name, so an agent can be prompted with the company's own credentials.
+     *
+     * Returns null when the platform credentials should be used (the agent's own
+     * configured provider / model attributes apply in that case).
+     */
+    public function registerRuntimeProvider(Company $company, AiProviderConfigurationData $configuration): ?string
+    {
+        if (! $configuration->usesOwnKey || blank($configuration->apiKey())) {
+            return null;
+        }
+
+        $name = $this->runtimeProviderName($company);
+
+        config(["ai.providers.{$name}" => [
+            'driver' => 'openai',
+            'key' => $configuration->apiKey(),
+            'url' => config('ai.providers.openai.url', 'https://api.openai.com/v1'),
+        ]]);
+
+        // Long-lived workers (queue, Octane) cache provider instances by name, so
+        // force a fresh instance in case a stale key was previously registered.
+        Ai::purge($name);
+
+        return $name;
+    }
+
+    /**
+     * Forget a company's temporary runtime provider once the agent call has finished,
+     * so its decrypted API key does not linger in the process's config/cache.
+     */
+    public function forgetRuntimeProvider(Company $company): void
+    {
+        $name = $this->runtimeProviderName($company);
+
+        Ai::purge($name);
+        config(["ai.providers.{$name}" => null]);
+    }
+
+    private function runtimeProviderName(Company $company): string
+    {
+        return 'byok:'.$company->getKey();
+    }
+
     public function resolve(Company $company): AiProviderConfigurationData
     {
         $company->loadMissing(['plan', 'aiSetting']);
