@@ -17,6 +17,7 @@ use App\Models\Job;
 use App\Models\Referral;
 use App\Services\ApplicationAvailabilityService;
 use App\Services\ApplicationDocumentStorage;
+use App\Services\ReferralService;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
@@ -30,6 +31,7 @@ class SubmitJobApplication
     public function __construct(
         private readonly ApplicationAvailabilityService $availabilityService,
         private readonly ApplicationDocumentStorage $documentStorage,
+        private readonly ReferralService $referralService,
     ) {}
 
     public function run(Job $job, SubmitJobApplicationData $data): Application
@@ -41,13 +43,13 @@ class SubmitJobApplication
             return DB::transaction(function () use ($job, $data, &$storedDocuments): Application {
                 $job = $this->availabilityService->lockAndEnsureCanReceive($job);
                 $job->load('applicationQuestions');
+                $referral = $this->resolveReferral($job, $data->referralKey);
                 $candidate = $this->resolveCandidate($job, $data);
 
                 if ($job->applications()->whereBelongsTo($candidate)->exists()) {
                     $this->throwDuplicateApplication();
                 }
 
-                $referral = $this->resolveReferral($job, $data->referralKey);
                 $coverLetterType = $this->coverLetterSubmissionType($job, $data);
                 $application = Application::query()->create([
                     'company_id' => $job->company_id,
@@ -141,11 +143,7 @@ class SubmitJobApplication
             return null;
         }
 
-        $referral = Referral::query()
-            ->where('key', $referralKey)
-            ->where('company_id', $job->company_id)
-            ->where('job_id', $job->getKey())
-            ->first();
+        $referral = $this->referralService->retrieveForApplication($referralKey, $job);
 
         if (! $referral instanceof Referral) {
             throw ValidationException::withMessages([

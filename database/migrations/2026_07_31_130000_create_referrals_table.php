@@ -14,9 +14,13 @@ return new class extends Migration
             $table->foreignId('job_id')->constrained('job_postings')->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->uuid('key')->unique();
+            $table->boolean('published')->default(true);
+            $table->timestamp('expires_at')->nullable();
+            $table->unsignedInteger('max_applications')->default(1);
             $table->timestamps();
 
             $table->unique(['job_id', 'user_id']);
+            $table->index(['published', 'expires_at']);
         });
 
         Schema::create('job_clicks', function (Blueprint $table) {

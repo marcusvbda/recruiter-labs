@@ -245,6 +245,32 @@ it('rejects an explicit referral from another job or tenant', function (string $
     expect(Application::query()->exists())->toBeFalse();
 })->with(['job', 'tenant']);
 
+it('rejects an application when its referral is no longer available', function (string $reason) {
+    ['company' => $company, 'job' => $job, 'status' => $status, 'question' => $question] = publicSubmissionFixture();
+    $referral = Referral::factory()->for($company)->for($job)->create();
+    $existingApplications = 0;
+
+    if ($reason === 'unpublished') {
+        $referral->update(['published' => false]);
+    } elseif ($reason === 'expired') {
+        $referral->update(['expires_at' => now()->subSecond()]);
+    } else {
+        Application::factory()->for($company)->for($job)->create([
+            'status_id' => $status->id,
+            'referral_id' => $referral->id,
+            'source' => ApplicationSource::Referral,
+        ]);
+        $existingApplications = 1;
+    }
+
+    $this->post(route('job.apply.store', $job->key), validPublicSubmissionPayload($question, [
+        'referral_key' => $referral->key,
+    ]))->assertSessionHasErrors('_form');
+
+    expect(Application::query()->count())->toBe($existingApplications)
+        ->and(Storage::disk('local')->allFiles())->toBe([]);
+})->with(['unpublished', 'expired', 'limit reached']);
+
 it('persists text and file cover letters according to the job configuration', function (string $type) {
     ['job' => $job, 'question' => $question] = publicSubmissionFixture([
         'cover_letter_type' => $type,

@@ -7,6 +7,7 @@ use App\Models\Job;
 use App\Models\Referral;
 use App\Models\User;
 use Database\Seeders\PlanSeeder;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -52,6 +53,11 @@ it('shows the referral key and copies its public URL when clicked', function () 
             fn (TextColumn $column): bool => $column->isCopyable($referral->key)
                 && ($column->getCopyableState($referral->key) === $url)
                 && ($column->getUrl() === null),
+            $referral,
+        )
+        ->assertTableColumnExists(
+            'published',
+            fn (IconColumn $column): bool => $column->isBoolean(),
             $referral,
         )
         ->assertTableColumnDoesNotExist('public_url');

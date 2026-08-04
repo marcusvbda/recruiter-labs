@@ -55,3 +55,29 @@ it('rejects a duplicate job/user referral submission with a form validation erro
 
     expect(Referral::query()->count())->toBe(1);
 });
+
+it('creates a referral with its availability configuration', function () {
+    $company = Company::factory()->create(['plan_id' => Plan::default()->id]);
+    $job = Job::factory()->for($company)->create();
+    $referredUser = User::factory()->create();
+    $referredUser->companies()->attach($company);
+
+    actAsCompany($company);
+
+    Livewire::test(CreateReferral::class)
+        ->fillForm([
+            'job_id' => $job->id,
+            'user_id' => $referredUser->id,
+            'published' => false,
+            'expires_at' => '2026-08-31 18:30:00',
+            'max_applications' => 3,
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $referral = Referral::query()->sole();
+
+    expect($referral->published)->toBeFalse()
+        ->and($referral->expires_at?->format('Y-m-d H:i:s'))->toBe('2026-08-31 18:30:00')
+        ->and($referral->max_applications)->toBe(3);
+});

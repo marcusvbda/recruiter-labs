@@ -32,6 +32,9 @@ class ReferralFactory extends Factory
 
                 return $user->id;
             },
+            'published' => true,
+            'expires_at' => null,
+            'max_applications' => 1,
         ];
     }
 }

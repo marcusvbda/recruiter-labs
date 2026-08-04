@@ -10,11 +10,21 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['company_id', 'job_id', 'user_id'])]
+#[Fillable(['company_id', 'job_id', 'user_id', 'published', 'expires_at', 'max_applications'])]
 class Referral extends Model
 {
     /** @use HasFactory<ReferralFactory> */
     use HasFactory, HasUniqueKey;
+
+    /** @return array<string, string> */
+    protected function casts(): array
+    {
+        return [
+            'published' => 'boolean',
+            'expires_at' => 'datetime',
+            'max_applications' => 'integer',
+        ];
+    }
 
     /** @return BelongsTo<Company, $this> */
     public function company(): BelongsTo

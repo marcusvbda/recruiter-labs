@@ -4,7 +4,10 @@ namespace App\Filament\Resources\Referrals\Schemas;
 
 use App\Models\Referral;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
@@ -54,6 +57,30 @@ class ReferralForm
                                 ignoreRecord: true,
                                 modifyRuleUsing: fn (Unique $rule, Get $get): Unique => $rule->where('job_id', $get('job_id')),
                             ),
+                    ]),
+                Section::make(__('referrals.sections.availability'))
+                    ->description(__('referrals.sections.availability_description'))
+                    ->columnSpanFull()
+                    ->columns(3)
+                    ->schema([
+                        Toggle::make('published')
+                            ->label(__('referrals.fields.published'))
+                            ->helperText(__('referrals.fields.published_helper'))
+                            ->inline(false)
+                            ->default(true),
+                        DateTimePicker::make('expires_at')
+                            ->label(__('referrals.fields.expires_at'))
+                            ->helperText(__('referrals.fields.expires_at_helper'))
+                            ->native(false)
+                            ->seconds(false),
+                        TextInput::make('max_applications')
+                            ->label(__('referrals.fields.max_applications'))
+                            ->helperText(__('referrals.fields.max_applications_helper'))
+                            ->numeric()
+                            ->integer()
+                            ->minValue(1)
+                            ->default(1)
+                            ->required(),
                     ]),
             ]);
     }

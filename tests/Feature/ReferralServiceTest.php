@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Application;
 use App\Models\Job;
 use App\Models\Referral;
 use App\Services\ReferralService;
@@ -63,6 +64,47 @@ it('does not retrieve a referral for an unavailable job', function (array $attri
     'ended' => [['ends_at' => '2026-08-14']],
 ]);
 
+it('does not retrieve an unpublished or expired referral', function (array $attributes) {
+    $job = Job::factory()->create([
+        'published' => true,
+        'starts_at' => null,
+        'ends_at' => null,
+    ]);
+    $referral = Referral::factory()
+        ->for($job->company)
+        ->for($job)
+        ->create($attributes);
+
+    expect(app(ReferralService::class)->retrieve($referral->key))->toBeNull();
+})->with([
+    'unpublished referral' => [['published' => false]],
+    'expired referral' => [['expires_at' => '2026-08-15 11:59:59']],
+]);
+
+it('keeps a referral available until its configured application limit is reached', function () {
+    $job = Job::factory()->create([
+        'published' => true,
+        'starts_at' => null,
+        'ends_at' => null,
+    ]);
+    $referral = Referral::factory()
+        ->for($job->company)
+        ->for($job)
+        ->create(['max_applications' => 2]);
+
+    Application::factory()->for($job->company)->for($job)->create([
+        'referral_id' => $referral->id,
+    ]);
+
+    expect(app(ReferralService::class)->retrieve($referral->key))->not->toBeNull();
+
+    Application::factory()->for($job->company)->for($job)->create([
+        'referral_id' => $referral->id,
+    ]);
+
+    expect(app(ReferralService::class)->retrieve($referral->key))->toBeNull();
+});
+
 it('does not retrieve a malformed referral key', function () {
     expect(app(ReferralService::class)->retrieve('unknown-key'))->toBeNull();
 });
@@ -81,6 +123,24 @@ it('returns 404 from the public referral route when its job is unavailable', fun
         ->for($job->company)
         ->for($job)
         ->create();
+
+    $this->get(route('referral.show', ['key' => $referral->key]))
+        ->assertNotFound();
+});
+
+it('returns 404 from the public referral route after its application limit is reached', function () {
+    $job = Job::factory()->create([
+        'published' => true,
+        'starts_at' => null,
+        'ends_at' => null,
+    ]);
+    $referral = Referral::factory()
+        ->for($job->company)
+        ->for($job)
+        ->create();
+    Application::factory()->for($job->company)->for($job)->create([
+        'referral_id' => $referral->id,
+    ]);
 
     $this->get(route('referral.show', ['key' => $referral->key]))
         ->assertNotFound();
