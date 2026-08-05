@@ -2,7 +2,7 @@
     display: grid;
     gap: 1rem;
     overflow-x: auto;
-    padding: 10px 5px;
+    padding-bottom: 0.25rem;
 }
 
 .fi-model-states-kanban__toolbar {

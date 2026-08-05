@@ -15,8 +15,8 @@ use App\Services\LimitManager;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Laravel\Ai\Responses\StructuredAgentResponse;
 use Illuminate\Support\Str;
+use Laravel\Ai\Responses\StructuredAgentResponse;
 use Throwable;
 use UnexpectedValueException;
 
@@ -30,11 +30,13 @@ class AnalyzeJobCriteria implements ShouldBeUnique, ShouldQueue
 
     public int $uniqueFor = 3600;
 
-    public const MODEL = 'gpt-4.1-mini';
+    public const MODEL = 'gpt-4o-mini';
 
     public const OPERATION = 'job_criteria_extraction';
 
     public const PROVIDER = 'openai';
+
+    public const QUEUE = 'ai-criteria-extraction';
 
     public readonly string $executionId;
 
@@ -45,6 +47,7 @@ class AnalyzeJobCriteria implements ShouldBeUnique, ShouldQueue
         ?string $executionId = null,
     ) {
         $this->executionId = $executionId ?? (string) Str::uuid();
+        $this->queue = self::QUEUE;
     }
 
     /** @return list<int> */

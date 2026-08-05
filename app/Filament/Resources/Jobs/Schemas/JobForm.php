@@ -304,11 +304,10 @@ class JobForm
                                 ->default(5)
                                 ->required()
                                 ->columnSpan(3),
-                            Textarea::make('reason')
+                            TextInput::make('reason')
                                 ->label(__('jobs.criteria.reason'))
-                                ->rows(2)
                                 ->required()
-                                ->maxLength(1000)
+                                ->maxLength(150)
                                 ->columnSpanFull(),
                         ])
                         ->columns(10)

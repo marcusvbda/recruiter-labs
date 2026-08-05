@@ -36,6 +36,23 @@ beforeEach(function () {
     Queue::fake();
 });
 
+it('encodes the job context as TOON and strips HTML markup from the description', function () {
+    $job = Job::factory()->create([
+        'name' => 'Senior Laravel Engineer',
+        'description' => '<p>Build a multi-tenant recruiting platform.</p><ul><li>Own the API layer.</li></ul>',
+    ]);
+
+    $context = (new ExtractJobCriteria($job))->jobContext();
+
+    expect($context)->toContain('title: Senior Laravel Engineer')
+        ->toContain('Build a multi-tenant recruiting platform. Own the API layer.')
+        ->not->toContain('<p>')
+        ->not->toContain('<ul>')
+        ->not->toContain('<li>')
+        ->not->toContain('\\n')
+        ->not->toContain('{');
+});
+
 it('does not queue criteria extraction automatically when a job is created or updated', function () {
     $user = User::factory()->create();
     $this->actingAs($user);
@@ -162,14 +179,14 @@ it('persists structured criteria and complete token usage for the current genera
         ->and($usage->job_id)->toBe($job->id)
         ->and($usage->provider->value)->toBe('platform')
         ->and($usage->ai_provider)->toBe('openai')
-        ->and($usage->model)->toBe('gpt-4.1-mini')
+        ->and($usage->model)->toBe('gpt-4o-mini')
         ->and($usage->input_tokens)->toBe(127)
         ->and($usage->output_tokens)->toBe(30)
         ->and($usage->cached_tokens)->toBe(20)
         ->and($usage->total_tokens)->toBe(157)
         ->and($usage->status)->toBe(AiUsageStatus::Completed);
 
-    ExtractJobCriteria::assertPrompted(fn (AgentPrompt $prompt): bool => $prompt->model === 'gpt-4.1-mini'
+    ExtractJobCriteria::assertPrompted(fn (AgentPrompt $prompt): bool => $prompt->model === 'gpt-4o-mini'
         && $prompt->provider()->name() === 'openai'
         && $prompt->contains('Senior Laravel Engineer')
         && $prompt->contains('Describe your Laravel experience.'));

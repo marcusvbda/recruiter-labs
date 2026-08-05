@@ -40,7 +40,6 @@ return [
         'api_key' => env('OPENAI_API_KEY'),
         'model' => env('OPENAI_MODEL', 'gpt-4o-mini'),
         'queue_connection' => env('AI_QUEUE_CONNECTION', env('QUEUE_CONNECTION', 'database')),
-        'queue' => env('AI_QUEUE', 'default'),
         'connect_timeout' => (int) env('OPENAI_CONNECT_TIMEOUT', 3),
         'timeout' => (int) env('OPENAI_TIMEOUT', 8),
     ],

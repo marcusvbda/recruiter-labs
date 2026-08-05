@@ -51,7 +51,8 @@ it('starts the first AI analysis from the not started state', function () {
         ->and($job->fresh()->criteria_generation)->toBe($expectedGeneration);
 
     Queue::assertPushed(AnalyzeJobCriteria::class, fn (AnalyzeJobCriteria $queuedJob): bool => $queuedJob->jobId === $job->id
-        && $queuedJob->generation === $expectedGeneration);
+        && $queuedJob->generation === $expectedGeneration
+        && $queuedJob->queue === AnalyzeJobCriteria::QUEUE);
 });
 
 it('retries a failed AI analysis', function () {

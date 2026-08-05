@@ -24,7 +24,6 @@ class ScheduleJobCriteriaExtraction
 
         AnalyzeJobCriteria::dispatch($job->getKey(), $userId, $generation)
             ->onConnection((string) config('services.openai.queue_connection', 'database'))
-            ->onQueue((string) config('services.openai.queue', 'ai'))
             ->afterCommit();
     }
 }

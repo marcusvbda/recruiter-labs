@@ -2,10 +2,12 @@
 
 namespace App\Providers;
 
+use App\Jobs\AnalyzeJobCriteria;
 use App\Models\Job;
 use App\Services\CompanyTopbarSummary;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Foundation\DevCommands;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
@@ -28,6 +30,16 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+
+        if ($this->app->runningInConsole()) {
+            // The default `composer run dev` queue listener only watches the
+            // connection's default queue, so AI criteria jobs need their own
+            // listener to actually run locally.
+            DevCommands::artisan(
+                'queue:listen --queue='.AnalyzeJobCriteria::QUEUE.' --tries=1 --timeout=0',
+                'ai-queue',
+            );
+        }
     }
 
     /**
