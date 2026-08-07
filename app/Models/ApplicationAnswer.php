@@ -9,6 +9,16 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $id
+ * @property int $company_id
+ * @property int $application_id
+ * @property int|null $job_application_question_id
+ * @property string $question_snapshot
+ * @property ApplicationQuestionType $response_type
+ * @property string|null $value_text
+ * @property string|null $value_number
+ */
 #[Fillable(['company_id', 'application_id', 'job_application_question_id', 'question_snapshot', 'response_type', 'value_text', 'value_number'])]
 class ApplicationAnswer extends Model
 {

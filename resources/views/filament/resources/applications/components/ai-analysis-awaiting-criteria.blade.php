@@ -17,8 +17,4 @@
         <x-filament::icon icon="heroicon-m-inbox-arrow-down" class="size-4" />
         {{ __('applications.admin.ai.received_at', ['date' => $analysis['received_at']]) }}
     </div>
-
-    <p class="mt-5 max-w-xl text-center text-xs leading-5 text-gray-500 dark:text-gray-400">
-        {{ __('applications.admin.ai.future_note') }}
-    </p>
 </div>

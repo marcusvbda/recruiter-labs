@@ -20,8 +20,8 @@ class PlanSeeder extends Seeder
                 'limits' => [
                     Limit::Users->value => 2,
                     Limit::Jobs->value => 1,
-                    Limit::Applications->value => 30,
-                    Limit::AiAnalyses->value => 20,
+                    Limit::Applications->value => 100,
+                    Limit::AiAnalyses->value => 100,
                 ],
             ],
             [

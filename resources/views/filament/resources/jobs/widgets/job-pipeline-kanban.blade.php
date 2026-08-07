@@ -139,6 +139,16 @@
                                                 </span>
                                             </div>
                                         @endif
+                                        @if ($this->showsAnalysisBadge($record))
+                                            <div class="flex my-2">
+                                                <x-filament::badge
+                                                    :color="$this->getAnalysisColor($record)"
+                                                    :icon="$this->getAnalysisIcon($record)"
+                                                >
+                                                    {{ $this->getAnalysisLabel($record) }}
+                                                </x-filament::badge>
+                                            </div>
+                                        @endif
                                         <a href="{{ $this->getApplicationUrl($record) }}" wire:navigate
                                             x-on:pointerdown.stop x-on:click.stop
                                             class="rl-pipeline-card-summary__link">

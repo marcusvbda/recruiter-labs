@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Jobs\Widgets;
 
+use App\Enums\ApplicationAnalysisStatus;
 use App\Enums\ApplicationSource;
 use App\Filament\Resources\Applications\ApplicationResource;
 use App\Filament\Resources\Jobs\JobResource;
@@ -139,6 +140,24 @@ class JobPipelineKanban extends StateKanbanBoard
             'pending_quota' => 'warning',
             default => 'gray',
         };
+    }
+
+    public function getAnalysisIcon(Application $application): string
+    {
+        $value = $this->enumValue($application->analysis_status);
+
+        return match ($value) {
+            'processing' => 'heroicon-m-arrow-path',
+            'completed' => 'heroicon-m-sparkles',
+            'failed' => 'heroicon-m-exclamation-triangle',
+            'pending_quota' => 'heroicon-m-bolt-slash',
+            default => 'heroicon-m-clock',
+        };
+    }
+
+    public function showsAnalysisBadge(Application $application): bool
+    {
+        return $this->enumValue($application->analysis_status) !== ApplicationAnalysisStatus::AwaitingCriteria->value;
     }
 
     private function enumValue(mixed $value): string

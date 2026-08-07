@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\ApplicationAnalysisStatus;
 use App\Enums\ApplicationCoverLetterType;
 use App\Enums\ApplicationSource;
+use Carbon\CarbonImmutable;
 use Database\Factories\ApplicationFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,6 +13,22 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property int $id
+ * @property int $company_id
+ * @property int $job_id
+ * @property int $candidate_id
+ * @property int $status_id
+ * @property int|null $referral_id
+ * @property ApplicationSource $source
+ * @property ApplicationAnalysisStatus $analysis_status
+ * @property int $analysis_generation
+ * @property string|null $analysis_score
+ * @property CarbonImmutable|null $analyzed_at
+ * @property ApplicationCoverLetterType $cover_letter_type
+ * @property string|null $cover_letter_text
+ * @property string|null $submitted_ip
+ */
 #[Fillable(['company_id', 'job_id', 'candidate_id', 'status_id', 'referral_id', 'source', 'analysis_status', 'analysis_generation', 'analysis_score', 'analyzed_at', 'cover_letter_type', 'cover_letter_text', 'submitted_ip'])]
 class Application extends Model
 {

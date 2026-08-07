@@ -2,12 +2,15 @@
 
 namespace App\Filament\Resources\Applications\Pages;
 
+use App\Actions\ScheduleApplicationFitAnalysis;
+use App\Enums\ApplicationAnalysisStatus;
 use App\Enums\PhoneCountry;
 use App\Enums\SocialNetwork;
 use App\Filament\Resources\Applications\ApplicationResource;
 use App\Filament\Resources\Jobs\JobResource;
 use App\Models\Application;
 use App\Models\ApplicationAnswer;
+use App\Models\ApplicationCriterionScore;
 use App\Models\ApplicationDocument;
 use App\Models\ApplicationUtmParameter;
 use App\Models\Candidate;
@@ -64,6 +67,22 @@ class ViewApplication extends ViewRecord
         $application = $this->getApplication();
 
         return [
+            Action::make('retryApplicationAnalysis')
+                ->label(__('applications.admin.ai.retry_action'))
+                ->icon(Heroicon::OutlinedSparkles)
+                ->color('gray')
+                ->requiresConfirmation()
+                ->modalDescription(__('applications.admin.ai.retry_confirmation'))
+                ->visible(fn (): bool => in_array($application->analysis_status, [
+                    ApplicationAnalysisStatus::Failed,
+                    ApplicationAnalysisStatus::PendingQuota,
+                ], strict: true))
+                ->action(function () use ($application): void {
+                    Gate::authorize('update', $application);
+
+                    app(ScheduleApplicationFitAnalysis::class)->handle($application);
+                    $this->record = ApplicationResource::getEloquentQuery()->findOrFail((int) $application->getKey());
+                }),
             Action::make('moveStatus')
                 ->label(__('applications.admin.actions.move_status'))
                 ->icon(Heroicon::OutlinedArrowsRightLeft)
@@ -162,7 +181,7 @@ class ViewApplication extends ViewRecord
                     Tab::make(__('applications.admin.tabs.ai_analysis'))
                         ->icon(Heroicon::OutlinedSparkles)
                         ->schema([
-                            View::make('filament.resources.applications.components.ai-analysis')
+                            View::make($this->analysisViewName($application))
                                 ->viewData(['analysis' => $this->analysisData($application)]),
                         ]),
                 ])
@@ -299,27 +318,66 @@ class ViewApplication extends ViewRecord
         return array_values($documents);
     }
 
+    /** @return view-string */
+    private function analysisViewName(Application $application): string
+    {
+        $status = $this->enumValue($application->analysis_status);
+
+        return match ($status) {
+            'pending', 'processing' => 'filament.resources.applications.components.ai-analysis-processing',
+            'completed' => 'filament.resources.applications.components.ai-analysis-completed',
+            'failed' => 'filament.resources.applications.components.ai-analysis-failed',
+            'pending_quota' => 'filament.resources.applications.components.ai-analysis-pending-quota',
+            default => 'filament.resources.applications.components.ai-analysis-awaiting-criteria',
+        };
+    }
+
     /**
-     * @return array<string, string>
+     * @return array<string, mixed>
      */
     private function analysisData(Application $application): array
     {
         $status = $this->enumValue($application->analysis_status);
 
-        return [
+        $data = [
             'status' => $status,
             'label' => __("applications.admin.ai.states.{$status}.label"),
             'title' => __("applications.admin.ai.states.{$status}.title"),
             'description' => __("applications.admin.ai.states.{$status}.description"),
-            'icon' => match ($status) {
-                'processing' => 'heroicon-o-arrow-path',
-                'completed' => 'heroicon-o-check-badge',
-                'failed' => 'heroicon-o-x-circle',
-                'pending_quota' => 'heroicon-o-bolt-slash',
-                default => 'heroicon-o-clock',
-            },
+            'icon' => $this->analysisIcon($status),
             'received_at' => $application->created_at->translatedFormat('M j, Y · H:i'),
         ];
+
+        if ($status === 'completed') {
+            $application->loadMissing('criterionScores');
+
+            $data['score'] = $application->analysis_score !== null
+                ? (int) round((float) $application->analysis_score)
+                : null;
+            $data['analyzed_at'] = $application->analyzed_at?->translatedFormat('M j, Y · H:i');
+            $data['criteria'] = $application->criterionScores
+                ->sortByDesc('score')
+                ->map(fn (ApplicationCriterionScore $score): array => [
+                    'criterion' => $score->criterion,
+                    'score' => $score->score,
+                    'reason' => $score->reason,
+                ])
+                ->values()
+                ->all();
+        }
+
+        return $data;
+    }
+
+    private function analysisIcon(string $status): string
+    {
+        return match ($status) {
+            'processing' => 'heroicon-o-arrow-path',
+            'completed' => 'heroicon-o-check-badge',
+            'failed' => 'heroicon-o-x-circle',
+            'pending_quota' => 'heroicon-o-bolt-slash',
+            default => 'heroicon-o-clock',
+        };
     }
 
     private function analysisColor(string $status): string

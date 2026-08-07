@@ -2,7 +2,9 @@
 
 namespace App\Actions;
 
+use App\Enums\ApplicationAnalysisStatus;
 use App\Enums\JobCriteriaProcessingStatus;
+use App\Models\Application;
 use App\Models\Job;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -25,7 +27,7 @@ class ReplaceJobCriteria
             ],
         )->validate();
 
-        return DB::transaction(function () use ($job, $validated, $expectedGeneration): bool {
+        $replaced = DB::transaction(function () use ($job, $validated, $expectedGeneration): bool {
             $lockedJob = Job::query()->whereKey($job->getKey())->lockForUpdate()->first();
 
             if ($lockedJob === null || $lockedJob->criteria_generation !== $expectedGeneration) {
@@ -47,5 +49,16 @@ class ReplaceJobCriteria
 
             return true;
         });
+
+        if ($replaced) {
+            $job->applications()
+                ->where('analysis_status', ApplicationAnalysisStatus::AwaitingCriteria)
+                ->get()
+                ->each(function (Application $application): void {
+                    app(ScheduleApplicationFitAnalysis::class)->handle($application);
+                });
+        }
+
+        return $replaced;
     }
 }

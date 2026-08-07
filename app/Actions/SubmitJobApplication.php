@@ -3,7 +3,6 @@
 namespace App\Actions;
 
 use App\Data\SubmitJobApplicationData;
-use App\Enums\ApplicationAnalysisStatus;
 use App\Enums\ApplicationCoverLetterType;
 use App\Enums\ApplicationDocumentType;
 use App\Enums\ApplicationQuestionType;
@@ -32,6 +31,7 @@ class SubmitJobApplication
         private readonly ApplicationAvailabilityService $availabilityService,
         private readonly ApplicationDocumentStorage $documentStorage,
         private readonly ReferralService $referralService,
+        private readonly ScheduleApplicationFitAnalysis $scheduleApplicationFitAnalysis,
     ) {}
 
     public function run(Job $job, SubmitJobApplicationData $data): Application
@@ -58,7 +58,6 @@ class SubmitJobApplication
                     'status_id' => $this->availabilityService->initialStatus($job)->getKey(),
                     'referral_id' => $referral?->getKey(),
                     'source' => $referral === null ? ApplicationSource::Direct : ApplicationSource::Referral,
-                    'analysis_status' => ApplicationAnalysisStatus::Pending,
                     'cover_letter_type' => $coverLetterType,
                     'cover_letter_text' => $coverLetterType === ApplicationCoverLetterType::Text
                         ? Str::trim((string) $data->coverLetter)
@@ -82,6 +81,8 @@ class SubmitJobApplication
                         ApplicationDocumentType::CoverLetter,
                     );
                 }
+
+                $this->scheduleApplicationFitAnalysis->handle($application);
 
                 return $application->load([
                     'candidate',

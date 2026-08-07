@@ -118,7 +118,12 @@ return [
         ],
         'ai' => [
             'received_at' => 'Dados do candidato recebidos em :date',
-            'future_note' => 'A análise aparecerá aqui quando o processamento por IA for habilitado. Nenhum processamento é realizado neste MVP.',
+            'retry_action' => 'Tentar novamente',
+            'retry_confirmation' => 'Isso colocará uma nova análise de IA na fila para este candidato.',
+            'overall_score_label' => 'Compatibilidade geral (IA)',
+            'analyzed_at' => 'Analisado em :date',
+            'criteria_heading' => 'Pontuação por critério',
+            'no_criteria_scored' => 'Nenhum critério foi avaliado nesta análise.',
             'states' => [
                 'awaiting_criteria' => [
                     'label' => 'Aguardando critério',

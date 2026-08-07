@@ -5,12 +5,15 @@ use App\Enums\ApplicationCoverLetterType;
 use App\Enums\ApplicationDocumentType;
 use App\Enums\ApplicationQuestionType;
 use App\Enums\ApplicationSource;
+use App\Enums\JobCriteriaProcessingStatus;
 use App\Filament\Resources\Applications\ApplicationResource;
 use App\Filament\Resources\Applications\Pages\ViewApplication;
 use App\Filament\Resources\Jobs\JobResource;
 use App\Filament\Resources\Jobs\Widgets\JobPipelineKanban;
+use App\Jobs\AnalyzeApplicationFit;
 use App\Models\Application;
 use App\Models\ApplicationAnswer;
+use App\Models\ApplicationCriterionScore;
 use App\Models\ApplicationDocument;
 use App\Models\ApplicationUtmParameter;
 use App\Models\Candidate;
@@ -27,6 +30,7 @@ use Filament\Support\Colors\Color;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Lang;
+use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -257,3 +261,135 @@ it('provides every admin application status translation', function (string $loca
         ->and(Lang::hasForLocale('applications.admin.tabs.documents', $locale))->toBeTrue()
         ->and(Lang::hasForLocale('applications.admin.tabs.ai_analysis', $locale))->toBeTrue();
 })->with(['en', 'pt_BR', 'es']);
+
+it('shows the awaiting-criteria state without polling when the job has no AI criteria', function () {
+    $company = Company::factory()->create();
+    $application = Application::factory()->for($company)->create([
+        'analysis_status' => ApplicationAnalysisStatus::AwaitingCriteria,
+    ]);
+
+    actAsCompany($company);
+
+    Livewire::test(ViewApplication::class, ['record' => $application->getRouteKey()])
+        ->assertSee(__('applications.admin.ai.states.awaiting_criteria.title'))
+        ->assertDontSee('wire:poll', escape: false);
+});
+
+it('shows a poller only while the analysis is pending or processing', function (ApplicationAnalysisStatus $status) {
+    $company = Company::factory()->create();
+    $application = Application::factory()->for($company)->create(['analysis_status' => $status]);
+
+    actAsCompany($company);
+
+    Livewire::test(ViewApplication::class, ['record' => $application->getRouteKey()])
+        ->assertSee('wire:poll.5s', escape: false);
+})->with([
+    'pending' => [ApplicationAnalysisStatus::Pending],
+    'processing' => [ApplicationAnalysisStatus::Processing],
+]);
+
+it('shows the aggregate score and per-criterion breakdown once completed', function () {
+    $company = Company::factory()->create();
+    $application = Application::factory()->for($company)->create([
+        'analysis_status' => ApplicationAnalysisStatus::Completed,
+        'analysis_score' => 82.5,
+    ]);
+    ApplicationCriterionScore::query()->create([
+        'company_id' => $company->id,
+        'application_id' => $application->id,
+        'criterion' => 'Laravel expertise',
+        'weight' => 9,
+        'score' => 85,
+        'reason' => 'Strong backend track record.',
+    ]);
+
+    actAsCompany($company);
+
+    Livewire::test(ViewApplication::class, ['record' => $application->getRouteKey()])
+        ->assertSee('82')
+        ->assertSee('Laravel expertise')
+        ->assertSee('85')
+        ->assertSee('Strong backend track record.');
+});
+
+it('offers a retry action only when the analysis failed or is waiting on quota', function (ApplicationAnalysisStatus $status) {
+    $company = Company::factory()->create();
+    // A Failed/PendingQuota status only occurs once the job's criteria were completed
+    // (that's the only path AnalyzeApplicationFit takes to reach either state), so the
+    // fixture mirrors that precondition rather than relying on a criteria-less job.
+    $job = Job::factory()->for($company)->create();
+    $job->jobCriteria()->create([
+        'company_id' => $company->id,
+        'criterion' => 'Laravel expertise',
+        'weight' => 9,
+        'reason' => 'Core requirement.',
+    ]);
+    $job->updateQuietly(['criteria_processing_status' => JobCriteriaProcessingStatus::Completed]);
+    $application = Application::factory()->for($company)->create([
+        'job_id' => $job->id,
+        'analysis_status' => $status,
+    ]);
+    actAsCompany($company);
+    Queue::fake();
+
+    Livewire::test(ViewApplication::class, ['record' => $application->getRouteKey()])
+        ->assertActionVisible('retryApplicationAnalysis')
+        ->callAction('retryApplicationAnalysis');
+
+    Queue::assertPushed(AnalyzeApplicationFit::class);
+})->with([
+    'failed' => [ApplicationAnalysisStatus::Failed],
+    'pending quota' => [ApplicationAnalysisStatus::PendingQuota],
+]);
+
+it('hides the retry action for every other analysis status', function (ApplicationAnalysisStatus $status) {
+    $company = Company::factory()->create();
+    $application = Application::factory()->for($company)->create(['analysis_status' => $status]);
+    actAsCompany($company);
+
+    Livewire::test(ViewApplication::class, ['record' => $application->getRouteKey()])
+        ->assertActionHidden('retryApplicationAnalysis');
+})->with([
+    'awaiting criteria' => [ApplicationAnalysisStatus::AwaitingCriteria],
+    'pending' => [ApplicationAnalysisStatus::Pending],
+    'processing' => [ApplicationAnalysisStatus::Processing],
+    'completed' => [ApplicationAnalysisStatus::Completed],
+]);
+
+it('hides the AI badge on the pipeline card while awaiting criteria', function () {
+    $company = Company::factory()->create();
+    $job = Job::factory()->for($company)->create();
+    $status = Status::factory()->for($company)->create();
+    $application = Application::factory()->for($company)->create([
+        'job_id' => $job->id,
+        'status_id' => $status->id,
+        'analysis_status' => ApplicationAnalysisStatus::AwaitingCriteria,
+    ]);
+
+    actAsCompany($company);
+
+    Livewire::test(JobPipelineKanban::class, ['record' => $job])
+        ->assertDontSee(__('applications.admin.ai.states.awaiting_criteria.label'));
+});
+
+it('shows the AI badge on the pipeline card for every other analysis status', function (ApplicationAnalysisStatus $status) {
+    $company = Company::factory()->create();
+    $job = Job::factory()->for($company)->create();
+    $pipelineStatus = Status::factory()->for($company)->create();
+    Application::factory()->for($company)->create([
+        'job_id' => $job->id,
+        'status_id' => $pipelineStatus->id,
+        'analysis_status' => $status,
+    ]);
+
+    actAsCompany($company);
+
+    Livewire::test(JobPipelineKanban::class, ['record' => $job])
+        ->assertSee(__("applications.admin.ai.states.{$status->value}.label"));
+})->with([
+    'pending' => [ApplicationAnalysisStatus::Pending],
+    'processing' => [ApplicationAnalysisStatus::Processing],
+    'completed' => [ApplicationAnalysisStatus::Completed],
+    'failed' => [ApplicationAnalysisStatus::Failed],
+    'pending quota' => [ApplicationAnalysisStatus::PendingQuota],
+]);

@@ -118,7 +118,12 @@ return [
         ],
         'ai' => [
             'received_at' => 'Candidate data received on :date',
-            'future_note' => 'The analysis will appear here when AI processing is enabled. No processing is performed in this MVP.',
+            'retry_action' => 'Retry analysis',
+            'retry_confirmation' => 'This will queue a new AI analysis for this candidate.',
+            'overall_score_label' => 'Overall AI match',
+            'analyzed_at' => 'Analyzed on :date',
+            'criteria_heading' => 'Score by criterion',
+            'no_criteria_scored' => 'No criteria were scored for this analysis.',
             'states' => [
                 'awaiting_criteria' => [
                     'label' => 'Awaiting criteria',

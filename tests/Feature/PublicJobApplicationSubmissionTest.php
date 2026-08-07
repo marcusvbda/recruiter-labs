@@ -98,7 +98,7 @@ it('submits a complete public application with private documents, answers, refer
         ->and($application->status_id)->not->toBe($status->id)
         ->and($application->referral_id)->toBe($referral->id)
         ->and($application->source)->toBe(ApplicationSource::Referral)
-        ->and($application->analysis_status)->toBe(ApplicationAnalysisStatus::Pending)
+        ->and($application->analysis_status)->toBe(ApplicationAnalysisStatus::AwaitingCriteria)
         ->and($application->cover_letter_type)->toBe(ApplicationCoverLetterType::None)
         ->and($candidate->name)->toBe('Public Candidate')
         ->and($candidate->email)->toBe('public.candidate@example.test')

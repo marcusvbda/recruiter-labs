@@ -33,3 +33,6 @@ frankenphp-worker.php
 
 .playwright-mcp
 .playwright-mcp/*
+
+docs
+docs/*
