@@ -7,6 +7,7 @@ use App\Ai\Agents\ExtractJobCriteria;
 use App\Enums\AiUsageStatus;
 use App\Enums\JobCriteriaProcessingStatus;
 use App\Enums\Limit;
+use App\Models\AiAgentResponseCache;
 use App\Models\AiUsageRecord;
 use App\Models\Job;
 use App\Services\AiCredentialsResolver;
@@ -79,6 +80,34 @@ class AnalyzeJobCriteria implements ShouldBeUnique, ShouldQueue
         }
 
         $configuration = $credentialsResolver->resolve($job->company);
+        $model = $configuration->usesOwnKey ? $configuration->model : self::MODEL;
+
+        $agent = new ExtractJobCriteria($job);
+        $context = $agent->jobContext();
+        $fingerprint = $agent->instructions()."\n---\n".$context;
+
+        $cached = AiAgentResponseCache::lookup(self::OPERATION, $model, $fingerprint);
+
+        if ($cached !== null) {
+            $criteria = $cached['criteria'] ?? null;
+
+            if (! is_array($criteria)) {
+                throw new UnexpectedValueException('The cached job criteria response did not contain criteria.');
+            }
+
+            $markedAsProcessing = Job::query()
+                ->whereKey($job)
+                ->where('criteria_generation', $this->generation)
+                ->update(['criteria_processing_status' => JobCriteriaProcessingStatus::Processing]);
+
+            if ($markedAsProcessing === 0) {
+                return;
+            }
+
+            $replaceJobCriteria->handle($job, $criteria, $this->generation);
+
+            return;
+        }
 
         if (! $configuration->usesOwnKey && $limitManager->usage($job->company, Limit::AiAnalyses)->isReached) {
             $this->markCurrentGenerationAsFailed();
@@ -111,9 +140,8 @@ class AnalyzeJobCriteria implements ShouldBeUnique, ShouldQueue
         $runtimeProvider = $credentialsResolver->registerRuntimeProvider($job->company, $configuration);
 
         try {
-            $agent = new ExtractJobCriteria($job);
             $response = $agent->prompt(
-                $agent->jobContext(),
+                $context,
                 provider: $runtimeProvider,
                 model: $configuration->usesOwnKey ? $configuration->model : null,
             );
@@ -130,6 +158,7 @@ class AnalyzeJobCriteria implements ShouldBeUnique, ShouldQueue
 
             $replaceJobCriteria->handle($job, $criteria, $this->generation);
             $usageTracker->complete($usageRecord, $response->usage, $this->elapsedMilliseconds($startedAt));
+            AiAgentResponseCache::remember(self::OPERATION, $model, $fingerprint, $response->toArray());
         } catch (Throwable $exception) {
             $usageTracker->fail($usageRecord, $this->elapsedMilliseconds($startedAt));
 

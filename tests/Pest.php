@@ -2,7 +2,7 @@
 
 use App\Models\Company;
 use App\Models\User;
-use Filament\Facades\Filament;
+// use Filament\Facades\Filament;
 
 /**
  * Log in as a user belonging to the given company and activate it as the
@@ -22,9 +22,9 @@ function actAsCompany(Company $company): User
 
     test()->actingAs($user);
 
-    Filament::setTenant($company);
-    Filament::setCurrentPanel('admin');
-    Filament::bootCurrentPanel();
+    // Filament::setTenant($company);
+    // Filament::setCurrentPanel('admin');
+    // Filament::bootCurrentPanel();
 
     return $user;
 }

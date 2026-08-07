@@ -9,6 +9,7 @@ use App\Enums\ApplicationAnalysisStatus;
 use App\Enums\ApplicationDocumentType;
 use App\Enums\JobCriteriaProcessingStatus;
 use App\Enums\Limit;
+use App\Models\AiAgentResponseCache;
 use App\Models\AiUsageRecord;
 use App\Models\Application;
 use App\Services\AiCredentialsResolver;
@@ -86,6 +87,37 @@ class AnalyzeApplicationFit implements ShouldBeUnique, ShouldQueue
         }
 
         $configuration = $credentialsResolver->resolve($application->company);
+        $model = $configuration->usesOwnKey ? $configuration->model : self::MODEL;
+
+        $resumeDocument = $application->documents->firstWhere('type', ApplicationDocumentType::Cv);
+        $resumeText = $resumeDocument === null ? null : $resumeTextExtractor->extract($resumeDocument);
+
+        $agent = new ScoreApplicationAgainstCriteria($application);
+        $context = $agent->applicationContext($resumeText);
+        $fingerprint = $agent->instructions()."\n---\n".$context;
+
+        $cached = AiAgentResponseCache::lookup(self::OPERATION, $model, $fingerprint);
+
+        if ($cached !== null) {
+            $scores = $cached['scores'] ?? null;
+
+            if (! is_array($scores)) {
+                throw new UnexpectedValueException('The cached application fit response did not contain scores.');
+            }
+
+            $markedAsProcessing = Application::query()
+                ->whereKey($application)
+                ->where('analysis_generation', $this->generation)
+                ->update(['analysis_status' => ApplicationAnalysisStatus::Processing]);
+
+            if ($markedAsProcessing === 0) {
+                return;
+            }
+
+            $replaceApplicationFitAnalysis->handle($application, $scores, $this->generation);
+
+            return;
+        }
 
         if (! $configuration->usesOwnKey && $limitManager->usage($application->company, Limit::AiAnalyses)->isReached) {
             $this->markCurrentGenerationAs(ApplicationAnalysisStatus::PendingQuota);
@@ -118,12 +150,8 @@ class AnalyzeApplicationFit implements ShouldBeUnique, ShouldQueue
         $runtimeProvider = $credentialsResolver->registerRuntimeProvider($application->company, $configuration);
 
         try {
-            $resumeDocument = $application->documents->firstWhere('type', ApplicationDocumentType::Cv);
-            $resumeText = $resumeDocument === null ? null : $resumeTextExtractor->extract($resumeDocument);
-
-            $agent = new ScoreApplicationAgainstCriteria($application);
             $response = $agent->prompt(
-                $agent->applicationContext($resumeText),
+                $context,
                 provider: $runtimeProvider,
                 model: $configuration->usesOwnKey ? $configuration->model : null,
             );
@@ -140,6 +168,7 @@ class AnalyzeApplicationFit implements ShouldBeUnique, ShouldQueue
 
             $replaceApplicationFitAnalysis->handle($application, $scores, $this->generation);
             $usageTracker->complete($usageRecord, $response->usage, $this->elapsedMilliseconds($startedAt));
+            AiAgentResponseCache::remember(self::OPERATION, $model, $fingerprint, $response->toArray());
         } catch (Throwable $exception) {
             $usageTracker->fail($usageRecord, $this->elapsedMilliseconds($startedAt));
 
