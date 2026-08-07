@@ -8,6 +8,7 @@ use App\Filament\Resources\Jobs\Widgets\JobPipelineKanban;
 use App\Models\Application;
 use App\Models\Candidate;
 use App\Models\Company;
+use App\Models\CompanyScoringSetting;
 use App\Models\Job;
 use App\Models\Referral;
 use App\Models\Status;
@@ -204,6 +205,54 @@ it('visually identifies only referral applications on pipeline cards', function 
     expect($html)
         ->toMatch('/data-record-id="'.$referralApplication->getKey().'"\s+data-referral="true"/')
         ->toMatch('/data-record-id="'.$directApplication->getKey().'"\s+data-referral="false"/');
+});
+
+it('orders pipeline cards by the company-weighted overall score, not the raw AI analysis score', function () {
+    $company = Company::factory()->create();
+    CompanyScoringSetting::factory()->for($company)->create([
+        'analysis_weight' => 50,
+        'referral_weight' => 50,
+    ]);
+    $job = Job::factory()->for($company)->create();
+    $status = Status::factory()->for($company)->create();
+    $referral = Referral::factory()->for($company)->for($job)->create();
+
+    // Highest raw AI score, but no referral bonus: overall = (90 * 50 + 0 * 50) / 100 = 45.
+    $highAiScoreDirect = Application::factory()->for($company)->create([
+        'job_id' => $job->id,
+        'status_id' => $status->id,
+        'source' => ApplicationSource::Direct,
+        'analysis_score' => 90,
+    ]);
+
+    // Lower raw AI score, but the referral bonus outweighs it: overall = (50 * 50 + 100 * 50) / 100 = 75.
+    $lowAiScoreReferral = Application::factory()->for($company)->create([
+        'job_id' => $job->id,
+        'status_id' => $status->id,
+        'referral_id' => $referral->id,
+        'source' => ApplicationSource::Referral,
+        'analysis_score' => 50,
+    ]);
+
+    // Never analyzed: overall falls back to 0, so it ranks last.
+    $unscored = Application::factory()->for($company)->create([
+        'job_id' => $job->id,
+        'status_id' => $status->id,
+        'source' => ApplicationSource::Direct,
+        'analysis_score' => null,
+    ]);
+
+    actAsCompany($company);
+
+    $records = Livewire::test(JobPipelineKanban::class, ['record' => $job])
+        ->instance()
+        ->getBoardColumns()[0]['records'];
+
+    expect($records->pluck('id')->all())->toBe([
+        $lowAiScoreReferral->id,
+        $highAiScoreDirect->id,
+        $unscored->id,
+    ]);
 });
 
 it('tints each pipeline column with its validated status color', function () {

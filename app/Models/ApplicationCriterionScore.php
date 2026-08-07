@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AnalysisConfidence;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,8 +15,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $weight
  * @property int $score
  * @property string $reason
+ * @property AnalysisConfidence $confidence
  */
-#[Fillable(['company_id', 'application_id', 'criterion', 'weight', 'score', 'reason'])]
+#[Fillable(['company_id', 'application_id', 'criterion', 'weight', 'score', 'reason', 'confidence'])]
 class ApplicationCriterionScore extends Model
 {
     protected $table = 'application_criterion_scores';
@@ -25,6 +27,7 @@ class ApplicationCriterionScore extends Model
         return [
             'weight' => 'integer',
             'score' => 'integer',
+            'confidence' => AnalysisConfidence::class,
         ];
     }
 

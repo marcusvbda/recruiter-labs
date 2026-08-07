@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\AnalysisConfidence;
 use App\Models\Application;
 use App\Models\ApplicationCriterionScore;
 use Database\Seeders\PlanSeeder;
@@ -12,7 +13,7 @@ beforeEach(function () {
     $this->seed(PlanSeeder::class);
 });
 
-it('belongs to an application and casts weight and score to integers', function () {
+it('belongs to an application and casts weight, score, and confidence', function () {
     $application = Application::factory()->create();
 
     $score = ApplicationCriterionScore::query()->create([
@@ -22,9 +23,11 @@ it('belongs to an application and casts weight and score to integers', function 
         'weight' => 9,
         'score' => 78,
         'reason' => 'Strong backend experience across several roles.',
+        'confidence' => 'high',
     ]);
 
     expect($application->criterionScores()->sole()->is($score))->toBeTrue()
         ->and($score->weight)->toBe(9)
-        ->and($score->score)->toBe(78);
+        ->and($score->score)->toBe(78)
+        ->and($score->confidence)->toBe(AnalysisConfidence::High);
 });

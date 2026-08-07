@@ -118,8 +118,8 @@ it('persists scores, matches weight case-insensitively, and computes the weighte
     $application = Application::factory()->for($job->company)->create(['job_id' => $job->id])->refresh();
 
     $replaced = app(ReplaceApplicationFitAnalysis::class)->handle($application, [
-        ['criterion' => '  laravel expertise  ', 'score' => 80, 'reason' => 'Strong backend skills.'],
-        ['criterion' => 'react expertise', 'score' => 40, 'reason' => 'Limited frontend exposure.'],
+        ['criterion' => '  laravel expertise  ', 'score' => 80, 'reason' => 'Strong backend skills.', 'confidence' => 'high'],
+        ['criterion' => 'react expertise', 'score' => 40, 'reason' => 'Limited frontend exposure.', 'confidence' => 'medium'],
     ], $application->analysis_generation);
 
     $scores = $application->criterionScores()->orderByDesc('score')->get();
@@ -140,7 +140,7 @@ it('falls back to a neutral weight when a returned criterion does not match any 
     $application = Application::factory()->for($job->company)->create(['job_id' => $job->id])->refresh();
 
     app(ReplaceApplicationFitAnalysis::class)->handle($application, [
-        ['criterion' => 'Paraphrased differently', 'score' => 60, 'reason' => 'r'],
+        ['criterion' => 'Paraphrased differently', 'score' => 60, 'reason' => 'r', 'confidence' => 'low'],
     ], $application->analysis_generation);
 
     expect($application->criterionScores()->sole()->weight)->toBe(5);
@@ -154,7 +154,7 @@ it('does not overwrite scores when the generation is stale', function () {
     $application->update(['analysis_generation' => $staleGeneration + 1]);
 
     $replaced = app(ReplaceApplicationFitAnalysis::class)->handle($application, [
-        ['criterion' => 'Laravel expertise', 'score' => 90, 'reason' => 'r'],
+        ['criterion' => 'Laravel expertise', 'score' => 90, 'reason' => 'r', 'confidence' => 'high'],
     ], $staleGeneration);
 
     expect($replaced)->toBeFalse()
@@ -166,11 +166,27 @@ it('rejects invalid structured scores without writing anything', function () {
     $application = Application::factory()->for($job->company)->create(['job_id' => $job->id])->refresh();
 
     expect(fn () => app(ReplaceApplicationFitAnalysis::class)->handle($application, [
-        ['criterion' => 'Laravel expertise', 'score' => 150, 'reason' => 'r'],
+        ['criterion' => 'Laravel expertise', 'score' => 150, 'reason' => 'r', 'confidence' => 'high'],
     ], $application->analysis_generation))->toThrow(ValidationException::class);
 
     expect($application->refresh()->analysis_status)->not->toBe(ApplicationAnalysisStatus::Completed);
 });
+
+it('rejects a missing or invalid confidence value without writing anything', function (array $result) {
+    $job = Job::factory()->create();
+    $job->jobCriteria()->create(['company_id' => $job->company_id, 'criterion' => 'Laravel expertise', 'weight' => 10, 'reason' => 'r']);
+    $application = Application::factory()->for($job->company)->create(['job_id' => $job->id])->refresh();
+
+    expect(fn () => app(ReplaceApplicationFitAnalysis::class)->handle($application, [
+        $result,
+    ], $application->analysis_generation))->toThrow(ValidationException::class);
+
+    expect($application->refresh()->analysis_status)->not->toBe(ApplicationAnalysisStatus::Completed)
+        ->and($application->criterionScores()->count())->toBe(0);
+})->with([
+    'missing confidence' => [['criterion' => 'Laravel expertise', 'score' => 80, 'reason' => 'r']],
+    'invalid confidence value' => [['criterion' => 'Laravel expertise', 'score' => 80, 'reason' => 'r', 'confidence' => 'certain']],
+]);
 
 use App\Enums\AiCredentialStatus;
 use App\Enums\Limit;
@@ -210,6 +226,7 @@ it('persists structured scores and complete token usage for the current generati
                 'criterion' => 'Laravel expertise',
                 'score' => 82,
                 'reason' => 'Several production Laravel applications delivered.',
+                'confidence' => 'high',
             ]]],
             text: '',
             usage: new Usage(promptTokens: 100, completionTokens: 30, cacheWriteInputTokens: 7, cacheReadInputTokens: 20),
@@ -270,7 +287,7 @@ it('does not enforce the platform quota when the company uses its own key', func
 
     ScoreApplicationAgainstCriteria::fake([
         new StructuredTextResponse(
-            structured: ['scores' => [['criterion' => 'Laravel expertise', 'score' => 70, 'reason' => 'r']]],
+            structured: ['scores' => [['criterion' => 'Laravel expertise', 'score' => 70, 'reason' => 'r', 'confidence' => 'medium']]],
             text: '',
             usage: new Usage(promptTokens: 50, completionTokens: 15),
             meta: new Meta('openai', 'gpt-4o'),

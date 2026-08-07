@@ -90,6 +90,15 @@ return [
             'documents' => 'Documentos de la postulación',
             'documents_description' => 'Los archivos son privados y solo están disponibles mediante acceso autorizado.',
         ],
+        'overview' => [
+            'overall_score' => [
+                'heading' => 'Puntuación general de la postulación',
+                'not_available' => 'Disponible una vez que se complete el análisis de IA.',
+                'ai_component' => 'Coincidencia de IA: :score/100 (:weight%)',
+                'referral_yes' => 'Referencia: Sí (:weight%)',
+                'referral_no' => 'Referencia: No (:weight%)',
+            ],
+        ],
         'sources' => [
             'direct' => 'Postulación directa',
             'referral' => 'Enlace de referencia',
@@ -118,12 +127,19 @@ return [
         ],
         'ai' => [
             'received_at' => 'Datos del candidato recibidos el :date',
-            'retry_action' => 'Reintentar',
-            'retry_confirmation' => 'Esto pondrá en cola un nuevo análisis de IA para este candidato.',
+            'start_action' => 'Iniciar análisis de IA',
+            'reprocess_action' => 'Reprocesar análisis',
+            'reprocess_confirmation' => 'Esto pondrá en cola un nuevo análisis de IA para este candidato. Los resultados actuales o en curso se reemplazarán cuando termine.',
             'overall_score_label' => 'Coincidencia general (IA)',
             'analyzed_at' => 'Analizado el :date',
             'criteria_heading' => 'Puntuación por criterio',
             'no_criteria_scored' => 'No se evaluó ningún criterio en este análisis.',
+            'confidence_label' => 'Confianza:',
+            'confidence' => [
+                'high' => 'Alta',
+                'medium' => 'Media',
+                'low' => 'Baja',
+            ],
             'states' => [
                 'awaiting_criteria' => [
                     'label' => 'Esperando criterios',

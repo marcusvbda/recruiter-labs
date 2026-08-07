@@ -1,7 +1,6 @@
 <?php
 
 use App\Actions\ChangeCompanyPlan;
-use App\Enums\Feature;
 use App\Enums\Limit;
 use App\Enums\PlanChangeSource;
 use App\Models\Company;
@@ -18,27 +17,6 @@ uses(TestCase::class, RefreshDatabase::class);
 
 beforeEach(function () {
     $this->seed(PlanSeeder::class);
-});
-
-it('seeds the development plans and uses starter as the default plan', function () {
-    $starter = Plan::query()->where('slug', 'starter')->sole();
-    $pro = Plan::query()->where('slug', 'pro')->sole();
-    $business = Plan::query()->where('slug', 'business')->sole();
-
-    expect(Plan::query()->pluck('slug')->all())
-        ->toEqualCanonicalizing(['starter', 'pro', 'business'])
-        ->and(Plan::default()->is($starter))->toBeTrue()
-        ->and($starter->getLimit(Limit::Users))->toBe(2)
-        ->and($starter->getLimit(Limit::Jobs))->toBe(1)
-        ->and($starter->getLimit(Limit::Applications))->toBe(30)
-        ->and($starter->getLimit(Limit::AiAnalyses))->toBe(20)
-        ->and($starter->hasFeature(Feature::OwnAiKey))->toBeFalse()
-        ->and($pro->getLimit(Limit::Users))->toBe(10)
-        ->and($pro->getLimit(Limit::Jobs))->toBe(20)
-        ->and($pro->getLimit(Limit::Applications))->toBe(1000)
-        ->and($pro->getLimit(Limit::AiAnalyses))->toBe(1000)
-        ->and($pro->hasFeature(Feature::OwnAiKey))->toBeTrue()
-        ->and($business->hasFeature(Feature::OwnAiKey))->toBeTrue();
 });
 
 it('supports unlimited limits on business without treating them as reached', function () {

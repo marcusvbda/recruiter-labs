@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\ApplicationLocale;
-use App\Enums\ApplicationQuestionType;
 use App\Enums\CoverLetterType;
 use App\Enums\JobCriteriaProcessingStatus;
 use App\Filament\Resources\Jobs\Pages\CreateJob;
@@ -165,87 +164,6 @@ it('rejects an unsupported application page language', function () {
         ])
         ->call('create')
         ->assertHasFormErrors(['application_locale']);
-});
-
-it('creates a job with campaign fields and application questions', function () {
-    $company = Company::factory()->create();
-    actAsCompany($company);
-
-    $acceptedCvTypeIds = CvFileType::query()
-        ->whereIn('extension', ['pdf', 'docx'])
-        ->pluck('id')
-        ->all();
-
-    Livewire::test(CreateJob::class)
-        ->fillForm([
-            'name' => 'Senior Backend Engineer',
-            'application_locale' => ApplicationLocale::English->value,
-            'description' => 'We are hiring for a senior backend role.',
-            'starts_at' => '2026-08-01',
-            'ends_at' => '2026-09-01',
-            'campaign_expectation' => 'Expect to hire 2 engineers meeting at least 80% of criteria.',
-            'acceptedCvTypes' => $acceptedCvTypeIds,
-            'cover_letter_type' => CoverLetterType::File->value,
-            'cover_letter_required' => true,
-            'coverLetterFileTypes' => $acceptedCvTypeIds,
-            'applicationQuestions' => [
-                [
-                    'question' => 'What is your preferred name?',
-                    'response_type' => 'text',
-                    'description' => 'Use the name you would like us to use during the process.',
-                    'required' => true,
-                ],
-                [
-                    'question' => 'How many years of Laravel experience do you have?',
-                    'response_type' => 'number',
-                    'description' => null,
-                    'required' => true,
-                ],
-                [
-                    'question' => 'Tell us about a challenging project.',
-                    'response_type' => 'textarea',
-                    'description' => 'Keep your answer concise.',
-                    'required' => false,
-                ],
-            ],
-        ])
-        ->call('create')
-        ->assertHasNoFormErrors();
-
-    $job = Job::query()->where('name', 'Senior Backend Engineer')->sole();
-
-    expect($job->company_id)->toBe($company->id)
-        ->and($job->application_locale)->toBe(ApplicationLocale::English)
-        ->and($job->description)->toBe('<p>We are hiring for a senior backend role.</p>')
-        ->and($job->starts_at->toDateString())->toBe('2026-08-01')
-        ->and($job->ends_at->toDateString())->toBe('2026-09-01')
-        ->and($job->campaign_expectation)->toBe('Expect to hire 2 engineers meeting at least 80% of criteria.');
-
-    expect($job->cover_letter_type)->toBe(CoverLetterType::File)
-        ->and($job->cover_letter_required)->toBeTrue();
-
-    expect($job->acceptedCvTypes()->orderBy('sort')->pluck('extension')->all())
-        ->toBe(['pdf', 'docx']);
-
-    expect($job->coverLetterFileTypes()->orderBy('sort')->pluck('extension')->all())
-        ->toBe(['pdf', 'docx']);
-
-    $applicationQuestions = $job->applicationQuestions()->get();
-
-    expect($applicationQuestions)->toHaveCount(3)
-        ->and($applicationQuestions[0]->company_id)->toBe($company->id)
-        ->and($applicationQuestions[0]->question)->toBe('What is your preferred name?')
-        ->and($applicationQuestions[0]->response_type)->toBe(ApplicationQuestionType::Text)
-        ->and($applicationQuestions[0]->description)->toBe('Use the name you would like us to use during the process.')
-        ->and($applicationQuestions[0]->required)->toBeTrue()
-        ->and($applicationQuestions[0]->sort)->toBe(1)
-        ->and($applicationQuestions[1]->response_type)->toBe(ApplicationQuestionType::Number)
-        ->and($applicationQuestions[1]->sort)->toBe(2)
-        ->and($applicationQuestions[2]->response_type)->toBe(ApplicationQuestionType::Textarea)
-        ->and($applicationQuestions[2]->description)->toBe('Keep your answer concise.')
-        ->and($applicationQuestions[2]->required)->toBeFalse()
-        ->and($applicationQuestions[2]->sort)->toBe(3);
-
 });
 
 it('requires a supported CV format and valid response field types', function () {

@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Jobs\AnalyzeApplicationFit;
 use App\Jobs\AnalyzeJobCriteria;
 use App\Models\Job;
 use App\Services\CompanyTopbarSummary;
@@ -33,10 +34,11 @@ class AppServiceProvider extends ServiceProvider
 
         if ($this->app->runningInConsole()) {
             // The default `composer run dev` queue listener only watches the
-            // connection's default queue, so AI criteria jobs need their own
-            // listener to actually run locally.
+            // connection's default queue, so AI job queues (criteria
+            // extraction and application analysis) need their own listener
+            // to actually run locally.
             DevCommands::artisan(
-                'queue:listen --queue='.AnalyzeJobCriteria::QUEUE.' --tries=1 --timeout=0',
+                'queue:listen --queue='.AnalyzeJobCriteria::QUEUE.','.AnalyzeApplicationFit::QUEUE.' --tries=1 --timeout=0',
                 'ai-queue',
             );
         }

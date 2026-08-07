@@ -90,6 +90,15 @@ return [
             'documents' => 'Application documents',
             'documents_description' => 'Files are private and available only through authorized access.',
         ],
+        'overview' => [
+            'overall_score' => [
+                'heading' => 'Overall application score',
+                'not_available' => 'Available once the AI analysis completes.',
+                'ai_component' => 'AI match: :score/100 (:weight%)',
+                'referral_yes' => 'Referral: Yes (:weight%)',
+                'referral_no' => 'Referral: No (:weight%)',
+            ],
+        ],
         'sources' => [
             'direct' => 'Direct application',
             'referral' => 'Referral link',
@@ -118,12 +127,19 @@ return [
         ],
         'ai' => [
             'received_at' => 'Candidate data received on :date',
-            'retry_action' => 'Retry analysis',
-            'retry_confirmation' => 'This will queue a new AI analysis for this candidate.',
+            'start_action' => 'Start AI analysis',
+            'reprocess_action' => 'Reprocess analysis',
+            'reprocess_confirmation' => 'This will queue a new AI analysis for this candidate. Any current or in-progress results will be replaced once it completes.',
             'overall_score_label' => 'Overall AI match',
             'analyzed_at' => 'Analyzed on :date',
             'criteria_heading' => 'Score by criterion',
             'no_criteria_scored' => 'No criteria were scored for this analysis.',
+            'confidence_label' => 'Confidence:',
+            'confidence' => [
+                'high' => 'High',
+                'medium' => 'Medium',
+                'low' => 'Low',
+            ],
             'states' => [
                 'awaiting_criteria' => [
                     'label' => 'Awaiting criteria',

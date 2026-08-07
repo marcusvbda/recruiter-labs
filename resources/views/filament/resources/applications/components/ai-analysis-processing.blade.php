@@ -6,7 +6,7 @@
     <div class="absolute -right-12 -top-12 size-40 rounded-full bg-primary-200/50 blur-3xl dark:bg-primary-700/20"></div>
 
     <div class="relative mx-auto flex max-w-2xl flex-col items-center gap-5 text-center">
-        <div class="flex size-14 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-primary-200 dark:bg-gray-900 dark:ring-primary-700">
+        <div class="rl-analysis-active-indicator flex size-14 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-primary-200 dark:bg-gray-900 dark:ring-primary-700">
             <x-filament::loading-indicator class="size-7 text-primary-600 dark:text-primary-400" />
         </div>
 

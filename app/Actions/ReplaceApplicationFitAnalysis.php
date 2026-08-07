@@ -22,10 +22,11 @@ class ReplaceApplicationFitAnalysis
             ['scores' => $scores],
             [
                 'scores' => ['required', 'array', 'min:1', 'max:20'],
-                'scores.*' => ['required', 'array:criterion,score,reason'],
+                'scores.*' => ['required', 'array:criterion,score,reason,confidence'],
                 'scores.*.criterion' => ['required', 'string', 'max:220'],
                 'scores.*.score' => ['required', 'integer', 'between:0,100'],
                 'scores.*.reason' => ['required', 'string'],
+                'scores.*.confidence' => ['required', 'string', 'in:high,medium,low'],
             ],
         )->validate();
 
@@ -52,6 +53,7 @@ class ReplaceApplicationFitAnalysis
                     'weight' => $weight,
                     'score' => $result['score'],
                     'reason' => $result['reason'],
+                    'confidence' => $result['confidence'],
                 ];
             }, $validated['scores']);
 

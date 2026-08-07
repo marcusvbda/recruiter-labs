@@ -67,22 +67,7 @@ class ViewApplication extends ViewRecord
         $application = $this->getApplication();
 
         return [
-            Action::make('retryApplicationAnalysis')
-                ->label(__('applications.admin.ai.retry_action'))
-                ->icon(Heroicon::OutlinedSparkles)
-                ->color('gray')
-                ->requiresConfirmation()
-                ->modalDescription(__('applications.admin.ai.retry_confirmation'))
-                ->visible(fn (): bool => in_array($application->analysis_status, [
-                    ApplicationAnalysisStatus::Failed,
-                    ApplicationAnalysisStatus::PendingQuota,
-                ], strict: true))
-                ->action(function () use ($application): void {
-                    Gate::authorize('update', $application);
-
-                    app(ScheduleApplicationFitAnalysis::class)->handle($application);
-                    $this->record = ApplicationResource::getEloquentQuery()->findOrFail((int) $application->getKey());
-                }),
+            $this->reprocessApplicationAnalysisAction($application),
             Action::make('moveStatus')
                 ->label(__('applications.admin.actions.move_status'))
                 ->icon(Heroicon::OutlinedArrowsRightLeft)
@@ -135,6 +120,32 @@ class ViewApplication extends ViewRecord
         ];
     }
 
+    private function reprocessApplicationAnalysisAction(Application $application): Action
+    {
+        $isAwaitingCriteria = $application->analysis_status === ApplicationAnalysisStatus::AwaitingCriteria;
+
+        return Action::make('reprocessApplicationAnalysis')
+            ->label($isAwaitingCriteria
+                ? __('applications.admin.ai.start_action')
+                : __('applications.admin.ai.reprocess_action'))
+            ->icon(Heroicon::OutlinedSparkles)
+            ->button()
+            ->requiresConfirmation(! $isAwaitingCriteria)
+            ->modalDescription($isAwaitingCriteria ? null : __('applications.admin.ai.reprocess_confirmation'))
+            ->action(function (): void {
+                $application = $this->getApplication();
+
+                Gate::authorize('update', $application);
+
+                app(ScheduleApplicationFitAnalysis::class)->handle($application);
+
+                $this->redirect(ApplicationResource::getUrl('view', [
+                    'record' => $application,
+                    'section' => 'ai-analysis::tab',
+                ], tenant: $application->company), navigate: false);
+            });
+    }
+
     /** @return array<int, string> */
     private function statusOptions(int $companyId): array
     {
@@ -181,7 +192,7 @@ class ViewApplication extends ViewRecord
                     Tab::make(__('applications.admin.tabs.ai_analysis'))
                         ->icon(Heroicon::OutlinedSparkles)
                         ->schema([
-                            View::make($this->analysisViewName($application))
+                            View::make(@$this->analysisViewName($application))
                                 ->viewData(['analysis' => $this->analysisData($application)]),
                         ]),
                 ])
@@ -249,6 +260,7 @@ class ViewApplication extends ViewRecord
                     ])
                     ->all(),
             ],
+            'overall_score' => $application->getOverallScoreData(),
         ];
     }
 
@@ -324,7 +336,8 @@ class ViewApplication extends ViewRecord
         $status = $this->enumValue($application->analysis_status);
 
         return match ($status) {
-            'pending', 'processing' => 'filament.resources.applications.components.ai-analysis-processing',
+            'pending' => 'filament.resources.applications.components.ai-analysis-pending',
+            'processing' => 'filament.resources.applications.components.ai-analysis-processing',
             'completed' => 'filament.resources.applications.components.ai-analysis-completed',
             'failed' => 'filament.resources.applications.components.ai-analysis-failed',
             'pending_quota' => 'filament.resources.applications.components.ai-analysis-pending-quota',
@@ -361,6 +374,7 @@ class ViewApplication extends ViewRecord
                     'criterion' => $score->criterion,
                     'score' => $score->score,
                     'reason' => $score->reason,
+                    'confidence' => $score->confidence->value,
                 ])
                 ->values()
                 ->all();

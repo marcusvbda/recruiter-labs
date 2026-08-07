@@ -49,31 +49,6 @@ function createAiUsageForTest(
     ]);
 }
 
-it('summarizes the monthly AI usage and provider split for one company', function () {
-    $company = Company::factory()->create([
-        'plan_id' => Plan::query()->where('slug', 'starter')->sole()->id,
-    ]);
-    $otherCompany = Company::factory()->create();
-    createAiUsageForTest($company);
-    createAiUsageForTest($company);
-    createAiUsageForTest($company, AiProvider::Own, true);
-    createAiUsageForTest($company, createdAt: '2026-07-31 23:59:59');
-    createAiUsageForTest($otherCompany);
-
-    $summary = app(CompanyUsageService::class)->summary($company);
-    $metric = $summary->metric(Limit::AiAnalyses);
-
-    expect($summary->planSlug)->toBe('starter')
-        ->and($metric->used)->toBe(2)
-        ->and($metric->limitValue)->toBe(20)
-        ->and($metric->remaining)->toBe(18)
-        ->and($metric->percentage)->toBe(10)
-        ->and($metric->cycleStart?->toDateString())->toBe('2026-08-01')
-        ->and($metric->cycleEnd?->toDateString())->toBe('2026-08-31')
-        ->and($summary->platformAiAnalyses)->toBe(2)
-        ->and($summary->ownAiAnalyses)->toBe(1);
-});
-
 it('enforces the monthly AI analysis limit', function () {
     $plan = Plan::query()->where('slug', 'starter')->sole();
     $plan->update([

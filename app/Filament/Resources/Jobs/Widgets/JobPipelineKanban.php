@@ -8,6 +8,7 @@ use App\Filament\Resources\Applications\ApplicationResource;
 use App\Filament\Resources\Jobs\JobResource;
 use App\Models\Application;
 use App\Models\Candidate;
+use App\Models\CompanyScoringSetting;
 use App\Models\Job;
 use App\Models\Status;
 use Filament\Facades\Filament;
@@ -27,6 +28,9 @@ class JobPipelineKanban extends StateKanbanBoard
 
     /** @var Collection<int, Status>|null */
     protected ?Collection $pipelineStatuses = null;
+
+    /** @var array{analysis: int, referral: int}|null */
+    protected ?array $scoringWeights = null;
 
     protected function getModel(): string
     {
@@ -160,6 +164,29 @@ class JobPipelineKanban extends StateKanbanBoard
         return $this->enumValue($application->analysis_status) !== ApplicationAnalysisStatus::AwaitingCriteria->value;
     }
 
+    public function showsScoreBadge(Application $application): bool
+    {
+        return $application->analysis_status === ApplicationAnalysisStatus::Completed
+            && $application->analysis_score !== null;
+    }
+
+    public function showAverageScoreBadge(Application $application): bool
+    {
+        return $application->analysis_status === ApplicationAnalysisStatus::Completed
+            && $application->analysis_score !== null;
+    }
+
+    public function getScoreColor(mixed $obj, string $index = 'analysis_score'): string
+    {
+        $score = (float) data_get($obj, $index, 0);
+
+        return match (true) {
+            $score >= 70 => 'success',
+            $score >= 40 => 'warning',
+            default => 'danger',
+        };
+    }
+
     private function enumValue(mixed $value): string
     {
         return $value instanceof \BackedEnum ? (string) $value->value : (string) $value;
@@ -173,6 +200,108 @@ class JobPipelineKanban extends StateKanbanBoard
             ->where('company_id', $this->record->company_id)
             ->with('candidate')
             ->withCount(['answers', 'documents']);
+    }
+
+    /**
+     * Highest overall score on top within each column — the same blended
+     * value {@see Application::getOverallScoreData()} would return (AI fit
+     * score weighted with the company's referral bonus, per
+     * {@see CompanyScoringSetting::overallScore()}), computed inline in SQL
+     * so it can be applied before any per-column `LIMIT`. Unscored
+     * applications (`analysis_score IS NULL`) fall back to a score of 0,
+     * matching that method's null short-circuit — this also sidesteps the
+     * NULL-ordering differences across engines (MySQL/SQLite sort NULL last,
+     * PostgreSQL sorts it first) that a plain `ORDER BY analysis_score DESC`
+     * would otherwise hit, since the `CASE` expression never evaluates to
+     * NULL itself.
+     *
+     * The weights are bound as query parameters (not interpolated into the
+     * SQL string) even though they currently only come from trusted app
+     * data.
+     *
+     * `created_at` asc then `updated_at` desc are kept as tie-breakers, for
+     * parity with the parent class's default card ordering.
+     *
+     * @param  Builder<Application>  $query
+     * @return Builder<Application>
+     */
+    private function applyCardOrdering(Builder $query): Builder
+    {
+        $weights = $this->getScoringWeights();
+
+        return $query
+            ->orderByRaw(
+                'CASE
+                    WHEN analysis_score IS NULL THEN 0
+                    ELSE ROUND((analysis_score * ? + (CASE WHEN source = ? THEN 100 ELSE 0 END) * ?) / 100)
+                END DESC',
+                [$weights['analysis'], ApplicationSource::Referral->value, $weights['referral']],
+            )
+            ->orderBy('created_at')
+            ->orderByDesc('updated_at');
+    }
+
+    /**
+     * Resolve and cache this company's AI/referral scoring weights, used to
+     * blend `analysis_score` into the overall score for {@see applyCardOrdering()}.
+     * {@see getQuery()} already scopes this widget to a single company, so
+     * the weights are constant for every row and only need resolving once.
+     *
+     * @return array{analysis: int, referral: int}
+     */
+    private function getScoringWeights(): array
+    {
+        if ($this->scoringWeights !== null) {
+            return $this->scoringWeights;
+        }
+
+        $scoringSetting = $this->record->company->scoringSetting ?? new CompanyScoringSetting;
+
+        return $this->scoringWeights = [
+            'analysis' => $scoringSetting->analysis_weight,
+            'referral' => $scoringSetting->referral_weight,
+        ];
+    }
+
+    /**
+     * Overridden instead of ordering in {@see getQuery()} because the parent's
+     * {@see StateKanbanBoard::getFilteredQuery()} is shared by both the record-fetching
+     * path and {@see StateKanbanBoard::getColumnTotals()}'s `GROUP BY status_id` count
+     * query. Ordering by `analysis_score`/`created_at` at the `getQuery()` level leaked
+     * into that `GROUP BY` query, which PostgreSQL rejects (strict grouping rules)
+     * even though SQLite silently allows it.
+     *
+     * @param  list<string>  $columns
+     * @return array<string, \Illuminate\Support\Collection<int, Model>>
+     */
+    protected function fetchRecordsGroupedByColumn(array $columns, int $limit): array
+    {
+        $field = $this->getStateField();
+        $totals = $this->getColumnTotals();
+        $totalMatchingRecords = array_sum($totals);
+        $maxSingleFetch = count($columns) * $limit;
+
+        if ($totalMatchingRecords <= $maxSingleFetch) {
+            $grouped = $this->applyCardOrdering($this->getFilteredQuery()->whereIn($field, $columns))
+                ->get()
+                ->groupBy(fn (Model $record): string => $this->resolveColumnKey($record));
+
+            return collect($columns)
+                ->mapWithKeys(fn (string $column): array => [
+                    $column => ($grouped->get($column) ?? collect())->take($limit)->values(),
+                ])
+                ->all();
+        }
+
+        return collect($columns)
+            ->mapWithKeys(function (string $column) use ($field, $limit): array {
+                return [
+                    $column => $this->applyCardOrdering($this->getFilteredQuery()->where($field, $column))
+                        ->limit($limit)
+                        ->get(),
+                ];
+            })
+            ->all();
     }
 
     /**

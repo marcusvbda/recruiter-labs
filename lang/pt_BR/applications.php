@@ -90,6 +90,15 @@ return [
             'documents' => 'Documentos da candidatura',
             'documents_description' => 'Os arquivos são privados e ficam disponíveis apenas por acesso autorizado.',
         ],
+        'overview' => [
+            'overall_score' => [
+                'heading' => 'Pontuação geral da candidatura',
+                'not_available' => 'Disponível quando a análise de IA for concluída.',
+                'ai_component' => 'Compatibilidade de IA: :score/100 (:weight%)',
+                'referral_yes' => 'Indicação: Sim (:weight%)',
+                'referral_no' => 'Indicação: Não (:weight%)',
+            ],
+        ],
         'sources' => [
             'direct' => 'Candidatura direta',
             'referral' => 'Link de indicação',
@@ -118,12 +127,19 @@ return [
         ],
         'ai' => [
             'received_at' => 'Dados do candidato recebidos em :date',
-            'retry_action' => 'Tentar novamente',
-            'retry_confirmation' => 'Isso colocará uma nova análise de IA na fila para este candidato.',
+            'start_action' => 'Iniciar análise de IA',
+            'reprocess_action' => 'Reprocessar análise',
+            'reprocess_confirmation' => 'Isso colocará uma nova análise de IA na fila para este candidato. Quaisquer resultados atuais ou em andamento serão substituídos quando ela for concluída.',
             'overall_score_label' => 'Compatibilidade geral (IA)',
             'analyzed_at' => 'Analisado em :date',
             'criteria_heading' => 'Pontuação por critério',
             'no_criteria_scored' => 'Nenhum critério foi avaliado nesta análise.',
+            'confidence_label' => 'Confiança:',
+            'confidence' => [
+                'high' => 'Alta',
+                'medium' => 'Média',
+                'low' => 'Baixa',
+            ],
             'states' => [
                 'awaiting_criteria' => [
                     'label' => 'Aguardando critério',

@@ -3,6 +3,7 @@
 namespace App\Ai\Agents;
 
 use App\Ai\Concerns\BuildsCompactAgentContext;
+use App\Enums\AnalysisConfidence;
 use App\Enums\ApplicationQuestionType;
 use App\Models\Application;
 use App\Models\ApplicationAnswer;
@@ -33,6 +34,8 @@ class ScoreApplicationAgainstCriteria implements Agent, HasStructuredOutput
             Context format: TOON — unquoted keys, indentation for nesting, arrays as `[n]{field1,field2}:` followed by one comma-separated row per line.
 
             For every criterion, score the match 0-100 and give a one-sentence reason. Base your judgment only on the provided context; if information relevant to a criterion is missing, score conservatively rather than guessing. Repeat each criterion's text back exactly as given, so it can be matched to the original. Use the job's own language. Plain text only, no HTML.
+
+            Also rate your confidence (high, medium, low) separately from the score: it reflects how much concrete, verifiable evidence supported that score, not the score itself. A vague claim ("very experienced") backed only by inference deserves low confidence even if the score looks reasonable; a specific, verifiable claim that directly addresses the criterion (an exact number, a named technology) deserves high confidence.
             INSTRUCTIONS;
     }
 
@@ -69,6 +72,7 @@ class ScoreApplicationAgainstCriteria implements Agent, HasStructuredOutput
                     'criterion' => $schema->string()->max(220)->required(),
                     'score' => $schema->integer()->min(0)->max(100)->required(),
                     'reason' => $schema->string()->max(220)->required(),
+                    'confidence' => $schema->string()->enum(AnalysisConfidence::class)->required(),
                 ])->withoutAdditionalProperties())
                 ->min(1)
                 ->max(20)

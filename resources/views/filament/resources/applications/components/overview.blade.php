@@ -39,6 +39,39 @@
                 </div>
             </dl>
         </x-filament::section>
+
+        <x-filament::section
+            :heading="__('applications.admin.overview.overall_score.heading')"
+            icon="heroicon-o-scale"
+        >
+            @if ($overview['overall_score'] === null)
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                    {{ __('applications.admin.overview.overall_score.not_available') }}
+                </p>
+            @else
+                @php
+                    $overallScore = $overview['overall_score'];
+                @endphp
+                <div class="flex items-center gap-4">
+                    <p class="text-4xl font-bold {{ $overallScore['value'] >= 70 ? 'text-success-600 dark:text-success-400' : ($overallScore['value'] >= 40 ? 'text-warning-600 dark:text-warning-400' : 'text-danger-600 dark:text-danger-400') }}">
+                        {{ $overallScore['value'] }}/100
+                    </p>
+                </div>
+                <p class="mt-3 text-sm text-gray-600 dark:text-gray-300">
+                    {{ __('applications.admin.overview.overall_score.ai_component', [
+                        'score' => $overallScore['ai_score'],
+                        'weight' => $overallScore['analysis_weight'],
+                    ]) }}
+                    ·
+                    {{ __(
+                        $overallScore['is_referral']
+                            ? 'applications.admin.overview.overall_score.referral_yes'
+                            : 'applications.admin.overview.overall_score.referral_no',
+                        ['weight' => $overallScore['referral_weight']],
+                    ) }}
+                </p>
+            @endif
+        </x-filament::section>
     </div>
 
     <div class="space-y-6">

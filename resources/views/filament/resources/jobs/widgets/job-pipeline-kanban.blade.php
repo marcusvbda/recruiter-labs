@@ -48,7 +48,7 @@
             </div>
 
             <div class="fi-model-states-kanban"
-                style="grid-template-columns: repeat({{ count($boardColumns) }}, minmax(15rem, 1fr));">
+                style="grid-template-columns: repeat({{ count($boardColumns) }}, minmax(18rem, 1fr));">
                 @foreach ($boardColumns as $column)
                     @php
                         $columnKey = $column['key'];
@@ -96,6 +96,7 @@
                             @forelse ($records as $record)
                                 @php
                                     $isReferral = $this->isReferralApplication($record);
+                                    $overallScore = @$record->getOverallScoreData();
                                 @endphp
                                 <div data-record-id="{{ $record->getKey() }}"
                                     data-referral="{{ $isReferral ? 'true' : 'false' }}" @class([
@@ -139,16 +140,25 @@
                                                 </span>
                                             </div>
                                         @endif
+                                        <div class="flex my-2">
+                                            <x-filament::badge :color="$this->getScoreColor($overallScore, 'value')">
+                                                {{ (int) round((float) data_get($overallScore, 'value', 0)) }}/100
+                                            </x-filament::badge>
+                                        </div>
                                         @if ($this->showsAnalysisBadge($record))
                                             <div class="flex my-2">
-                                                <x-filament::badge
-                                                    :color="$this->getAnalysisColor($record)"
-                                                    :icon="$this->getAnalysisIcon($record)"
-                                                >
-                                                    {{ $this->getAnalysisLabel($record) }}
-                                                </x-filament::badge>
+                                                @if ($this->showsScoreBadge($record))
+                                                    <x-filament::badge :color="$this->getScoreColor($record)" icon="heroicon-m-sparkles">
+                                                        {{ (int) round((float) $record->analysis_score) }}/100
+                                                    </x-filament::badge>
+                                                @else
+                                                    <x-filament::badge :color="$this->getAnalysisColor($record)" :icon="$this->getAnalysisIcon($record)">
+                                                        {{ $this->getAnalysisLabel($record) }}
+                                                    </x-filament::badge>
+                                                @endif
                                             </div>
                                         @endif
+
                                         <a href="{{ $this->getApplicationUrl($record) }}" wire:navigate
                                             x-on:pointerdown.stop x-on:click.stop
                                             class="rl-pipeline-card-summary__link">
@@ -205,4 +215,76 @@
     </x-filament::section>
 
     @filamentScripts(['filament-model-states'])
+
+    <script>
+        // The vendor kanban-board.js calls `Sortable.create(columnEl, {...})` for each
+        // `.fi-model-states-column` element without setting the `sort` option, which
+        // defaults to `true` in SortableJS. That allows dragging a card up/down WITHIN
+        // its own column, visually reordering the DOM even though `onEnd` intentionally
+        // ignores same-column drops (order must always come from the score-based
+        // `ORDER BY` in `JobPipelineKanban::fetchRecordsGroupedByColumn()`, never from
+        // manual drag). We cannot edit the vendor file, so we patch `Sortable.create`
+        // to force `sort: false` only for this widget's columns, leaving every other
+        // caller (e.g. Filament core's own `x-sortable` directive used by Repeaters,
+        // which shares the same global `window.Sortable`) completely untouched.
+        //
+        // `window.Sortable` gets (re)assigned more than once while this page loads:
+        // once from the panel-wide asset bundle and again when this widget's own
+        // `@filamentScripts(['filament-model-states'])` call (re-)injects the package
+        // script (confirmed by tracing every assignment in a real browser). Patching
+        // `.create` only the first time `Sortable` becomes defined gets silently undone
+        // by that later reassignment. Instead we intercept the `window.Sortable`
+        // property itself and re-wrap `.create` on every assignment, so the patch
+        // survives no matter how many times, or in what order, the vendor scripts
+        // (re)define the global.
+        (function scopeKanbanSortableToDisableIntraColumnReordering() {
+            if (window.__rlKanbanSortablePatchInstalled) {
+                return;
+            }
+
+            window.__rlKanbanSortablePatchInstalled = true;
+
+            let currentSortable = Object.getOwnPropertyDescriptor(window, 'Sortable')?.value;
+
+            const wrapCreate = (SortableCtor) => {
+                if (!SortableCtor || typeof SortableCtor.create !== 'function' || SortableCtor.create
+                    .__rlKanbanPatched) {
+                    return SortableCtor;
+                }
+
+                const originalCreate = SortableCtor.create;
+
+                const patchedCreate = function(element, options = {}) {
+                    if (element instanceof Element && element.matches('.fi-model-states-column')) {
+                        options = {
+                            ...options,
+                            sort: false
+                        };
+                    }
+
+                    return originalCreate.call(SortableCtor, element, options);
+                };
+
+                patchedCreate.__rlKanbanPatched = true;
+                SortableCtor.create = patchedCreate;
+
+                return SortableCtor;
+            };
+
+            Object.defineProperty(window, 'Sortable', {
+                configurable: true,
+                enumerable: true,
+                get() {
+                    return currentSortable;
+                },
+                set(value) {
+                    currentSortable = wrapCreate(value);
+                },
+            });
+
+            if (typeof currentSortable !== 'undefined') {
+                wrapCreate(currentSortable);
+            }
+        })();
+    </script>
 </x-filament-widgets::widget>
