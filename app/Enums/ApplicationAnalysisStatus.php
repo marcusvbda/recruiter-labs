@@ -4,6 +4,7 @@ namespace App\Enums;
 
 enum ApplicationAnalysisStatus: string
 {
+    case AwaitingCriteria = 'awaiting_criteria';
     case Pending = 'pending';
     case Processing = 'processing';
     case Completed = 'completed';

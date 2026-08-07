@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['company_id', 'job_id', 'candidate_id', 'status_id', 'referral_id', 'source', 'analysis_status', 'cover_letter_type', 'cover_letter_text', 'submitted_ip'])]
+#[Fillable(['company_id', 'job_id', 'candidate_id', 'status_id', 'referral_id', 'source', 'analysis_status', 'analysis_generation', 'analysis_score', 'analyzed_at', 'cover_letter_type', 'cover_letter_text', 'submitted_ip'])]
 class Application extends Model
 {
     /** @use HasFactory<ApplicationFactory> */
@@ -29,6 +29,9 @@ class Application extends Model
         return [
             'source' => ApplicationSource::class,
             'analysis_status' => ApplicationAnalysisStatus::class,
+            'analysis_generation' => 'integer',
+            'analysis_score' => 'decimal:2',
+            'analyzed_at' => 'immutable_datetime',
             'cover_letter_type' => ApplicationCoverLetterType::class,
         ];
     }
@@ -79,6 +82,12 @@ class Application extends Model
     public function utmParameters(): HasMany
     {
         return $this->hasMany(ApplicationUtmParameter::class);
+    }
+
+    /** @return HasMany<ApplicationCriterionScore, $this> */
+    public function criterionScores(): HasMany
+    {
+        return $this->hasMany(ApplicationCriterionScore::class);
     }
 
     /** @return HasMany<AiUsageRecord, $this> */

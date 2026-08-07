@@ -16,6 +16,8 @@
         "laravel/octane": "^2.18",
         "laravel/tinker": "^3.0",
         "laravel/wayfinder": "^0.1.14",
+        "phpoffice/phpword": "^1.4",
+        "smalot/pdfparser": "^2.12",
         "usamamuneerchaudhary/filament-model-states": "^1.0"
     },
     "require-dev": {

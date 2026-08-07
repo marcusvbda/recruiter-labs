@@ -120,6 +120,11 @@ return [
             'received_at' => 'Candidate data received on :date',
             'future_note' => 'The analysis will appear here when AI processing is enabled. No processing is performed in this MVP.',
             'states' => [
+                'awaiting_criteria' => [
+                    'label' => 'Awaiting criteria',
+                    'title' => 'No AI criteria yet',
+                    'description' => "This job doesn't have AI-generated evaluation criteria yet. The candidate will be analyzed automatically once the job's criteria are ready.",
+                ],
                 'pending' => [
                     'label' => 'Pending',
                     'title' => 'Waiting for analysis',

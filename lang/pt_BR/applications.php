@@ -120,6 +120,11 @@ return [
             'received_at' => 'Dados do candidato recebidos em :date',
             'future_note' => 'A análise aparecerá aqui quando o processamento por IA for habilitado. Nenhum processamento é realizado neste MVP.',
             'states' => [
+                'awaiting_criteria' => [
+                    'label' => 'Aguardando critério',
+                    'title' => 'Ainda sem critérios de IA',
+                    'description' => 'Esta vaga ainda não possui critérios de avaliação gerados por IA. O candidato será analisado automaticamente quando os critérios da vaga estiverem prontos.',
+                ],
                 'pending' => [
                     'label' => 'Pendente',
                     'title' => 'Aguardando análise',
