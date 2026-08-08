@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
-#[Fillable(['company_id', 'automatable_type', 'automatable_id', 'event_type', 'action_type', 'action_config', 'is_active'])]
+#[Fillable(['company_id', 'automatable_type', 'automatable_id', 'event_type', 'action_type', 'action_config', 'status_id', 'is_active'])]
 class AutomationEvent extends Model
 {
     use HasFactory;
@@ -33,6 +33,11 @@ class AutomationEvent extends Model
     public function automatable(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    public function status(): BelongsTo
+    {
+        return $this->belongsTo(Status::class);
     }
 
     /**

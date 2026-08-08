@@ -10,9 +10,7 @@ return [
     ],
     'event_types' => [
         'application_submitted' => 'Postulación enviada',
-        'status_changed' => 'Estado cambiado',
-        'approved' => 'Aprobado',
-        'rejected' => 'Rechazado',
+        'status_changed' => 'Estado de la postulación cambiado',
     ],
     'action_types' => [
         'send_email' => 'Enviar correo',
@@ -22,6 +20,8 @@ return [
         'action_type' => 'Acción',
         'email_template' => 'Plantilla de correo',
         'automatable' => 'Vinculado a',
+        'status' => 'Estado',
+        'all_option' => 'Todos los :type',
         'is_active' => 'Activo',
     ],
     'relation_manager' => [

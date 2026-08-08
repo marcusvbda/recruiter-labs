@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\EmailTemplates\Schemas;
 
-use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\MarkdownEditor;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -31,11 +31,11 @@ class EmailTemplateForm
                     ->columnSpanFull()
                     ->columns(1)
                     ->schema([
-                        Textarea::make('body')
+                        MarkdownEditor::make('body')
+                            ->fileAttachments(false)
                             ->label(__('email-templates.fields.body'))
                             ->helperText(__('email-templates.fields.body_helper_text'))
-                            ->required()
-                            ->rows(10),
+                            ->required(),
                     ]),
             ]);
     }

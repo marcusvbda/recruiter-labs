@@ -4,6 +4,8 @@ namespace App\Filament\Resources\AutomationEvents\Tables;
 
 use App\Enums\AutomationActionType;
 use App\Enums\AutomationEventType;
+use App\Filament\Resources\AutomationEvents\Schemas\AutomationEventForm;
+use App\Models\AutomationEvent;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -13,12 +15,6 @@ use Filament\Tables\Table;
 
 class AutomationEventsTable
 {
-    /**
-     * Shared by the global `AutomationEventResource` table and the contextual
-     * `AutomationEventsRelationManager` on `JobResource`. The `automatable`
-     * column is only relevant on the global resource, where the target isn't
-     * already implied by the current page's context.
-     */
     public static function configure(Table $table, bool $includeAutomatableColumn = false): Table
     {
         return $table
@@ -26,7 +22,8 @@ class AutomationEventsTable
                 TextColumn::make('event_type')
                     ->label(__('event-hooks.fields.event_type'))
                     ->badge()
-                    ->formatStateUsing(fn (AutomationEventType $state): string => $state->label()),
+                    ->formatStateUsing(fn (AutomationEventType $state): string => $state->label())
+                    ->description(fn (AutomationEvent $record): ?string => $record->status?->name),
                 TextColumn::make('action_type')
                     ->label(__('event-hooks.fields.action_type'))
                     ->badge()
@@ -35,8 +32,9 @@ class AutomationEventsTable
                     ->label(__('event-hooks.fields.is_active'))
                     ->boolean(),
                 ...($includeAutomatableColumn ? [
-                    TextColumn::make('automatable.name')
-                        ->label(__('event-hooks.fields.automatable')),
+                    TextColumn::make('automatable')
+                        ->label(__('event-hooks.fields.automatable'))
+                        ->state(fn (AutomationEvent $record): ?string => AutomationEventForm::automatableRecordLabel($record)),
                 ] : []),
             ])
             ->recordActions([

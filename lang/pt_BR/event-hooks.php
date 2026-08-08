@@ -10,9 +10,7 @@ return [
     ],
     'event_types' => [
         'application_submitted' => 'Candidatura enviada',
-        'status_changed' => 'Status alterado',
-        'approved' => 'Aprovado',
-        'rejected' => 'Rejeitado',
+        'status_changed' => 'Status da candidatura alterado',
     ],
     'action_types' => [
         'send_email' => 'Enviar e-mail',
@@ -22,6 +20,8 @@ return [
         'action_type' => 'Ação',
         'email_template' => 'Modelo de e-mail',
         'automatable' => 'Vinculado a',
+        'status' => 'Status',
+        'all_option' => 'Todos(as) :type',
         'is_active' => 'Ativo',
     ],
     'relation_manager' => [

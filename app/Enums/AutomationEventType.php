@@ -6,8 +6,6 @@ enum AutomationEventType: string
 {
     case ApplicationSubmitted = 'application_submitted';
     case StatusChanged = 'status_changed';
-    case Approved = 'approved';
-    case Rejected = 'rejected';
 
     public function label(): string
     {

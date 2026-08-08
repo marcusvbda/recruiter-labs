@@ -7,6 +7,7 @@ use App\Enums\AutomationEventType;
 use App\Models\AutomationEvent;
 use App\Models\Company;
 use App\Models\Job;
+use App\Models\Status;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -31,6 +32,12 @@ class AutomationEventFactory extends Factory
             // actually persists this column in production.
             'automatable_type' => (new Job)->getMorphClass(),
             'event_type' => $this->faker->randomElement(AutomationEventType::cases()),
+            // Only meaningful for `StatusChanged`; kept null otherwise so the
+            // resulting fixture matches what the Filament form itself would
+            // dehydrate for `ApplicationSubmitted`.
+            'status_id' => fn (array $attributes) => $attributes['event_type'] === AutomationEventType::StatusChanged
+                ? Status::factory()->create(['company_id' => $attributes['company_id']])->id
+                : null,
             'action_type' => AutomationActionType::SendEmail,
             'action_config' => [],
             'is_active' => true,

@@ -7,7 +7,6 @@ use App\Filament\Resources\Jobs\Pages\CreateJob;
 use App\Filament\Resources\Jobs\Pages\EditJob;
 use App\Filament\Resources\Jobs\Pages\ListJobs;
 use App\Filament\Resources\Jobs\Pages\ViewJob;
-use App\Filament\Resources\Jobs\RelationManagers\AutomationEventsRelationManager;
 use App\Filament\Resources\Jobs\Schemas\JobForm;
 use App\Filament\Resources\Jobs\Tables\JobsTable;
 use App\Models\Job;
@@ -64,13 +63,6 @@ class JobResource extends Resource
             'create' => CreateJob::route('/create'),
             'view' => ViewJob::route('/{record}'),
             'edit' => EditJob::route('/{record}/edit'),
-        ];
-    }
-
-    public static function getRelations(): array
-    {
-        return [
-            AutomationEventsRelationManager::class,
         ];
     }
 }

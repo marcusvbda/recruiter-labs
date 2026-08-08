@@ -10,9 +10,7 @@ return [
     ],
     'event_types' => [
         'application_submitted' => 'Application submitted',
-        'status_changed' => 'Status changed',
-        'approved' => 'Approved',
-        'rejected' => 'Rejected',
+        'status_changed' => 'Application status changed',
     ],
     'action_types' => [
         'send_email' => 'Send email',
@@ -22,6 +20,8 @@ return [
         'action_type' => 'Action',
         'email_template' => 'Email template',
         'automatable' => 'Linked to',
+        'status' => 'Status',
+        'all_option' => 'All :type',
         'is_active' => 'Active',
     ],
     'relation_manager' => [
