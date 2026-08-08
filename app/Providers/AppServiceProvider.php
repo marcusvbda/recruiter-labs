@@ -5,8 +5,12 @@ namespace App\Providers;
 use App\Jobs\AnalyzeApplicationFit;
 use App\Jobs\AnalyzeJobCriteria;
 use App\Models\Job;
+use App\Notifications\ResetPasswordNotification;
+use App\Notifications\VerifyEmailNotification;
 use App\Services\CompanyTopbarSummary;
 use Carbon\CarbonImmutable;
+use Filament\Auth\Notifications\ResetPassword;
+use Filament\Auth\Notifications\VerifyEmail;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Foundation\DevCommands;
 use Illuminate\Support\Facades\Date;
@@ -23,6 +27,9 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->scoped(CompanyTopbarSummary::class);
+
+        $this->app->bind(VerifyEmail::class, VerifyEmailNotification::class);
+        $this->app->bind(ResetPassword::class, ResetPasswordNotification::class);
     }
 
     /**

@@ -6,7 +6,6 @@ use App\Actions\ChangeCompanyPlan;
 use App\Actions\RemoveCompanyAiCredentials;
 use App\Actions\TestCompanyAiCredentials;
 use App\Actions\UpdateCompanyAiSettings;
-use App\Actions\UpdateCompanyScoringSettings;
 use App\Concerns\PasswordValidationRules;
 use App\Concerns\ProfileValidationRules;
 use App\Data\UsageMetricData;
@@ -18,7 +17,6 @@ use App\Enums\UsageWarningState;
 use App\Models\AiUsageRecord;
 use App\Models\Company;
 use App\Models\CompanyAiSetting;
-use App\Models\CompanyScoringSetting;
 use App\Models\Plan;
 use App\Models\User;
 use App\Services\AiCredentialsResolver;
@@ -34,6 +32,7 @@ use Filament\Pages\Page;
 use Filament\Schemas\Components\Actions;
 use Filament\Schemas\Components\EmbeddedSchema;
 use Filament\Schemas\Components\Form;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Components\Utilities\Get;
@@ -42,7 +41,6 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Number;
 use Illuminate\Validation\Rules\Password;
-use InvalidArgumentException;
 use Livewire\Attributes\Url;
 
 /**
@@ -65,9 +63,6 @@ class Settings extends Page
 
     /** @var array<string, mixed> */
     public array $aiSettings = [];
-
-    /** @var array<string, mixed> */
-    public array $scoringSettings = [];
 
     #[Url(as: 'section', except: 'general')]
     public string $activeSettingsTab = 'general';
@@ -92,7 +87,7 @@ class Settings extends Page
         PlanComparisonService $comparisonService,
         AiCredentialsResolver $credentialsResolver,
     ): void {
-        if (! in_array($this->activeSettingsTab, ['general', 'authentication', 'plan', 'ai', 'scoring', 'integrations'], strict: true)) {
+        if (! in_array($this->activeSettingsTab, ['general', 'authentication', 'plan', 'ai'], strict: true)) {
             $this->activeSettingsTab = 'general';
         }
 
@@ -137,44 +132,52 @@ class Settings extends Page
                             ->id('general')
                             ->icon('heroicon-o-user-circle')
                             ->schema([
-                                TextInput::make('name')
-                                    ->label(__('settings.fields.name'))
-                                    ->required()
-                                    ->rules($this->nameRules()),
-                                TextInput::make('email')
-                                    ->label(__('settings.fields.email'))
-                                    ->required()
-                                    ->email()
-                                    ->maxLength(255)
-                                    ->unique(table: User::class, column: 'email', ignorable: $user),
-                                Select::make('locale')
-                                    ->label(__('settings.fields.language'))
-                                    ->native(false)
-                                    ->options([
-                                        'en' => 'English',
-                                        'pt_BR' => 'Português (Brasil)',
-                                        'es' => 'Español',
+                                Section::make()->columnSpanFull()
+                                    ->columns(1)
+                                    ->schema([
+                                        TextInput::make('name')
+                                            ->label(__('settings.fields.name'))
+                                            ->required()
+                                            ->rules($this->nameRules()),
+                                        TextInput::make('email')
+                                            ->label(__('settings.fields.email'))
+                                            ->required()
+                                            ->email()
+                                            ->maxLength(255)
+                                            ->unique(table: User::class, column: 'email', ignorable: $user),
+                                        Select::make('locale')
+                                            ->label(__('settings.fields.language'))
+                                            ->native(false)
+                                            ->options([
+                                                'en' => 'English',
+                                                'pt_BR' => 'Português (Brasil)',
+                                                'es' => 'Español',
+                                            ]),
                                     ]),
                             ]),
                         'authentication' => Tab::make(__('settings.tabs.auth'))
                             ->id('authentication')
                             ->icon('heroicon-o-shield-check')
                             ->schema([
-                                TextInput::make('current_password')
-                                    ->label(__('settings.fields.current_password'))
-                                    ->password()
-                                    ->revealable()
-                                    ->rules(fn (Get $get): array => filled($get('password')) ? ['current_password'] : []),
-                                TextInput::make('password')
-                                    ->label(__('settings.fields.password'))
-                                    ->password()
-                                    ->revealable()
-                                    ->rules([Password::default()])
-                                    ->confirmed(),
-                                TextInput::make('password_confirmation')
-                                    ->label(__('settings.fields.password_confirmation'))
-                                    ->password()
-                                    ->revealable(),
+                                Section::make()->columnSpanFull()
+                                    ->columns(1)
+                                    ->schema([
+                                        TextInput::make('current_password')
+                                            ->label(__('settings.fields.current_password'))
+                                            ->password()
+                                            ->revealable()
+                                            ->rules(fn (Get $get): array => filled($get('password')) ? ['current_password'] : []),
+                                        TextInput::make('password')
+                                            ->label(__('settings.fields.password'))
+                                            ->password()
+                                            ->revealable()
+                                            ->rules([Password::default()])
+                                            ->confirmed(),
+                                        TextInput::make('password_confirmation')
+                                            ->label(__('settings.fields.password_confirmation'))
+                                            ->password()
+                                            ->revealable(),
+                                    ]),
                             ]),
                         'plan' => Tab::make(__('settings.tabs.plan'))
                             ->id('plan')
@@ -187,18 +190,6 @@ class Settings extends Page
                             ->icon('heroicon-o-sparkles')
                             ->schema([
                                 ViewComponent::make('filament.pages.settings.ai'),
-                            ]),
-                        'scoring' => Tab::make(__('settings.tabs.scoring'))
-                            ->id('scoring')
-                            ->icon(Heroicon::OutlinedScale)
-                            ->schema([
-                                ViewComponent::make('filament.pages.settings.scoring'),
-                            ]),
-                        'integrations' => Tab::make(__('settings.tabs.integrations'))
-                            ->id('integrations')
-                            ->icon('heroicon-o-squares-plus')
-                            ->schema([
-                                ViewComponent::make('filament.pages.settings.integrations'),
                             ]),
                     ]),
             ])
@@ -350,69 +341,6 @@ class Settings extends Page
             });
     }
 
-    public function updateScoringWeightsAction(): Action
-    {
-        return Action::make('updateScoringWeights')
-            ->modal()
-            ->modalHeading(__('settings.scoring.update.heading'))
-            ->modalDescription(__('settings.scoring.update.description'))
-            ->modalIcon('heroicon-o-scale')
-            ->modalSubmitActionLabel(__('settings.scoring.update.save'))
-            ->fillForm(fn (): array => [
-                'analysis_weight' => $this->scoringSettings['analysis_weight'],
-                'referral_weight' => $this->scoringSettings['referral_weight'],
-            ])
-            ->schema([
-                TextInput::make('analysis_weight')
-                    ->label(__('settings.fields.analysis_weight'))
-                    ->helperText(__('settings.scoring.update.sum_helper'))
-                    ->numeric()
-                    ->integer()
-                    ->required()
-                    ->minValue(0)
-                    ->maxValue(100)
-                    ->suffix('%'),
-                TextInput::make('referral_weight')
-                    ->label(__('settings.fields.referral_weight'))
-                    ->numeric()
-                    ->integer()
-                    ->required()
-                    ->minValue(0)
-                    ->maxValue(100)
-                    ->suffix('%'),
-            ])
-            ->action(function (
-                array $data,
-                UpdateCompanyScoringSettings $updateScoringSettings,
-                CompanyUsageService $usageService,
-                PlanComparisonService $comparisonService,
-                AiCredentialsResolver $credentialsResolver,
-            ): void {
-                try {
-                    $updateScoringSettings->run(
-                        $this->getCompany(),
-                        $this->getRecord(),
-                        (int) $data['analysis_weight'],
-                        (int) $data['referral_weight'],
-                    );
-                } catch (InvalidArgumentException $exception) {
-                    Notification::make()
-                        ->title($exception->getMessage())
-                        ->danger()
-                        ->send();
-
-                    return;
-                }
-
-                $this->refreshSettingsState($usageService, $comparisonService, $credentialsResolver);
-
-                Notification::make()
-                    ->title(__('settings.notifications.scoring_updated'))
-                    ->success()
-                    ->send();
-            });
-    }
-
     public function save(): void
     {
         $data = $this->form->getState();
@@ -461,7 +389,7 @@ class Settings extends Page
         AiCredentialsResolver $credentialsResolver,
     ): void {
         $company = $this->getCompany();
-        $company->refresh()->load(['plan', 'aiSetting', 'scoringSetting']);
+        $company->refresh()->load(['plan', 'aiSetting']);
         $usage = $usageService->summary($company);
 
         $this->planSettings = [
@@ -559,13 +487,6 @@ class Settings extends Page
                     },
                 ])
                 ->all(),
-        ];
-
-        $scoringSetting = $company->scoringSetting ?? new CompanyScoringSetting;
-
-        $this->scoringSettings = [
-            'analysis_weight' => $scoringSetting->analysis_weight,
-            'referral_weight' => $scoringSetting->referral_weight,
         ];
     }
 

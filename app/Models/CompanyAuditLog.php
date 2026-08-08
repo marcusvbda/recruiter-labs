@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\AiConfigurationEventType;
 use Database\Factories\CompanyAuditLogFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -20,7 +19,7 @@ class CompanyAuditLog extends Model
     protected function casts(): array
     {
         return [
-            'event' => AiConfigurationEventType::class,
+            'event' => 'string',
             'metadata' => 'array',
         ];
     }

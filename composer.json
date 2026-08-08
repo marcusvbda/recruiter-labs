@@ -17,6 +17,7 @@
         "laravel/tinker": "^3.0",
         "laravel/wayfinder": "^0.1.14",
         "phpoffice/phpword": "^1.4",
+        "resend/resend-php": "^1.7",
         "smalot/pdfparser": "^2.12",
         "usamamuneerchaudhary/filament-model-states": "^1.0"
     },

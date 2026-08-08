@@ -14,8 +14,6 @@ return [
         'auth' => 'Autenticação',
         'plan' => 'Plano',
         'ai' => 'IA',
-        'scoring' => 'Pontuação',
-        'integrations' => 'Integrações',
     ],
     'fields' => [
         'name' => 'Nome',
@@ -26,8 +24,6 @@ return [
         'password_confirmation' => 'Confirmar nova senha',
         'api_key' => 'Chave de API da OpenAI',
         'model' => 'Modelo',
-        'analysis_weight' => 'Peso da análise',
-        'referral_weight' => 'Peso da indicação',
     ],
     'plan' => [
         'eyebrow' => 'Plano da empresa',
@@ -162,20 +158,6 @@ return [
             'confirm' => 'Remover chave',
         ],
     ],
-    'scoring' => [
-        'eyebrow' => 'Configuração de pontuação',
-        'heading' => 'Equilibre como as candidaturas são pontuadas',
-        'description' => 'Controle o peso da análise de IA e do bônus de indicação ao classificar as candidaturas.',
-        'weights_heading' => 'Pesos atuais',
-        'weights_description' => 'Esses pesos são aplicados a todas as candidaturas pontuadas neste ambiente.',
-        'update' => [
-            'action' => 'Atualizar pesos',
-            'heading' => 'Atualizar pesos de pontuação',
-            'description' => 'Os dois pesos devem ser números inteiros entre 0 e 100 que somem exatamente 100.',
-            'sum_helper' => 'Os pesos de análise e indicação devem somar 100.',
-            'save' => 'Salvar pesos',
-        ],
-    ],
     'topbar' => [
         'current_plan' => 'Plano atual: :plan',
         'manage_plan' => 'Gerenciar plano',
@@ -193,11 +175,11 @@ return [
         'reached' => 'Limite de análises de IA atingido',
         'unlimited' => 'Ilimitado',
     ],
-    'integrations' => [
-        'heading' => 'Integrações',
-        'description' => 'Conecte as ferramentas que sua equipe de recrutamento usa todos os dias.',
-        'placeholder_title' => 'As integrações chegam em breve',
-        'placeholder' => 'Esta área está preparada para futuras conexões de calendário, comunicação e automação.',
+    'email' => [
+        'messages' => [
+            'connection_succeeded' => 'Conexão com o Resend validada',
+            'connection_failed' => 'Não foi possível validar a chave do Resend',
+        ],
     ],
     'actions' => [
         'save' => 'Salvar alterações',
@@ -210,7 +192,6 @@ return [
         'ai_key_removed' => 'Chave de API da empresa removida',
         'ai_connection_valid' => 'Conexão com a OpenAI validada',
         'ai_connection_invalid' => 'Não foi possível validar a chave da OpenAI',
-        'scoring_updated' => 'Pesos de pontuação atualizados',
     ],
     'errors' => [
         'plan_limit_reached' => 'O limite do plano atual para :limit foi atingido.',

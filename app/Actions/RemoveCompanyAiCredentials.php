@@ -37,7 +37,7 @@ class RemoveCompanyAiCredentials
                 CompanyAuditLog::query()->create([
                     'company_id' => $company->getKey(),
                     'user_id' => $changedBy->getKey(),
-                    'event' => AiConfigurationEventType::CredentialRemoved,
+                    'event' => AiConfigurationEventType::CredentialRemoved->value,
                 ]);
             }
 

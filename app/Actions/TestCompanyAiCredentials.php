@@ -48,8 +48,8 @@ class TestCompanyAiCredentials
             'company_id' => $company->getKey(),
             'user_id' => $changedBy->getKey(),
             'event' => $result->success
-                ? AiConfigurationEventType::CredentialTestSucceeded
-                : AiConfigurationEventType::CredentialTestFailed,
+                ? AiConfigurationEventType::CredentialTestSucceeded->value
+                : AiConfigurationEventType::CredentialTestFailed->value,
             'metadata' => ['model' => $setting->model],
         ]);
 

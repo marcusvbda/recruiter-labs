@@ -97,6 +97,18 @@ class Company extends Model
         return $this->hasOne(CompanyAiSetting::class);
     }
 
+    /** @return HasMany<CompanyEmailProviderSetting, $this> */
+    public function emailProviderSettings(): HasMany
+    {
+        return $this->hasMany(CompanyEmailProviderSetting::class);
+    }
+
+    /** @return HasOne<CompanyEmailProviderSetting, $this> */
+    public function defaultEmailProviderSetting(): HasOne
+    {
+        return $this->hasOne(CompanyEmailProviderSetting::class)->where('is_default', true);
+    }
+
     /** @return HasOne<CompanyScoringSetting, $this> */
     public function scoringSetting(): HasOne
     {

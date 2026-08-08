@@ -22,7 +22,7 @@ class CompanyAuditLogFactory extends Factory
         return [
             'company_id' => Company::factory(),
             'user_id' => null,
-            'event' => AiConfigurationEventType::ProviderChanged,
+            'event' => AiConfigurationEventType::ProviderChanged->value,
             'metadata' => null,
         ];
     }

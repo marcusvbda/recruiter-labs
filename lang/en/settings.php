@@ -14,8 +14,6 @@ return [
         'auth' => 'Authentication',
         'plan' => 'Plan',
         'ai' => 'AI',
-        'scoring' => 'Scoring',
-        'integrations' => 'Integrations',
     ],
     'fields' => [
         'name' => 'Name',
@@ -26,8 +24,6 @@ return [
         'password_confirmation' => 'Confirm new password',
         'api_key' => 'OpenAI API key',
         'model' => 'Model',
-        'analysis_weight' => 'Analysis weight',
-        'referral_weight' => 'Referral weight',
     ],
     'plan' => [
         'eyebrow' => 'Workspace plan',
@@ -162,20 +158,6 @@ return [
             'confirm' => 'Remove key',
         ],
     ],
-    'scoring' => [
-        'eyebrow' => 'Scoring configuration',
-        'heading' => 'Balance how candidates are scored',
-        'description' => 'Control how much weight the AI fit analysis and the referral bonus carry when ranking applications.',
-        'weights_heading' => 'Current weights',
-        'weights_description' => 'These weights are applied to every application scored in this workspace.',
-        'update' => [
-            'action' => 'Update weights',
-            'heading' => 'Update scoring weights',
-            'description' => 'Both weights must be whole numbers between 0 and 100 that add up to exactly 100.',
-            'sum_helper' => 'The analysis and referral weights must sum to 100.',
-            'save' => 'Save weights',
-        ],
-    ],
     'topbar' => [
         'current_plan' => 'Current plan: :plan',
         'manage_plan' => 'Manage plan',
@@ -193,11 +175,11 @@ return [
         'reached' => 'AI analysis limit reached',
         'unlimited' => 'Unlimited',
     ],
-    'integrations' => [
-        'heading' => 'Integrations',
-        'description' => 'Connect the tools your recruiting team uses every day.',
-        'placeholder_title' => 'Integrations are coming next',
-        'placeholder' => 'This area is prepared for future calendar, communication and automation connections.',
+    'email' => [
+        'messages' => [
+            'connection_succeeded' => 'Resend connection validated',
+            'connection_failed' => 'The Resend key could not be validated',
+        ],
     ],
     'actions' => [
         'save' => 'Save changes',
@@ -210,7 +192,6 @@ return [
         'ai_key_removed' => 'Company API key removed',
         'ai_connection_valid' => 'OpenAI connection validated',
         'ai_connection_invalid' => 'The OpenAI key could not be validated',
-        'scoring_updated' => 'Scoring weights updated',
     ],
     'errors' => [
         'plan_limit_reached' => 'Your current plan limit for :limit has been reached.',

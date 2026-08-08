@@ -99,7 +99,7 @@ class UpdateCompanyAiSettings
         CompanyAuditLog::query()->create([
             'company_id' => $company->getKey(),
             'user_id' => $user->getKey(),
-            'event' => $event,
+            'event' => $event->value,
             'metadata' => $metadata === [] ? null : $metadata,
         ]);
     }
