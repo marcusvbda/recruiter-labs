@@ -60,7 +60,7 @@ class CalendarSettings extends Page
     {
         return Action::make('disconnectGoogleCalendar')
             ->requiresConfirmation()
-            ->modalHeading(fn (): string => __('calendar.disconnect.heading', [
+            ->modalHeading(fn(): string => __('calendar.disconnect.heading', [
                 'plugin' => $this->calendarConnection['plugin_label'],
             ]))
             ->modalDescription(__('calendar.disconnect.description'))
@@ -135,7 +135,7 @@ class CalendarSettings extends Page
     private function getPluginMetadata(ConnectedIntegrationRegistry $integrationRegistry): array
     {
         $metadata = collect($integrationRegistry->metadata())
-            ->first(fn (array $plugin): bool => $plugin['key'] === self::GoogleCalendarPluginKey);
+            ->first(fn(array $plugin): bool => $plugin['key'] === self::GoogleCalendarPluginKey);
 
         if ($metadata === null) {
             throw new LogicException('The Google Calendar integration plugin is not registered.');

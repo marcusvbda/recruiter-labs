@@ -13,12 +13,35 @@ use LogicException;
 
 class GmailPlugin extends GoogleOAuthPlugin
 {
-    public function key(): string { return 'gmail'; }
-    public function label(): string { return __('connected_integrations.plugins.gmail.label'); }
-    public function description(): string { return __('connected_integrations.plugins.gmail.description'); }
-    public function category(): string { return __('connected_integrations.plugins.gmail.category'); }
-    public function icon(): string { return 'heroicon-o-envelope'; }
-    public function capabilities(): array { return ['email.send']; }
+    public function key(): string
+    {
+        return 'gmail';
+    }
+
+    public function label(): string
+    {
+        return __('connected_integrations.plugins.gmail.label');
+    }
+
+    public function description(): string
+    {
+        return __('connected_integrations.plugins.gmail.description');
+    }
+
+    public function category(): string
+    {
+        return __('connected_integrations.plugins.gmail.category');
+    }
+
+    public function icon(): string
+    {
+        return asset('assets/image/icons/gmail.png');
+    }
+
+    public function capabilities(): array
+    {
+        return ['email.send'];
+    }
 
     public function validateConnection(OAuthTokenData $token): void
     {

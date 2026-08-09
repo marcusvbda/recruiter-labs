@@ -8,12 +8,35 @@ use App\Models\ConnectedIntegration;
 
 class GoogleCalendarPlugin extends GoogleOAuthPlugin
 {
-    public function key(): string { return 'google-calendar'; }
-    public function label(): string { return __('connected_integrations.plugins.google_calendar.label'); }
-    public function description(): string { return __('connected_integrations.plugins.google_calendar.description'); }
-    public function category(): string { return __('connected_integrations.plugins.google_calendar.category'); }
-    public function icon(): string { return 'heroicon-o-calendar-days'; }
-    public function capabilities(): array { return ['availability.read', 'events.create', 'events.update', 'events.delete']; }
+    public function key(): string
+    {
+        return 'google-calendar';
+    }
+
+    public function label(): string
+    {
+        return __('connected_integrations.plugins.google_calendar.label');
+    }
+
+    public function description(): string
+    {
+        return __('connected_integrations.plugins.google_calendar.description');
+    }
+
+    public function category(): string
+    {
+        return __('connected_integrations.plugins.google_calendar.category');
+    }
+
+    public function icon(): string
+    {
+        return asset('assets/image/icons/google-agenda.webp');
+    }
+
+    public function capabilities(): array
+    {
+        return ['availability.read', 'events.create', 'events.update', 'events.delete'];
+    }
 
     public function validateConnection(OAuthTokenData $token): void
     {

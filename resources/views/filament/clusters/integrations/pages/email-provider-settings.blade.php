@@ -23,26 +23,29 @@
             </div>
         </section>
 
-        <div class="grid gap-4 sm:grid-cols-2" data-testid="email-provider-cards">
+        <div class="grid gap-4" data-testid="email-provider-cards">
             @foreach ($providers as $provider)
-                <div class="rl-settings-panel" data-testid="email-provider-card-{{ $provider['provider'] }}">
-                    <div class="flex items-center gap-3">
-                        <span class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-black p-2">
+                <details class="group rl-settings-panel p-0"
+                    data-testid="email-provider-card-{{ $provider['provider'] }}">
+                    <summary
+                        class="flex cursor-pointer list-none items-center gap-3 [&::-webkit-details-marker]:hidden p-5">
+                        <span
+                            class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-black p-2 shadow-md">
                             <img src="{{ $provider['icon'] }}" alt="{{ $provider['provider_label'] }}"
                                 class="size-full object-contain" />
                         </span>
-                        <div class="min-w-0">
-                            <h3 class="truncate font-semibold text-gray-950 dark:text-white">
+                        <span class="min-w-0 flex-1">
+                            <span class="block truncate font-semibold text-gray-950 dark:text-white">
                                 {{ $provider['provider_label'] }}
-                            </h3>
+                            </span>
                             @if ($provider['is_configured'])
-                                <div class="mt-0.5 flex items-center gap-1.5">
+                                <span class="mt-0.5 flex items-center gap-1.5">
                                     <span
                                         class="size-2 rounded-full {{ $provider['is_default'] ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600' }}"></span>
                                     <span class="text-xs text-gray-500 dark:text-gray-400">
                                         {{ $provider['is_default'] ? __('email_provider.default_badge') : $provider['credential_status_label'] }}
                                     </span>
-                                </div>
+                                </span>
                             @elseif ($provider['has_key'])
                                 <span class="text-xs font-medium text-amber-600 dark:text-amber-400">
                                     Setup incomplete
@@ -52,12 +55,14 @@
                                     {{ __('email_provider.empty.heading') }}
                                 </span>
                             @endif
-                        </div>
-                    </div>
+                        </span>
+                        <x-filament::icon icon="heroicon-o-chevron-down"
+                            class="size-5 shrink-0 text-gray-400 transition-transform group-open:rotate-180 dark:text-gray-500" />
+                    </summary>
 
                     @if ($provider['has_key'])
                         <div
-                            class="mt-4 flex flex-wrap items-center gap-2 rounded-xl bg-gray-50 px-3 py-2.5 dark:bg-white/5">
+                            class="mt-4 flex flex-wrap items-center gap-2 rounded-xl bg-gray-50 mx-5 px-3 py-2.5 dark:bg-white/5">
                             <code
                                 class="text-sm font-semibold text-gray-700 dark:text-gray-200">{{ $provider['masked_key'] }}</code>
                             <span class="text-xs text-gray-500 dark:text-gray-400">
@@ -74,7 +79,7 @@
                             @endif
                         </div>
 
-                        <div class="mt-4 flex flex-wrap gap-2">
+                        <div class="mt-4 flex flex-wrap gap-2 p-5">
                             <x-filament::button size="sm" color="gray" outlined
                                 wire:click="mountAction('configureProvider', { provider: '{{ $provider['provider'] }}' })">
                                 {{ __('email_provider.actions.replace') }}
@@ -107,23 +112,20 @@
                             </x-filament::button>
                         </div>
                     @endif
-                </div>
+                </details>
             @endforeach
 
-            <div class="rl-settings-panel" data-testid="email-provider-card-gmail">
-                <div class="flex items-start gap-3">
-                    <span
-                        class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-300">
-                        <x-filament::icon :icon="$gmail['plugin_icon']" class="size-6" />
+            <details class="group rl-settings-panel p-0" data-testid="email-provider-card-gmail">
+                <summary
+                    class="flex cursor-pointer list-none items-center gap-3 [&::-webkit-details-marker]:hidden p-4">
+                    <span class="flex size-11 shrink-0 items-center justify-center rounded-xl p-2 shadow-md">
+                        <img src="{{ $gmail['plugin_icon'] }}" alt="gmail" class="size-full object-contain" />
                     </span>
-                    <div class="min-w-0 flex-1">
-                        <p class="text-xs font-semibold tracking-wide text-gray-400 uppercase dark:text-gray-500">
-                            {{ $gmail['plugin_category'] }}
-                        </p>
-                        <div class="flex flex-wrap items-center gap-2">
-                            <h3 class="truncate font-semibold text-gray-950 dark:text-white">
+                    <span class="min-w-0 flex-1">
+                        <span class="flex flex-wrap items-center gap-2">
+                            <span class="truncate font-semibold text-gray-950 dark:text-white">
                                 {{ $gmail['plugin_label'] }}
-                            </h3>
+                            </span>
                             <x-filament::badge :color="$gmail['needs_reauthorization']
                                 ? 'warning'
                                 : ($gmail['is_connected']
@@ -131,15 +133,23 @@
                                     : 'gray')">
                                 {{ $gmail['status_label'] }}
                             </x-filament::badge>
-                        </div>
-                    </div>
-                </div>
+                        </span>
+                    </span>
+                    <x-filament::icon icon="heroicon-o-chevron-down"
+                        class="size-5 shrink-0 text-gray-400 transition-transform group-open:rotate-180 dark:text-gray-500" />
+                </summary>
 
-                <p class="mt-4 text-sm leading-6 text-gray-500 dark:text-gray-400">
-                    {{ $gmail['needs_reauthorization']
-                        ? __('email_provider.gmail.reauthorization_description', ['plugin' => $gmail['plugin_label']])
-                        : $gmail['plugin_description'] }}
-                </p>
+                <div class="mx-5">
+                    <p class="mt-4 text-xs font-semibold tracking-wide text-gray-400 uppercase dark:text-gray-500">
+                        {{ $gmail['plugin_category'] }}
+                    </p>
+
+                    <p class="mt-4 text-sm leading-6 text-gray-500 dark:text-gray-400">
+                        {{ $gmail['needs_reauthorization']
+                            ? __('email_provider.gmail.reauthorization_description', ['plugin' => $gmail['plugin_label']])
+                            : $gmail['plugin_description'] }}
+                    </p>
+                </div>
 
                 @if ($gmail['default_uses_another_connection'])
                     <div
@@ -150,7 +160,7 @@
                 @endif
 
                 @if ($gmail['is_connected'])
-                    <dl class="mt-4 grid gap-3 rounded-xl bg-gray-50 px-3 py-3 dark:bg-white/5">
+                    <dl class="mt-4 grid gap-3 rounded-xl bg-gray-50 px-3 py-3 mx-5 dark:bg-white/5">
                         @if ($gmail['account_name'])
                             <div>
                                 <dt class="text-xs font-medium text-gray-400 dark:text-gray-500">
@@ -184,7 +194,7 @@
                     </dl>
                 @endif
 
-                <div class="mt-4 flex flex-wrap gap-2">
+                <div class="mt-4 flex flex-wrap gap-2 p-5">
                     <x-filament::button tag="a" size="sm" :href="$gmail['has_credentials'] ? $gmail['reconnect_url'] : $gmail['connect_url']" :color="$gmail['is_connected'] ? 'gray' : 'primary'"
                         :outlined="$gmail['is_connected']">
                         {{ $gmail['has_credentials']
@@ -204,7 +214,7 @@
                         </x-filament::button>
                     @endif
                 </div>
-            </div>
+            </details>
         </div>
     </div>
 </x-filament-panels::page>

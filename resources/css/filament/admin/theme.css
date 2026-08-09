@@ -5,6 +5,7 @@
 @source '../../../../resources/views/vendor/pagination/**/*';
 
 @layer components {
+
     .dark .fi-tenant-avatar,
     .dark .fi-user-avatar {
         @apply invert;
@@ -170,7 +171,7 @@
         @apply space-y-4;
     }
 
-    .rl-application-detail-list > div {
+    .rl-application-detail-list>div {
         @apply border-b border-gray-100 pb-4 last:border-0 last:pb-0 dark:border-white/5;
     }
 
@@ -178,7 +179,7 @@
         @apply rounded-xl border border-gray-200 bg-gray-50/80 p-4 sm:p-5 dark:border-white/10 dark:bg-white/5;
     }
 
-    .rl-application-answer + .rl-application-answer {
+    .rl-application-answer+.rl-application-answer {
         @apply mt-4;
     }
 
@@ -198,7 +199,7 @@
         @apply flex flex-wrap gap-x-3 gap-y-1 text-[0.6875rem] text-gray-500 dark:text-gray-400;
     }
 
-    .rl-pipeline-card-summary__meta > span {
+    .rl-pipeline-card-summary__meta>span {
         @apply flex items-center gap-1;
     }
 
