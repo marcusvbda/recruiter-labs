@@ -24,7 +24,7 @@
 
         <section class="rl-settings-panel" aria-labelledby="google-calendar-heading"
             data-testid="google-calendar-card">
-            <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+            <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
                 <div class="flex min-w-0 items-start gap-4">
                     <span
                         class="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-300">
@@ -50,8 +50,8 @@
                     </div>
                 </div>
 
-                <div class="flex shrink-0 flex-wrap gap-2">
-                    <x-filament::button tag="a"
+                <div class="flex shrink-0 flex-wrap items-center gap-2">
+                    <x-filament::button tag="a" size="sm" class="self-center"
                         :href="$connection['has_credentials'] ? $connection['reconnect_url'] : $connection['connect_url']"
                         :color="$connection['is_connected'] ? 'gray' : 'primary'" :outlined="$connection['is_connected']">
                         {{ $connection['has_credentials'] ? __('calendar.actions.reconnect') : __('calendar.actions.connect') }}

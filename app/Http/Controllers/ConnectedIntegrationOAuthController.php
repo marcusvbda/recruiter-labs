@@ -15,6 +15,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
+use League\OAuth2\Client\Provider\Exception\IdentityProviderException;
 use Throwable;
 
 class ConnectedIntegrationOAuthController extends Controller
@@ -83,12 +84,26 @@ class ConnectedIntegrationOAuthController extends Controller
             $integration = $this->completeConnection->run($company, $user, $plugin, $token);
             $oauthPlugin->afterConnected($integration);
         } catch (Throwable $exception) {
-            Log::warning('Connected integration OAuth callback failed.', [
+            $context = [
                 'company_id' => $company->getKey(),
                 'user_id' => $user->getKey(),
                 'plugin_key' => $plugin,
                 'exception_class' => $exception::class,
-            ]);
+            ];
+
+            if ($exception instanceof IdentityProviderException) {
+                $response = $exception->getResponseBody();
+
+                if (is_array($response)) {
+                    $providerError = $response['error'] ?? null;
+
+                    if (is_string($providerError) && preg_match('/\A[a-z0-9_]{1,64}\z/', $providerError) === 1) {
+                        $context['provider_error'] = $providerError;
+                    }
+                }
+            }
+
+            Log::warning('Connected integration OAuth callback failed.', $context);
 
             return redirect()->to($state->returnUrl)->with([
                 'connected_integration_status' => 'error',
