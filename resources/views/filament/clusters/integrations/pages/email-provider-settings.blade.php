@@ -1,6 +1,7 @@
 <x-filament-panels::page>
     @php
         $providers = $this->emailProviderSettings;
+        $gmail = $this->gmailConnection;
     @endphp
 
     <div class="grid gap-6" data-testid="email-provider-settings">
@@ -108,6 +109,99 @@
                     @endif
                 </div>
             @endforeach
+
+            <div class="rl-settings-panel" data-testid="email-provider-card-gmail">
+                <div class="flex items-start gap-3">
+                    <span
+                        class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-300">
+                        <x-filament::icon :icon="$gmail['plugin_icon']" class="size-6" />
+                    </span>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-xs font-semibold tracking-wide text-gray-400 uppercase dark:text-gray-500">
+                            {{ $gmail['plugin_category'] }}
+                        </p>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <h3 class="truncate font-semibold text-gray-950 dark:text-white">
+                                {{ $gmail['plugin_label'] }}
+                            </h3>
+                            <x-filament::badge :color="$gmail['needs_reauthorization'] ? 'warning' : ($gmail['is_connected'] ? 'success' : 'gray')">
+                                {{ $gmail['status_label'] }}
+                            </x-filament::badge>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="mt-4 text-sm leading-6 text-gray-500 dark:text-gray-400">
+                    {{ $gmail['needs_reauthorization']
+                        ? __('email_provider.gmail.reauthorization_description', ['plugin' => $gmail['plugin_label']])
+                        : $gmail['plugin_description'] }}
+                </p>
+
+                @if ($gmail['default_uses_another_connection'])
+                    <div
+                        class="mt-4 flex items-start gap-2 rounded-xl bg-blue-50 px-3 py-2.5 text-sm text-blue-700 dark:bg-blue-500/10 dark:text-blue-200">
+                        <x-filament::icon icon="heroicon-o-information-circle" class="mt-0.5 size-4 shrink-0" />
+                        <span>{{ __('email_provider.gmail.default_uses_another_connection', ['plugin' => $gmail['plugin_label']]) }}</span>
+                    </div>
+                @endif
+
+                @if ($gmail['is_connected'])
+                    <dl class="mt-4 grid gap-3 rounded-xl bg-gray-50 px-3 py-3 dark:bg-white/5">
+                        @if ($gmail['account_name'])
+                            <div>
+                                <dt class="text-xs font-medium text-gray-400 dark:text-gray-500">
+                                    {{ __('email_provider.gmail.details.account_name') }}
+                                </dt>
+                                <dd class="mt-0.5 truncate text-sm font-medium text-gray-800 dark:text-gray-100">
+                                    {{ $gmail['account_name'] }}
+                                </dd>
+                            </div>
+                        @endif
+                        @if ($gmail['account_email'])
+                            <div>
+                                <dt class="text-xs font-medium text-gray-400 dark:text-gray-500">
+                                    {{ __('email_provider.gmail.details.account_email') }}
+                                </dt>
+                                <dd class="mt-0.5 truncate text-sm font-medium text-gray-800 dark:text-gray-100">
+                                    {{ $gmail['account_email'] }}
+                                </dd>
+                            </div>
+                        @endif
+                        @if ($gmail['connected_at'])
+                            <div>
+                                <dt class="text-xs font-medium text-gray-400 dark:text-gray-500">
+                                    {{ __('email_provider.gmail.details.connected_at') }}
+                                </dt>
+                                <dd class="mt-0.5 text-sm font-medium text-gray-800 dark:text-gray-100">
+                                    {{ $gmail['connected_at'] }}
+                                </dd>
+                            </div>
+                        @endif
+                    </dl>
+                @endif
+
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <x-filament::button tag="a" size="sm"
+                        :href="$gmail['has_credentials'] ? $gmail['reconnect_url'] : $gmail['connect_url']"
+                        :color="$gmail['is_connected'] ? 'gray' : 'primary'" :outlined="$gmail['is_connected']">
+                        {{ $gmail['has_credentials']
+                            ? __('email_provider.gmail.actions.reconnect')
+                            : __('email_provider.gmail.actions.connect', ['plugin' => $gmail['plugin_label']]) }}
+                    </x-filament::button>
+                    @if ($gmail['can_set_default'])
+                        <x-filament::button size="sm" color="primary" outlined
+                            wire:click="mountAction('setDefaultProvider', { provider: 'gmail' })">
+                            {{ __('email_provider.actions.set_default') }}
+                        </x-filament::button>
+                    @endif
+                    @if ($gmail['has_credentials'])
+                        <x-filament::button size="sm" color="danger" outlined
+                            wire:click="mountAction('disconnectGmail')">
+                            {{ __('email_provider.gmail.actions.disconnect') }}
+                        </x-filament::button>
+                    @endif
+                </div>
+            </div>
         </div>
     </div>
 </x-filament-panels::page>

@@ -2,6 +2,9 @@
 
 namespace App\Services;
 
+use App\Contracts\RecruitmentEmailSender;
+use App\Enums\EmailCredentialStatus;
+use App\Enums\EmailProvider;
 use App\Mail\Recruitment\RecruitmentMail;
 use App\Models\CompanyEmailProviderSetting;
 use GuzzleHttp\Client as GuzzleClient;
@@ -14,9 +17,22 @@ use Resend\ValueObjects\Transporter\BaseUri;
 use Resend\ValueObjects\Transporter\Headers;
 use Symfony\Component\Mime\Address;
 
-class ResendRecruitmentEmailSender
+class ResendRecruitmentEmailSender implements RecruitmentEmailSender
 {
     public function __construct(private readonly Markdown $markdown) {}
+
+    public function provider(): EmailProvider
+    {
+        return EmailProvider::Resend;
+    }
+
+    public function isReady(CompanyEmailProviderSetting $providerSetting): bool
+    {
+        return $providerSetting->provider === EmailProvider::Resend
+            && $providerSetting->credential_status === EmailCredentialStatus::Active
+            && filled($providerSetting->api_key)
+            && $providerSetting->validSenderAddress() !== null;
+    }
 
     public function send(
         CompanyEmailProviderSetting $providerSetting,

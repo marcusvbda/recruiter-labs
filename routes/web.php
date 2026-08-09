@@ -1,10 +1,12 @@
 <?php
 
 use App\Http\Controllers\ApplicationDocumentController;
+use App\Http\Controllers\ConnectedIntegrationOAuthController;
 use App\Http\Controllers\JobApplicationController;
 use App\Http\Controllers\JobController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\ReferralController;
+use App\Http\Middleware\SetLocale;
 use Filament\Http\Middleware\Authenticate;
 use Illuminate\Support\Facades\Route;
 
@@ -26,6 +28,21 @@ Route::get('/referal/{key}', [ReferralController::class, 'show'])->name('referra
 Route::get('/locale/{locale}', LocaleController::class)
     ->middleware(['web', 'auth'])
     ->name('locale.switch');
+
+Route::middleware([Authenticate::class, 'verified', SetLocale::class])->group(function (): void {
+    Route::get('/admin/{company:slug}/integrations/{plugin}/connect', [ConnectedIntegrationOAuthController::class, 'connect'])
+        ->where('plugin', '[a-z0-9-]+')
+        ->name('integrations.oauth.connect');
+    Route::get('/admin/{company:slug}/integrations/{plugin}/reconnect', [ConnectedIntegrationOAuthController::class, 'reconnect'])
+        ->where('plugin', '[a-z0-9-]+')
+        ->name('integrations.oauth.reconnect');
+    Route::delete('/admin/{company:slug}/integrations/{plugin}', [ConnectedIntegrationOAuthController::class, 'disconnect'])
+        ->where('plugin', '[a-z0-9-]+')
+        ->name('integrations.oauth.disconnect');
+    Route::get('/integrations/oauth/callback', [ConnectedIntegrationOAuthController::class, 'callback'])
+        ->middleware('throttle:20,1')
+        ->name('integrations.oauth.callback');
+});
 
 Route::prefix('admin/{company:slug}/applications/{application}/documents/{document}')
     ->middleware(Authenticate::class)

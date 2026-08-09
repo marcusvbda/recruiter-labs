@@ -2,12 +2,17 @@
 
 namespace App\Providers;
 
+use App\Contracts\OAuthIntegrationPlugin;
 use App\Jobs\AnalyzeApplicationFit;
 use App\Jobs\AnalyzeJobCriteria;
 use App\Jobs\SendRecruitmentEmail;
 use App\Notifications\ResetPasswordNotification;
 use App\Notifications\VerifyEmailNotification;
 use App\Services\CompanyTopbarSummary;
+use App\Services\ConnectedIntegrationRegistry;
+use App\Services\GmailRecruitmentEmailSender;
+use App\Services\RecruitmentEmailSenderRegistry;
+use App\Services\ResendRecruitmentEmailSender;
 use Carbon\CarbonImmutable;
 use Filament\Auth\Notifications\ResetPassword;
 use Filament\Auth\Notifications\VerifyEmail;
@@ -29,6 +34,21 @@ class AppServiceProvider extends ServiceProvider
 
         $this->app->bind(VerifyEmail::class, VerifyEmailNotification::class);
         $this->app->bind(ResetPassword::class, ResetPasswordNotification::class);
+
+        $this->app->singleton(ConnectedIntegrationRegistry::class, function (): ConnectedIntegrationRegistry {
+            /** @var list<class-string<OAuthIntegrationPlugin>> $pluginClasses */
+            $pluginClasses = config('connected-integrations.plugins', []);
+
+            return new ConnectedIntegrationRegistry(array_map(
+                fn (string $pluginClass): OAuthIntegrationPlugin => $this->app->make($pluginClass),
+                $pluginClasses,
+            ));
+        });
+
+        $this->app->singleton(RecruitmentEmailSenderRegistry::class, fn (): RecruitmentEmailSenderRegistry => new RecruitmentEmailSenderRegistry([
+            $this->app->make(ResendRecruitmentEmailSender::class),
+            $this->app->make(GmailRecruitmentEmailSender::class),
+        ]));
     }
 
     /**

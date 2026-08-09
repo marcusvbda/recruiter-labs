@@ -103,6 +103,12 @@ class Company extends Model
         return $this->hasMany(CompanyEmailNotificationSetting::class);
     }
 
+    /** @return HasMany<ConnectedIntegration, $this> */
+    public function connectedIntegrations(): HasMany
+    {
+        return $this->hasMany(ConnectedIntegration::class);
+    }
+
     /** @return HasOne<CompanyScoringSetting, $this> */
     public function scoringSetting(): HasOne
     {

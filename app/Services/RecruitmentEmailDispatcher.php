@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Data\RecruitmentEmailContext;
-use App\Enums\EmailCredentialStatus;
 use App\Enums\EmailNotificationType;
 use App\Jobs\SendRecruitmentEmail;
 use App\Models\Company;
@@ -13,6 +12,8 @@ use Illuminate\Support\Facades\Log;
 
 class RecruitmentEmailDispatcher
 {
+    public function __construct(private RecruitmentEmailSenderRegistry $senders) {}
+
     public function dispatch(
         Company $company,
         EmailNotificationType $type,
@@ -38,21 +39,9 @@ class RecruitmentEmailDispatcher
             ->first();
 
         if (! $providerSetting instanceof CompanyEmailProviderSetting
-            || blank($providerSetting->api_key)
-            || $providerSetting->validSenderAddress() === null) {
+            || ! $this->senders->sender($providerSetting->provider)->isReady($providerSetting)) {
             Log::notice('Recruitment email was not queued because the company has no fully configured default email provider.', [
                 'company_id' => $company->getKey(),
-                'notification_type' => $type->value,
-                'context_key' => $context->idempotencyKey(),
-            ]);
-
-            return false;
-        }
-
-        if ($providerSetting->credential_status !== EmailCredentialStatus::Active) {
-            Log::notice('Recruitment email was not queued because the default email provider is not active.', [
-                'company_id' => $company->getKey(),
-                'provider' => $providerSetting->provider->value,
                 'notification_type' => $type->value,
                 'context_key' => $context->idempotencyKey(),
             ]);

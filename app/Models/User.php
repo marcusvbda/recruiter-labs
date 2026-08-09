@@ -86,4 +86,10 @@ class User extends Authenticatable implements FilamentUser, HasLocalePreference,
     {
         return $this->hasMany(AiUsageRecord::class);
     }
+
+    /** @return HasMany<ConnectedIntegration, $this> */
+    public function connectedIntegrations(): HasMany
+    {
+        return $this->hasMany(ConnectedIntegration::class);
+    }
 }

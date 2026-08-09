@@ -3,11 +3,10 @@
 namespace App\Jobs;
 
 use App\Data\RecruitmentEmailContext;
-use App\Enums\EmailCredentialStatus;
 use App\Enums\EmailNotificationType;
 use App\Models\CompanyEmailProviderSetting;
 use App\Services\NativeRecruitmentMailFactory;
-use App\Services\ResendRecruitmentEmailSender;
+use App\Services\RecruitmentEmailSenderRegistry;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -42,7 +41,7 @@ class SendRecruitmentEmail implements ShouldBeUnique, ShouldQueue
      */
     public function handle(
         NativeRecruitmentMailFactory $mailFactory,
-        ResendRecruitmentEmailSender $sender,
+        RecruitmentEmailSenderRegistry $senders,
     ): void {
         if (Cache::has($this->deliveryKey())) {
             return;
@@ -56,10 +55,13 @@ class SendRecruitmentEmail implements ShouldBeUnique, ShouldQueue
 
         $fromAddress = $providerSetting?->validSenderAddress();
 
+        $sender = $providerSetting instanceof CompanyEmailProviderSetting
+            ? $senders->sender($providerSetting->provider)
+            : null;
+
         if (! $providerSetting instanceof CompanyEmailProviderSetting
-            || blank($providerSetting->api_key)
             || $fromAddress === null
-            || $providerSetting->credential_status !== EmailCredentialStatus::Active) {
+            || ! $sender?->isReady($providerSetting)) {
             Log::warning('Queued recruitment email was skipped because its tenant provider is no longer available.', [
                 'company_id' => $this->companyId,
                 'provider_setting_id' => $this->providerSettingId,
@@ -93,7 +95,7 @@ class SendRecruitmentEmail implements ShouldBeUnique, ShouldQueue
             'provider_setting_id' => $this->providerSettingId,
             'notification_type' => $this->type->value,
             'context_key' => $this->context->idempotencyKey(),
-            'exception' => $exception,
+            'exception_class' => $exception !== null ? $exception::class : null,
         ]);
     }
 

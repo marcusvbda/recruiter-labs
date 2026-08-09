@@ -14,6 +14,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasColumn('referrals', 'published')) {
+            return;
+        }
+
         Schema::table('referrals', function (Blueprint $table) {
             $table->boolean('published')->default(true)->after('key');
             $table->timestamp('expires_at')->nullable()->after('published');
@@ -25,9 +29,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('referrals', function (Blueprint $table) {
-            $table->dropIndex(['published', 'expires_at']);
-            $table->dropColumn(['published', 'expires_at', 'max_applications']);
-        });
+        // The original create migration now owns these columns and its index.
     }
 };

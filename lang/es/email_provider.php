@@ -15,6 +15,7 @@ return [
     ],
     'providers' => [
         'resend' => 'Resend',
+        'gmail' => 'Gmail',
     ],
     'status' => [
         'valid' => 'Validada',
@@ -48,5 +49,32 @@ return [
     'notifications' => [
         'key_removed' => 'Clave del proveedor de correo eliminada',
         'default_updated' => 'Proveedor de correo predeterminado actualizado',
+    ],
+    'gmail' => [
+        'reauthorization_description' => ':plugin necesita nuevamente tu autorización para enviar correos de reclutamiento.',
+        'default_uses_another_connection' => ':plugin es el proveedor predeterminado del espacio mediante la cuenta conectada de otro reclutador.',
+        'status' => [
+            'connected' => 'Conectado',
+            'reauthorization_required' => 'Es necesario reconectar',
+            'disconnected' => 'No conectado',
+        ],
+        'details' => [
+            'account_name' => 'Nombre de la cuenta',
+            'account_email' => 'Cuenta conectada',
+            'connected_at' => 'Fecha de conexión',
+        ],
+        'actions' => [
+            'connect' => 'Conectar :plugin',
+            'reconnect' => 'Reconectar',
+            'disconnect' => 'Desconectar',
+        ],
+        'disconnect' => [
+            'heading' => '¿Desconectar :plugin?',
+            'description' => 'RecruiterLabs eliminará tu autorización almacenada. Si esta conexión es la predeterminada del espacio, dejará de utilizarse para el correo de reclutamiento.',
+            'confirm' => 'Desconectar',
+        ],
+        'notifications' => [
+            'disconnected' => ':plugin desconectado',
+        ],
     ],
 ];

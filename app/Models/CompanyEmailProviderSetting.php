@@ -13,6 +13,7 @@ use Illuminate\Support\Str;
 
 /**
  * @property int $company_id
+ * @property int|null $connected_integration_id
  * @property EmailProvider $provider
  * @property string|null $api_key
  * @property string|null $from_address
@@ -20,7 +21,7 @@ use Illuminate\Support\Str;
  * @property Carbon|null $validated_at
  * @property bool $is_default
  */
-#[Fillable(['company_id', 'provider', 'api_key', 'from_address', 'credential_status', 'validated_at', 'is_default'])]
+#[Fillable(['company_id', 'connected_integration_id', 'provider', 'api_key', 'from_address', 'credential_status', 'validated_at', 'is_default'])]
 #[Hidden(['api_key'])]
 class CompanyEmailProviderSetting extends Model
 {
@@ -44,6 +45,12 @@ class CompanyEmailProviderSetting extends Model
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
+    }
+
+    /** @return BelongsTo<ConnectedIntegration, $this> */
+    public function connectedIntegration(): BelongsTo
+    {
+        return $this->belongsTo(ConnectedIntegration::class);
     }
 
     public function maskedKey(): ?string

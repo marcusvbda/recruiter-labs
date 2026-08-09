@@ -40,12 +40,30 @@ class UpdateCompanyEmailProviderSettings
         }
 
         return DB::transaction(function () use ($company, $changedBy, $provider, $apiKey, $normalizedFromAddress): CompanyEmailProviderSetting {
-            $setting = CompanyEmailProviderSetting::query()->firstOrNew([
-                'company_id' => $company->getKey(),
-                'provider' => $provider->value,
-            ]);
+            Company::query()
+                ->whereKey($company->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $setting = CompanyEmailProviderSetting::query()
+                ->where('company_id', $company->getKey())
+                ->where('provider', $provider->value)
+                ->lockForUpdate()
+                ->first();
+
+            if ($setting === null) {
+                $setting = new CompanyEmailProviderSetting([
+                    'company_id' => $company->getKey(),
+                    'provider' => $provider,
+                ]);
+            }
+
             $isNewRow = ! $setting->exists;
             $hadKey = filled($setting->api_key);
+
+            if ($apiKey === null && ! $hadKey) {
+                throw new InvalidArgumentException('An email provider API key is required.');
+            }
 
             if ($apiKey !== null) {
                 $setting->api_key = $apiKey;

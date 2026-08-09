@@ -15,6 +15,7 @@ return [
     ],
     'providers' => [
         'resend' => 'Resend',
+        'gmail' => 'Gmail',
     ],
     'status' => [
         'valid' => 'Validated',
@@ -48,5 +49,32 @@ return [
     'notifications' => [
         'key_removed' => 'Email provider key removed',
         'default_updated' => 'Default email provider updated',
+    ],
+    'gmail' => [
+        'reauthorization_description' => ':plugin needs your authorization again before it can send recruitment emails.',
+        'default_uses_another_connection' => ':plugin is the workspace default through another recruiter\'s connected account.',
+        'status' => [
+            'connected' => 'Connected',
+            'reauthorization_required' => 'Reconnect required',
+            'disconnected' => 'Not connected',
+        ],
+        'details' => [
+            'account_name' => 'Account name',
+            'account_email' => 'Connected account',
+            'connected_at' => 'Connected at',
+        ],
+        'actions' => [
+            'connect' => 'Connect :plugin',
+            'reconnect' => 'Reconnect',
+            'disconnect' => 'Disconnect',
+        ],
+        'disconnect' => [
+            'heading' => 'Disconnect :plugin?',
+            'description' => 'RecruiterLabs will remove your stored authorization. If this connection is the workspace default, it will stop being used for recruitment email.',
+            'confirm' => 'Disconnect',
+        ],
+        'notifications' => [
+            'disconnected' => ':plugin disconnected',
+        ],
     ],
 ];
