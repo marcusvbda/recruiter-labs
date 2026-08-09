@@ -23,7 +23,7 @@
             </div>
         </section>
 
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" data-testid="email-provider-cards">
+        <div class="grid gap-4 sm:grid-cols-2" data-testid="email-provider-cards">
             @foreach ($providers as $provider)
                 <div class="rl-settings-panel" data-testid="email-provider-card-{{ $provider['provider'] }}">
                     <div class="flex items-center gap-3">
@@ -124,7 +124,11 @@
                             <h3 class="truncate font-semibold text-gray-950 dark:text-white">
                                 {{ $gmail['plugin_label'] }}
                             </h3>
-                            <x-filament::badge :color="$gmail['needs_reauthorization'] ? 'warning' : ($gmail['is_connected'] ? 'success' : 'gray')">
+                            <x-filament::badge :color="$gmail['needs_reauthorization']
+                                ? 'warning'
+                                : ($gmail['is_connected']
+                                    ? 'success'
+                                    : 'gray')">
                                 {{ $gmail['status_label'] }}
                             </x-filament::badge>
                         </div>
@@ -181,9 +185,8 @@
                 @endif
 
                 <div class="mt-4 flex flex-wrap gap-2">
-                    <x-filament::button tag="a" size="sm"
-                        :href="$gmail['has_credentials'] ? $gmail['reconnect_url'] : $gmail['connect_url']"
-                        :color="$gmail['is_connected'] ? 'gray' : 'primary'" :outlined="$gmail['is_connected']">
+                    <x-filament::button tag="a" size="sm" :href="$gmail['has_credentials'] ? $gmail['reconnect_url'] : $gmail['connect_url']" :color="$gmail['is_connected'] ? 'gray' : 'primary'"
+                        :outlined="$gmail['is_connected']">
                         {{ $gmail['has_credentials']
                             ? __('email_provider.gmail.actions.reconnect')
                             : __('email_provider.gmail.actions.connect', ['plugin' => $gmail['plugin_label']]) }}
