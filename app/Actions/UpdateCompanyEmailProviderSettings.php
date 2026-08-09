@@ -21,6 +21,7 @@ class UpdateCompanyEmailProviderSettings
         User $changedBy,
         EmailProvider $provider,
         ?string $apiKey = null,
+        ?string $fromAddress = null,
     ): CompanyEmailProviderSetting {
         Gate::forUser($changedBy)->authorize('update', $company);
 
@@ -28,7 +29,17 @@ class UpdateCompanyEmailProviderSettings
             throw new InvalidArgumentException('The email provider API key is invalid.');
         }
 
-        return DB::transaction(function () use ($company, $changedBy, $provider, $apiKey): CompanyEmailProviderSetting {
+        $normalizedFromAddress = $fromAddress === null
+            ? null
+            : Str::lower(Str::trim($fromAddress));
+
+        if ($normalizedFromAddress !== null
+            && (Str::length($normalizedFromAddress) > 255
+                || filter_var($normalizedFromAddress, FILTER_VALIDATE_EMAIL) === false)) {
+            throw new InvalidArgumentException('The sender email address is invalid.');
+        }
+
+        return DB::transaction(function () use ($company, $changedBy, $provider, $apiKey, $normalizedFromAddress): CompanyEmailProviderSetting {
             $setting = CompanyEmailProviderSetting::query()->firstOrNew([
                 'company_id' => $company->getKey(),
                 'provider' => $provider->value,
@@ -40,6 +51,10 @@ class UpdateCompanyEmailProviderSettings
                 $setting->api_key = $apiKey;
                 $setting->credential_status = EmailCredentialStatus::PendingValidation;
                 $setting->validated_at = null;
+            }
+
+            if ($normalizedFromAddress !== null) {
+                $setting->from_address = $normalizedFromAddress;
             }
 
             if ($isNewRow) {

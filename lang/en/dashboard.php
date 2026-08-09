@@ -19,8 +19,6 @@ return [
         'quick_access_description' => 'Continue from the area you need right now.',
         'recruitment_title' => 'Recruitment',
         'recruitment_description' => 'Manage jobs, candidates, applications, pipelines, referrals, and statuses.',
-        'automation_title' => 'Automation',
-        'automation_description' => 'Manage event hooks and reusable email templates for your workflows.',
         'fallback_user' => 'User',
         'fallback_email' => 'No email available',
         'no_company' => 'No company selected',

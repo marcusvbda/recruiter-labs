@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\ApplicationAnalysisStatus;
 use App\Enums\ApplicationCoverLetterType;
 use App\Enums\ApplicationSource;
+use App\Events\ApplicationHired;
 use Carbon\CarbonImmutable;
 use Database\Factories\ApplicationFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -40,6 +41,35 @@ class Application extends Model
         'analysis_status' => ApplicationAnalysisStatus::Pending->value,
         'cover_letter_type' => ApplicationCoverLetterType::None->value,
     ];
+
+    protected static function booted(): void
+    {
+        static::updated(function (Application $application): void {
+            if (! $application->wasChanged('status_id')) {
+                return;
+            }
+
+            $newStatus = Status::query()
+                ->where('company_id', $application->company_id)
+                ->whereKey($application->status_id)
+                ->first();
+
+            if ($newStatus?->is_hired !== true) {
+                return;
+            }
+
+            $originalStatus = Status::query()
+                ->where('company_id', $application->company_id)
+                ->whereKey($application->getRawOriginal('status_id'))
+                ->first();
+
+            if ($originalStatus?->is_hired === true) {
+                return;
+            }
+
+            ApplicationHired::dispatch((int) $application->getKey());
+        });
+    }
 
     protected function casts(): array
     {
@@ -113,6 +143,15 @@ class Application extends Model
         return $this->hasMany(AiUsageRecord::class);
     }
 
+    /**
+     * @return array{
+     *     value: int,
+     *     analysis_weight: int,
+     *     referral_weight: int,
+     *     is_referral: bool,
+     *     ai_score: int,
+     * }|null
+     */
     public function getOverallScoreData(): ?array
     {
         $company = $this->company;

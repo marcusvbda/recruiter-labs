@@ -6,11 +6,12 @@ return [
     'subtitle' => 'Configure os provedores de e-mail usados para o envio de recrutamento.',
     'eyebrow' => 'Configuração do provedor de e-mail',
     'heading' => 'Configure seus provedores de e-mail de recrutamento',
-    'description' => 'Isso configura os provedores usados para enviar comunicações com candidatos e automações. Não afeta os e-mails da própria conta do sistema.',
+    'description' => 'Isso configura os provedores usados para enviar e-mails de recrutamento aos candidatos. Não afeta os e-mails da própria conta do sistema.',
     'default_badge' => 'Padrão',
     'fields' => [
         'provider' => 'Provedor',
         'api_key' => 'Chave de API',
+        'from_address' => 'Endereço de e-mail do remetente',
     ],
     'providers' => [
         'resend' => 'Resend',
@@ -25,7 +26,7 @@ return [
     ],
     'configure' => [
         'heading' => 'Configurar :provider',
-        'description' => 'A chave é criptografada e nunca será exibida novamente por completo.',
+        'description' => 'A chave é criptografada e nunca será exibida novamente por completo. O endereço do remetente deve ser verificado pelo provedor.',
         'save' => 'Salvar e validar',
     ],
     'remove' => [
@@ -35,7 +36,7 @@ return [
     ],
     'empty' => [
         'heading' => 'Ainda não configurado',
-        'description' => 'Adicione uma chave de API para habilitar comunicações com candidatos e automações neste ambiente.',
+        'description' => 'Adicione uma chave de API e um endereço de remetente verificado para habilitar os e-mails de recrutamento neste ambiente.',
     ],
     'actions' => [
         'configure' => 'Configurar',

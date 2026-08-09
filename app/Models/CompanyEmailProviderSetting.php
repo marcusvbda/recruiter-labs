@@ -15,11 +15,12 @@ use Illuminate\Support\Str;
  * @property int $company_id
  * @property EmailProvider $provider
  * @property string|null $api_key
+ * @property string|null $from_address
  * @property EmailCredentialStatus $credential_status
  * @property Carbon|null $validated_at
  * @property bool $is_default
  */
-#[Fillable(['company_id', 'provider', 'api_key', 'credential_status', 'validated_at', 'is_default'])]
+#[Fillable(['company_id', 'provider', 'api_key', 'from_address', 'credential_status', 'validated_at', 'is_default'])]
 #[Hidden(['api_key'])]
 class CompanyEmailProviderSetting extends Model
 {
@@ -54,5 +55,15 @@ class CompanyEmailProviderSetting extends Model
         return Str::substr($this->api_key, 0, 3)
             .str_repeat('•', 12)
             .Str::substr($this->api_key, -4);
+    }
+
+    public function validSenderAddress(): ?string
+    {
+        if (! is_string($this->from_address)
+            || filter_var($this->from_address, FILTER_VALIDATE_EMAIL) === false) {
+            return null;
+        }
+
+        return $this->from_address;
     }
 }

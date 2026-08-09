@@ -1,5 +1,5 @@
 <div>
-    <section class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-gray-900">
+    <section id="utm-ranking" class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-gray-900">
         <div class="flex items-center gap-3 border-b border-gray-200 px-5 py-4 dark:border-white/10">
             <span class="flex size-10 items-center justify-center rounded-xl bg-primary-50 text-primary-600 dark:bg-primary-500/10 dark:text-primary-400">
                 <x-filament::icon icon="heroicon-o-megaphone" class="size-5" />
@@ -45,4 +45,12 @@
             @endif
         @endif
     </section>
+
+    <script>
+        if (window.location.hash === '#utm-ranking') {
+            window.addEventListener('load', () => {
+                document.getElementById('utm-ranking')?.scrollIntoView({ block: 'start' });
+            });
+        }
+    </script>
 </div>

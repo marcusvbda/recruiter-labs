@@ -2,6 +2,7 @@
 
 @source '../../../../app/Filament/**/*';
 @source '../../../../resources/views/filament/**/*';
+@source '../../../../resources/views/vendor/pagination/**/*';
 
 @layer components {
     .dark .fi-tenant-avatar,

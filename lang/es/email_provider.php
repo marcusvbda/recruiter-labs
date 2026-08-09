@@ -6,11 +6,12 @@ return [
     'subtitle' => 'Configura los proveedores de correo utilizados para el envío de reclutamiento.',
     'eyebrow' => 'Configuración del proveedor de correo',
     'heading' => 'Configura tus proveedores de correo de reclutamiento',
-    'description' => 'Esto configura los proveedores utilizados para enviar comunicaciones con candidatos y automatizaciones. No afecta los correos de la propia cuenta del sistema.',
+    'description' => 'Esto configura los proveedores utilizados para enviar correos de reclutamiento a candidatos. No afecta los correos de la propia cuenta del sistema.',
     'default_badge' => 'Predeterminado',
     'fields' => [
         'provider' => 'Proveedor',
         'api_key' => 'Clave API',
+        'from_address' => 'Dirección de correo del remitente',
     ],
     'providers' => [
         'resend' => 'Resend',
@@ -25,7 +26,7 @@ return [
     ],
     'configure' => [
         'heading' => 'Configurar :provider',
-        'description' => 'La clave se cifra y nunca volverá a mostrarse completa.',
+        'description' => 'La clave se cifra y nunca volverá a mostrarse completa. La dirección del remitente debe estar verificada por el proveedor.',
         'save' => 'Guardar y validar',
     ],
     'remove' => [
@@ -35,7 +36,7 @@ return [
     ],
     'empty' => [
         'heading' => 'Aún no configurado',
-        'description' => 'Agrega una clave API para habilitar las comunicaciones con candidatos y las automatizaciones en este espacio.',
+        'description' => 'Agrega una clave API y una dirección de remitente verificada para habilitar los correos de reclutamiento en este espacio.',
     ],
     'actions' => [
         'configure' => 'Configurar',

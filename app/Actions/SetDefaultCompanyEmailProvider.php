@@ -24,8 +24,8 @@ class SetDefaultCompanyEmailProvider
                 ->where('provider', $provider->value)
                 ->first();
 
-            if ($setting === null || blank($setting->api_key)) {
-                throw new InvalidArgumentException('This provider must be configured with a valid API key before it can be set as default.');
+            if ($setting === null || blank($setting->api_key) || $setting->validSenderAddress() === null) {
+                throw new InvalidArgumentException('This provider must have a valid API key and sender email address before it can be set as default.');
             }
 
             CompanyEmailProviderSetting::query()

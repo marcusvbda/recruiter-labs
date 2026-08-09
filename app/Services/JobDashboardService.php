@@ -67,8 +67,9 @@ class JobDashboardService
             ->orderByDesc('clicks')
             ->orderBy('name')
             ->orderBy('value')
-            ->paginate(perPage: 15, pageName: 'utmPage')
+            ->paginate(perPage: 10, pageName: 'utmPage')
             ->withQueryString()
+            ->fragment('utm-ranking')
             ->through(fn (JobClickUtmParameter $parameter): array => [
                 'name' => $parameter->name,
                 'value' => $parameter->value,

@@ -19,8 +19,6 @@ return [
         'quick_access_description' => 'Continue pela área que você precisa agora.',
         'recruitment_title' => 'Recrutamento',
         'recruitment_description' => 'Gerencie vagas, candidatos, candidaturas, pipelines, indicações e status.',
-        'automation_title' => 'Automação',
-        'automation_description' => 'Gerencie event hooks e templates de e-mail reutilizáveis nos seus fluxos.',
         'fallback_user' => 'Usuário',
         'fallback_email' => 'E-mail indisponível',
         'no_company' => 'Nenhuma empresa selecionada',

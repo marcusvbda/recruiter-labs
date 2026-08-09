@@ -4,14 +4,13 @@ namespace App\Providers;
 
 use App\Jobs\AnalyzeApplicationFit;
 use App\Jobs\AnalyzeJobCriteria;
-use App\Models\Job;
+use App\Jobs\SendRecruitmentEmail;
 use App\Notifications\ResetPasswordNotification;
 use App\Notifications\VerifyEmailNotification;
 use App\Services\CompanyTopbarSummary;
 use Carbon\CarbonImmutable;
 use Filament\Auth\Notifications\ResetPassword;
 use Filament\Auth\Notifications\VerifyEmail;
-use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Foundation\DevCommands;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -41,12 +40,15 @@ class AppServiceProvider extends ServiceProvider
 
         if ($this->app->runningInConsole()) {
             // The default `composer run dev` queue listener only watches the
-            // connection's default queue, so AI job queues (criteria
-            // extraction and application analysis) need their own listener
-            // to actually run locally.
+            // connection's default queue, so dedicated queues need their own
+            // listeners to actually run locally.
             DevCommands::artisan(
                 'queue:listen --queue='.AnalyzeJobCriteria::QUEUE.','.AnalyzeApplicationFit::QUEUE.' --tries=1 --timeout=0',
                 'ai-queue',
+            );
+            DevCommands::artisan(
+                'queue:listen --queue='.SendRecruitmentEmail::QUEUE.' --timeout=60',
+                'recruitment-email-queue',
             );
         }
     }
@@ -77,10 +79,5 @@ class AppServiceProvider extends ServiceProvider
             : null,
         );
 
-        // Stores a short stable alias in polymorphic `*_type` columns
-        // (e.g. `automatable_type`) instead of the FQCN.
-        Relation::enforceMorphMap([
-            'job' => Job::class,
-        ]);
     }
 }

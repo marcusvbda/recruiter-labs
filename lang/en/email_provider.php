@@ -6,11 +6,12 @@ return [
     'subtitle' => 'Configure the email providers used for recruitment sending.',
     'eyebrow' => 'Email provider configuration',
     'heading' => 'Configure your recruitment email providers',
-    'description' => 'This configures the providers used to send candidate communications and automations. It does not affect the system\'s own account emails.',
+    'description' => 'This configures the providers used to send recruitment emails to candidates. It does not affect the system\'s own account emails.',
     'default_badge' => 'Default',
     'fields' => [
         'provider' => 'Provider',
         'api_key' => 'API key',
+        'from_address' => 'Sender email address',
     ],
     'providers' => [
         'resend' => 'Resend',
@@ -25,7 +26,7 @@ return [
     ],
     'configure' => [
         'heading' => 'Configure :provider',
-        'description' => 'The key is encrypted at rest and is never shown again in full.',
+        'description' => 'The key is encrypted at rest and is never shown again in full. The sender address must be verified by the provider.',
         'save' => 'Save and validate',
     ],
     'remove' => [
@@ -35,7 +36,7 @@ return [
     ],
     'empty' => [
         'heading' => 'Not configured yet',
-        'description' => 'Add an API key to enable candidate communications and automations for this workspace.',
+        'description' => 'Add an API key and verified sender address to enable recruitment emails for this workspace.',
     ],
     'actions' => [
         'configure' => 'Configure',

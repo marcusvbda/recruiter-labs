@@ -64,14 +64,24 @@ class EmailProviderSettings extends Page
             ->modalDescription(__('email_provider.configure.description'))
             ->modalIcon('heroicon-o-key')
             ->modalSubmitActionLabel(__('email_provider.configure.save'))
+            ->fillForm(fn (array $arguments): array => [
+                'from_address' => $this->getProviderSetting($arguments)?->from_address,
+            ])
             ->schema([
                 TextInput::make('api_key')
                     ->label(__('email_provider.fields.api_key'))
+                    ->helperText('Leave blank to keep the existing API key.')
                     ->password()
                     ->revealable()
-                    ->required()
+                    ->required(fn (array $arguments): bool => ! $this->providerHasKey($arguments))
                     ->maxLength(512)
                     ->autocomplete('new-password'),
+                TextInput::make('from_address')
+                    ->label('Sender email address')
+                    ->helperText('Recruitment emails will be sent from this address.')
+                    ->email()
+                    ->required()
+                    ->maxLength(255),
             ])
             ->action(function (
                 array $data,
@@ -83,7 +93,13 @@ class EmailProviderSettings extends Page
                 $company = $this->getCompany();
                 $user = $this->getRecord();
 
-                $updateSettings->run($company, $user, $provider, $data['api_key']);
+                $updateSettings->run(
+                    $company,
+                    $user,
+                    $provider,
+                    filled($data['api_key'] ?? null) ? $data['api_key'] : null,
+                    $data['from_address'],
+                );
                 $result = $testCredentials->run($company, $user, $provider);
 
                 $this->refreshEmailProviderState();
@@ -204,22 +220,28 @@ class EmailProviderSettings extends Page
         $company = $this->getCompany();
         $company->refresh()->load('emailProviderSettings');
 
-        $settingsByProvider = $company->emailProviderSettings->keyBy(
-            fn (CompanyEmailProviderSetting $setting): string => $setting->provider->value,
-        );
+        $settingsByProvider = $company->emailProviderSettings
+            ->mapWithKeys(fn (CompanyEmailProviderSetting $setting): array => [
+                $setting->provider->value => $setting,
+            ])
+            ->all();
 
         $this->emailProviderSettings = collect(EmailProvider::cases())
             ->map(function (EmailProvider $provider) use ($settingsByProvider): array {
-                $setting = $settingsByProvider->get($provider->value);
+                $setting = $settingsByProvider[$provider->value] ?? null;
                 $hasKey = $setting !== null && filled($setting->api_key);
+                $hasSenderAddress = $setting !== null && filled($setting->from_address);
 
                 return [
                     'provider' => $provider->value,
                     'provider_label' => __('email_provider.providers.'.$provider->value),
                     'icon' => $this->providerIcon($provider),
-                    'is_default' => $setting?->is_default ?? false,
+                    'is_default' => $setting !== null && $setting->is_default,
                     'has_key' => $hasKey,
+                    'has_sender_address' => $hasSenderAddress,
+                    'is_configured' => $hasKey && $hasSenderAddress,
                     'masked_key' => $setting?->maskedKey(),
+                    'from_address' => $setting?->from_address,
                     'credential_status_label' => $setting !== null ? $this->credentialStatusLabel($setting) : null,
                     'last_validated_label' => $setting?->validated_at !== null
                         ? __('email_provider.status.last_validated', [
@@ -229,6 +251,21 @@ class EmailProviderSettings extends Page
                 ];
             })
             ->all();
+    }
+
+    /** @param array<string, mixed> $arguments */
+    private function getProviderSetting(array $arguments): ?CompanyEmailProviderSetting
+    {
+        return CompanyEmailProviderSetting::query()
+            ->whereBelongsTo($this->getCompany())
+            ->where('provider', EmailProvider::from($arguments['provider']))
+            ->first();
+    }
+
+    /** @param array<string, mixed> $arguments */
+    private function providerHasKey(array $arguments): bool
+    {
+        return filled($this->getProviderSetting($arguments)?->api_key);
     }
 
     private function providerIcon(EmailProvider $provider): string

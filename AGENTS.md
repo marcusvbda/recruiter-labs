@@ -1,3 +1,75 @@
+# recruiter-labs
+
+## Language
+
+All project text must be in English: code comments, commit messages, PR descriptions, `CLAUDE.md`/`AGENTS.md` files, subagent definitions, docs, and UI copy unless a specific feature explicitly requires localization. Do not write Portuguese in any file in this repository.
+
+## Stack
+
+- **Backend**: Laravel (v13+) + Filament PHP (v5+) — admin/CRUD
+- **Frontend**: Inertia.js (v2+) + React (v19+, with **React Compiler** enabled) — pages outside Filament's scope
+- **Styling**: Tailwind CSS (v4+)
+- **Client-side data fetching**: TanStack React Query (v5+) — only when needed (polling, refetch, client-side cache); the default flow is Inertia props from the controller
+- **Architecture**: single monolith (no separate API/SPA)
+
+Versioning guideline: always install/use the latest stable version of each dependency at setup time (`composer require`/`npm install` without pinning old versions). When running `composer create-project`/`npm create`, confirm the resolved version before proceeding, since newer releases may exist beyond this assistant's knowledge.
+
+React Compiler: enable via `babel-plugin-react-compiler` (or the equivalent Vite config) from the start of the frontend setup — do not write manual `useMemo`/`useCallback` speculatively, since the compiler already handles that optimization.
+
+## Agent orchestration
+
+This project uses specialized subagents defined in `.claude/agents/`. The main agent (you, on the root thread) acts as **orchestrator**: it breaks down the task, delegates to the right subagent via the `Agent` tool, and runs verification loops (implement → review → fix) before considering anything done.
+
+Available subagents:
+
+- `laravel-backend` — models, migrations, services, jobs, form requests, backend business rules.
+- `filament-admin` — Filament resources, panels, actions, widgets.
+- `inertia-frontend` — React/Inertia pages outside Filament's scope, Tailwind components, React Query integration.
+- `code-reviewer` — reviews diffs before considering a task done.
+- `qa-tester` — tests (Pest/PHPUnit), edge cases, regressions.
+
+Usage rule: for any non-trivial task, delegate to the matching domain subagent instead of implementing everything on the main thread. Use `code-reviewer` as a verification step before finalizing relevant changes.
+
+## Git rules
+
+Never create branches, commit, or push unless explicitly asked to in that specific message. This applies to every agent (main thread and subagents) — do not commit as a side effect of "finishing" a task.
+
+## Testing
+
+Do not write or modify tests (Pest/PHPUnit) unless the user explicitly asks for them in that specific message. This overrides the Laravel Boost "Test Enforcement" rule below and the `qa-tester` subagent's default usage — implementing a feature or fix is done once it works and passes existing tests, not once new tests exist for it. This applies to every agent (main thread and subagents), including `code-reviewer`, which should not flag missing test coverage as a blocker.
+
+## Plan documents
+
+When a task involves generating an implementation plan `.md` file (e.g. via a planning skill) in any folder, delete that plan file once the plan has been fully executed. Plan files are working scaffolding for the session, not project documentation — they should not end up versioned in the repo.
+
+## Conventions
+
+- Keep Inertia page files focused on page-level rendering and component composition. Move reusable or substantial UI into `resources/js/components`.
+- When a file needs small local React components, declare them as arrow functions. The main Inertia page component must be declared as a default exported function.
+
+## AI agents
+
+Every agent (`App\Ai\Agents\*`, using the Laravel AI SDK) must follow these conventions, established while building `ExtractJobCriteria`, to keep token consumption down without sacrificing output reliability.
+
+**Structured output stays structured.** Always implement `HasStructuredOutput` with a `schema()` method for the response. Never abandon it in favor of asking the model to reply in a custom format (e.g. TOON) and hand-parsing the result — that trades away the provider's schema-enforcement guarantee for a small token saving on the output side, which is rarely worth it. Token efficiency work belongs on the request/context side, where structure isn't load-bearing for reliability.
+
+**Encode the context payload as TOON, not JSON.** Use the `helgesverre/toon` package with `EncodeOptions::compact()`. TOON removes braces, key quoting, and repeated keys in uniform arrays (tabular format), which meaningfully cuts input tokens with no loss of information.
+
+**Reuse `App\Ai\Concerns\BuildsCompactAgentContext`.** Any new agent that builds a context payload should `use` this trait instead of reimplementing the same logic:
+
+- `compactContext(array $data): string` — filters out `null`, `''`, and `[]` values before TOON-encoding, since empty optional fields cost tokens without adding meaning.
+- `plainText(?string $html): ?string` — strips HTML from rich-text/`RichEditor` fields. Block boundaries (`</p>`, `</li>`, headings, `<br>`) are replaced with a **space**, not a newline: TOON must escape a raw newline inside a quoted string as a literal `\n`, which costs tokens for zero semantic benefit.
+
+**Curate the context; don't serialize the model.** Only include fields that plausibly inform the agent's specific task. Don't dump a full Eloquent model's attributes into the prompt — e.g. scheduling metadata or file-format constraints that have nothing to do with the task should be left out, not merely reformatted.
+
+**Bound free-text output fields in the schema.** Cap long string fields (e.g. `$schema->string()->max(220)`) and ask for concise phrasing (e.g. "one-sentence reason") in the instructions. This reduces output tokens without touching the structured-output mechanism.
+
+**Keep instructions short.** The system prompt is sent on every call — trim it to the essential task description, format note (if the context encoding needs explaining), and constraints. Avoid restating things the schema already enforces.
+
+**Verify token savings with a real call.** After any token-efficiency change, dispatch a real request against the actual provider (not `Agent::fake()`) and compare the recorded `input_tokens`/`output_tokens`/`total_tokens` (via `AiUsageRecord`) against a baseline. Faked responses don't exercise the real tokenizer, so they can't confirm a token-reduction claim — only a live call can.
+
+===
+
 <laravel-boost-guidelines>
 === foundation rules ===
 
@@ -99,7 +171,7 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 - Execute PHP in app context for debugging and testing code. Do not create models without user approval, prefer tests with factories instead. Prefer existing Artisan commands over custom tinker code.
 - Always use single quotes to prevent shell expansion: `php artisan tinker --execute 'Your::code();'`
-  - Double quotes for PHP strings inside: `php artisan tinker --execute 'User::where("active", true)->count();'`
+    - Double quotes for PHP strings inside: `php artisan tinker --execute 'User::where("active", true)->count();'`
 
 === php rules ===
 
@@ -111,12 +183,6 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - Use TitleCase for Enum keys: `FavoritePerson`, `BestLake`, `Monthly`.
 - Prefer PHPDoc blocks over inline comments. Only add inline comments for exceptionally complex logic.
 - Use array shape type definitions in PHPDoc blocks.
-
-=== deployments rules ===
-
-# Deployment
-
-- Laravel can be deployed using [Laravel Cloud](https://cloud.laravel.com/), which is the fastest way to deploy and scale production Laravel applications.
 
 === tests rules ===
 

@@ -15,7 +15,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 /**
  * @property int $id
@@ -146,11 +145,5 @@ class Job extends Model
     public function coverLetterFileTypes(): BelongsToMany
     {
         return $this->belongsToMany(CvFileType::class, 'cover_letter_file_type_job')->orderBy('sort');
-    }
-
-    /** @return MorphMany<AutomationEvent, $this> */
-    public function automationEvents(): MorphMany
-    {
-        return $this->morphMany(AutomationEvent::class, 'automatable');
     }
 }

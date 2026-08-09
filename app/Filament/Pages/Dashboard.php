@@ -2,7 +2,6 @@
 
 namespace App\Filament\Pages;
 
-use App\Filament\Clusters\Automation\AutomationCluster;
 use App\Filament\Clusters\Recruitment\RecruitmentCluster;
 use App\Models\Company;
 use App\Models\User;
@@ -33,8 +32,7 @@ class Dashboard extends BaseDashboard
      *     userEmail: string,
      *     userInitials: string,
      *     companyName: string,
-     *     recruitmentUrl: string,
-     *     automationUrl: string
+     *     recruitmentUrl: string
      * }
      */
     protected function getViewData(): array
@@ -63,7 +61,6 @@ class Dashboard extends BaseDashboard
                 ? $selectedCompany->name
                 : __('dashboard.welcome.no_company'),
             'recruitmentUrl' => RecruitmentCluster::getUrl(),
-            'automationUrl' => AutomationCluster::getUrl(),
         ];
     }
 

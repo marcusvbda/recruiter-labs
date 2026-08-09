@@ -9,6 +9,7 @@ use App\Enums\ApplicationQuestionType;
 use App\Enums\ApplicationSource;
 use App\Enums\CoverLetterType;
 use App\Enums\PhoneCountry;
+use App\Events\ApplicationCreated;
 use App\Models\Application;
 use App\Models\ApplicationDocument;
 use App\Models\Candidate;
@@ -83,6 +84,7 @@ class SubmitJobApplication
                 }
 
                 $this->scheduleApplicationFitAnalysis->handle($application);
+                ApplicationCreated::dispatch((int) $application->getKey());
 
                 return $application->load([
                     'candidate',

@@ -49,18 +49,6 @@ class Company extends Model
         return $this->hasMany(Status::class);
     }
 
-    /** @return HasMany<EmailTemplate, $this> */
-    public function emailTemplates(): HasMany
-    {
-        return $this->hasMany(EmailTemplate::class);
-    }
-
-    /** @return HasMany<AutomationEvent, $this> */
-    public function automationEvents(): HasMany
-    {
-        return $this->hasMany(AutomationEvent::class);
-    }
-
     /** @return HasMany<Application, $this> */
     public function applications(): HasMany
     {
@@ -107,6 +95,12 @@ class Company extends Model
     public function defaultEmailProviderSetting(): HasOne
     {
         return $this->hasOne(CompanyEmailProviderSetting::class)->where('is_default', true);
+    }
+
+    /** @return HasMany<CompanyEmailNotificationSetting, $this> */
+    public function emailNotificationSettings(): HasMany
+    {
+        return $this->hasMany(CompanyEmailNotificationSetting::class);
     }
 
     /** @return HasOne<CompanyScoringSetting, $this> */

@@ -140,7 +140,7 @@
                 </p>
             </div>
 
-            <div class="grid gap-4 lg:grid-cols-2">
+            <div class="grid gap-4">
                 <a href="{{ $recruitmentUrl }}"
                     class="group flex items-center gap-5 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary-300 hover:shadow-md dark:border-white/10 dark:bg-gray-900 dark:hover:border-primary-500/50">
                     <span
@@ -159,23 +159,6 @@
                         class="size-5 shrink-0 text-gray-400 transition group-hover:translate-x-1 group-hover:text-primary-600" />
                 </a>
 
-                <a href="{{ $automationUrl }}"
-                    class="group flex items-center gap-5 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-cyan-300 hover:shadow-md dark:border-white/10 dark:bg-gray-900 dark:hover:border-cyan-500/50">
-                    <span
-                        class="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-600 transition group-hover:bg-cyan-600 group-hover:text-white dark:bg-cyan-500/10 dark:text-cyan-400">
-                        <x-filament::icon icon="heroicon-o-bolt" class="size-7" />
-                    </span>
-                    <span class="min-w-0 flex-1">
-                        <span class="block font-semibold text-gray-950 dark:text-white">
-                            {{ __('dashboard.welcome.automation_title') }}
-                        </span>
-                        <span class="mt-1 block text-sm leading-6 text-gray-500 dark:text-gray-400">
-                            {{ __('dashboard.welcome.automation_description') }}
-                        </span>
-                    </span>
-                    <x-filament::icon icon="heroicon-o-arrow-right"
-                        class="size-5 shrink-0 text-gray-400 transition group-hover:translate-x-1 group-hover:text-cyan-600" />
-                </a>
             </div>
         </section>
     </div>

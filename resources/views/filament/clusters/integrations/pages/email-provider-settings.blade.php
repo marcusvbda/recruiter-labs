@@ -34,7 +34,7 @@
                             <h3 class="truncate font-semibold text-gray-950 dark:text-white">
                                 {{ $provider['provider_label'] }}
                             </h3>
-                            @if ($provider['has_key'])
+                            @if ($provider['is_configured'])
                                 <div class="mt-0.5 flex items-center gap-1.5">
                                     <span
                                         class="size-2 rounded-full {{ $provider['is_default'] ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600' }}"></span>
@@ -42,6 +42,10 @@
                                         {{ $provider['is_default'] ? __('email_provider.default_badge') : $provider['credential_status_label'] }}
                                     </span>
                                 </div>
+                            @elseif ($provider['has_key'])
+                                <span class="text-xs font-medium text-amber-600 dark:text-amber-400">
+                                    Setup incomplete
+                                </span>
                             @else
                                 <span class="text-xs text-gray-500 dark:text-gray-400">
                                     {{ __('email_provider.empty.heading') }}
@@ -58,6 +62,15 @@
                             <span class="text-xs text-gray-500 dark:text-gray-400">
                                 {{ $provider['credential_status_label'] }} · {{ $provider['last_validated_label'] }}
                             </span>
+                            @if ($provider['has_sender_address'])
+                                <span class="basis-full truncate text-xs text-gray-500 dark:text-gray-400">
+                                    From {{ $provider['from_address'] }}
+                                </span>
+                            @else
+                                <span class="basis-full text-xs font-medium text-amber-600 dark:text-amber-400">
+                                    Add a sender email address to enable recruitment emails.
+                                </span>
+                            @endif
                         </div>
 
                         <div class="mt-4 flex flex-wrap gap-2">
@@ -65,16 +78,18 @@
                                 wire:click="mountAction('configureProvider', { provider: '{{ $provider['provider'] }}' })">
                                 {{ __('email_provider.actions.replace') }}
                             </x-filament::button>
-                            <x-filament::button size="sm" color="gray" outlined
-                                wire:click="mountAction('testProvider', { provider: '{{ $provider['provider'] }}' })">
-                                {{ __('email_provider.actions.test') }}
-                            </x-filament::button>
-                            @unless ($provider['is_default'])
-                                <x-filament::button size="sm" color="primary" outlined
-                                    wire:click="mountAction('setDefaultProvider', { provider: '{{ $provider['provider'] }}' })">
-                                    {{ __('email_provider.actions.set_default') }}
+                            @if ($provider['is_configured'])
+                                <x-filament::button size="sm" color="gray" outlined
+                                    wire:click="mountAction('testProvider', { provider: '{{ $provider['provider'] }}' })">
+                                    {{ __('email_provider.actions.test') }}
                                 </x-filament::button>
-                            @endunless
+                                @unless ($provider['is_default'])
+                                    <x-filament::button size="sm" color="primary" outlined
+                                        wire:click="mountAction('setDefaultProvider', { provider: '{{ $provider['provider'] }}' })">
+                                        {{ __('email_provider.actions.set_default') }}
+                                    </x-filament::button>
+                                @endunless
+                            @endif
                             <x-filament::button size="sm" color="danger" outlined
                                 wire:click="mountAction('removeProvider', { provider: '{{ $provider['provider'] }}' })">
                                 {{ __('email_provider.actions.remove') }}
