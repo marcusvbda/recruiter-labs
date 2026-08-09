@@ -59,9 +59,11 @@ class SendRecruitmentEmail implements ShouldBeUnique, ShouldQueue
             ? $senders->sender($providerSetting->provider)
             : null;
 
-        if (! $providerSetting instanceof CompanyEmailProviderSetting
+        if (
+            ! $providerSetting instanceof CompanyEmailProviderSetting
             || $fromAddress === null
-            || ! $sender?->isReady($providerSetting)) {
+            || ! $sender?->isReady($providerSetting)
+        ) {
             Log::warning('Queued recruitment email was skipped because its tenant provider is no longer available.', [
                 'company_id' => $this->companyId,
                 'provider_setting_id' => $this->providerSettingId,
@@ -85,7 +87,7 @@ class SendRecruitmentEmail implements ShouldBeUnique, ShouldQueue
 
     public function uniqueId(): string
     {
-        return $this->companyId.':'.$this->type->value.':'.$this->context->idempotencyKey();
+        return $this->companyId . ':' . $this->type->value . ':' . $this->context->idempotencyKey();
     }
 
     public function failed(?Throwable $exception): void
@@ -101,11 +103,11 @@ class SendRecruitmentEmail implements ShouldBeUnique, ShouldQueue
 
     private function providerIdempotencyKey(): string
     {
-        return 'recruiter-labs/'.hash('sha256', $this->uniqueId());
+        return 'recruiter-labs/' . hash('sha256', $this->uniqueId());
     }
 
     private function deliveryKey(): string
     {
-        return 'recruitment-email-delivered:'.$this->uniqueId();
+        return 'recruitment-email-delivered:' . $this->uniqueId();
     }
 }

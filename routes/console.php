@@ -8,7 +8,20 @@ use Illuminate\Support\Facades\Schedule;
 //     $this->comment(Inspiring::quote());
 // })->purpose('Display an inspiring quote');
 
-Schedule::command('queue:work --queue=default,ai-application-analysis,ai-criteria-extraction --stop-when-empty --max-time=55')
-    ->everyMinute()
-    ->withoutOverlapping()
-    ->runInBackground();
+
+$queues = [
+    'default',
+    'ai-application-analysis',
+    'ai-criteria-extraction',
+    'recruitment-emails',
+];
+
+foreach ($queues as $queue) {
+    Schedule::command(
+        "queue:work database --queue={$queue} --stop-when-empty --max-time=55"
+    )
+        ->name("queue-worker:{$queue}")
+        ->everyMinute()
+        ->withoutOverlapping(2)
+        ->runInBackground();
+}
