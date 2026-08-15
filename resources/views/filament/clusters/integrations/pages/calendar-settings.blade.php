@@ -48,7 +48,7 @@
             </summary>
 
             <div class="mx-5">
-                <p class="mt-4 text-xs font-semibold tracking-wide text-gray-400 uppercase dark:text-gray-500">
+                <p class="text-xs font-semibold tracking-wide text-gray-400 uppercase dark:text-gray-500">
                     {{ $connection['plugin_category'] }}
                 </p>
 
@@ -95,7 +95,7 @@
                 </dl>
             @endif
 
-            <div class="mt-6 flex shrink-0 flex-wrap items-center gap-2 p-5">
+            <div class="mt-3 flex shrink-0 flex-wrap items-center gap-2 p-5 pt-0">
                 <x-filament::button tag="a" size="sm" class="self-center" :href="$connection['has_credentials'] ? $connection['reconnect_url'] : $connection['connect_url']"
                     :color="$connection['is_connected'] ? 'gray' : 'primary'" :outlined="$connection['is_connected']">
                     {{ $connection['has_credentials'] ? __('calendar.actions.reconnect') : __('calendar.actions.connect') }}

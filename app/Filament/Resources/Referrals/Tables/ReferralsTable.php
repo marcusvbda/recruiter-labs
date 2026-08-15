@@ -2,7 +2,8 @@
 
 namespace App\Filament\Resources\Referrals\Tables;
 
-use App\Models\Referral;
+use App\Filament\Actions\CopyTrackedUrlAction;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -24,11 +25,6 @@ class ReferralsTable
                     ->label(__('referrals.fields.user'))
                     ->searchable()
                     ->sortable(),
-                TextColumn::make('key')
-                    ->label('URL')
-                    ->copyable()
-                    ->copyableState(fn (Referral $record): string => route('referral.show', ['key' => $record->key]))
-                    ->searchable(),
                 IconColumn::make('published')
                     ->label(__('referrals.fields.published'))
                     ->boolean()
@@ -39,7 +35,10 @@ class ReferralsTable
                     ->sortable(),
             ])
             ->recordActions([
-                EditAction::make(),
+                ActionGroup::make([
+                    CopyTrackedUrlAction::make('referral.show'),
+                    EditAction::make(),
+                ]),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

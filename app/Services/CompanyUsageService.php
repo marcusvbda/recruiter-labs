@@ -9,7 +9,6 @@ use App\Enums\Limit;
 use App\Enums\UsageWarningState;
 use App\Models\AiUsageRecord;
 use App\Models\Company;
-use App\Models\Job;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -53,7 +52,7 @@ class CompanyUsageService
 
         $used = match ($limit) {
             Limit::Users => $company->users()->count(),
-            Limit::Jobs => $company->jobs()->currentlyActive()->count(),
+            Limit::Jobs => $company->jobs()->count(),
             Limit::Applications => $company->applications()
                 ->whereBetween('created_at', [$cycleStart, $cycleEnd])
                 ->count(),
@@ -83,18 +82,6 @@ class CompanyUsageService
             ->latest()
             ->limit(max(1, min($limit, 50)))
             ->get();
-    }
-
-    public function activeJobUsageExcluding(Company $company, ?Job $job = null): UsageMetricData
-    {
-        $company->loadMissing('plan');
-        $query = $company->jobs()->currentlyActive();
-
-        if ($job?->exists) {
-            $query->whereKeyNot($job->getKey());
-        }
-
-        return $this->makeMetric($company, Limit::Jobs, $query->count());
     }
 
     private function makeMetric(

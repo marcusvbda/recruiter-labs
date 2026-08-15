@@ -29,15 +29,26 @@
     <section class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-gray-900 sm:p-6">
         <div class="flex items-start gap-4">
             <span class="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-400">
-                <x-filament::icon icon="heroicon-o-sparkles" class="size-7" />
+                <x-filament::icon icon="heroicon-o-arrows-right-left" class="size-7" />
             </span>
             <div class="min-w-0">
                 <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
-                    {{ __('jobs.fields.campaign_expectation') }}
+                    {{ __('jobs.fields.pipeline') }}
                 </p>
-                <p class="mt-2 text-sm leading-6 text-gray-700 dark:text-gray-300">
-                    {{ filled($job->campaign_expectation) ? $job->campaign_expectation : __('jobs.dashboard.no_expectation') }}
+                <p class="mt-1 text-xl font-semibold text-gray-950 dark:text-white">
+                    {{ $job->pipeline?->name }}
                 </p>
+                <div class="mt-3 flex flex-wrap items-center gap-x-1 gap-y-1 text-sm text-gray-700 dark:text-gray-300">
+                    @foreach ($job->pipeline?->statuses ?? [] as $status)
+                        @if (! $loop->first)
+                            <span class="text-gray-400">&rarr;</span>
+                        @endif
+                        <span class="whitespace-nowrap">
+                            <span class="inline-block size-2 rounded-full align-middle" style="background-color: {{ $status->color }}"></span>
+                            {{ $status->name }}
+                        </span>
+                    @endforeach
+                </div>
             </div>
         </div>
     </section>

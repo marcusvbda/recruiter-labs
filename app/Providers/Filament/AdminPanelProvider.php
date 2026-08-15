@@ -49,6 +49,7 @@ class AdminPanelProvider extends PanelProvider
             ->brandLogoHeight('3rem')
             ->viteTheme('resources/css/filament/admin/theme.css')
             ->maxContentWidth(Width::Full)
+            ->globalSearch(false)
             ->login()
             ->registration()
             ->passwordReset()

@@ -2,12 +2,12 @@
 
 use App\Actions\SetDefaultCompanyEmailProvider;
 use App\Contracts\RecruitmentEmailSender;
-use App\Data\ApplicationEmailContext;
+use App\Data\StatusEmailContext;
 use App\Enums\ConnectedIntegrationStatus;
 use App\Enums\EmailCredentialStatus;
 use App\Enums\EmailProvider;
 use App\Enums\RecruitmentEmailDeliveryStatus;
-use App\Mail\Recruitment\ApplicationReceivedMail;
+use App\Mail\Recruitment\PipelineStatusMail;
 use App\Models\Company;
 use App\Models\CompanyEmailProviderSetting;
 use App\Models\ConnectedIntegration;
@@ -53,7 +53,7 @@ test('Gmail delivery posts a base64url RFC 5322 message without a real Google ca
     Http::preventStrayRequests();
     Http::fake(['gmail.googleapis.com/*' => Http::response(['id' => 'message-id'])]);
     $sender = new GmailRecruitmentEmailSender(app(Markdown::class), app(Factory::class), $tokens);
-    $mail = new ApplicationReceivedMail(new ApplicationEmailContext(42, 'Taylor', 'candidate@example.com', 'Engineer', $company->name));
+    $mail = new PipelineStatusMail(new StatusEmailContext(42, 7, 'candidate@example.com', $company->name, 'Your application', '<p>Hi Taylor</p>', 1700000000));
 
     $sender->send($setting, $mail, 'candidate@example.com', $company->name, 'stable-key');
 
@@ -98,7 +98,7 @@ test('Gmail authentication failures require reauthorization while server failure
     Http::fake(['gmail.googleapis.com/*' => Http::response($body, $status)]);
     $tokens = new ConnectedIntegrationTokenManager(new ConnectedIntegrationRegistry([]));
     $sender = new GmailRecruitmentEmailSender(app(Markdown::class), app(Factory::class), $tokens);
-    $mail = new ApplicationReceivedMail(new ApplicationEmailContext(42, 'Taylor', 'candidate@example.com', 'Engineer', $company->name));
+    $mail = new PipelineStatusMail(new StatusEmailContext(42, 7, 'candidate@example.com', $company->name, 'Your application', '<p>Hi Taylor</p>', 1700000000));
 
     try {
         $sender->send($setting, $mail, 'candidate@example.com', $company->name, 'stable-key');
@@ -196,7 +196,7 @@ test('an ambiguous Gmail connection failure is recorded once and is never automa
         app(Factory::class),
         new ConnectedIntegrationTokenManager(new ConnectedIntegrationRegistry([])),
     );
-    $mail = new ApplicationReceivedMail(new ApplicationEmailContext(42, 'Taylor', 'candidate@example.com', 'Engineer', $company->name));
+    $mail = new PipelineStatusMail(new StatusEmailContext(42, 7, 'candidate@example.com', $company->name, 'Your application', '<p>Hi Taylor</p>', 1700000000));
 
     $sender->send($setting, $mail, 'candidate@example.com', $company->name, 'stable-ambiguous-key');
     $sender->send($setting, $mail, 'candidate@example.com', $company->name, 'stable-ambiguous-key');

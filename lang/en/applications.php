@@ -12,7 +12,7 @@ return [
         'select_candidate' => 'Candidate',
         'candidate_added' => 'Candidate added to the pipeline.',
         'no_eligible_candidates' => 'All candidates have already been added to this pipeline.',
-        'no_statuses' => 'This company has no statuses configured yet, so a candidate cannot be added to the pipeline.',
+        'no_statuses' => "This job's pipeline has no stages configured yet, so a candidate cannot be added.",
         'already_added' => 'This candidate has already been added to this pipeline.',
         'kanban' => [
             'heading' => 'Workflow board',
@@ -94,9 +94,10 @@ return [
             'overall_score' => [
                 'heading' => 'Overall application score',
                 'not_available' => 'Available once the AI analysis completes.',
-                'ai_component' => 'AI match: :score/100 (:weight%)',
-                'referral_yes' => 'Referral: Yes (:weight%)',
-                'referral_no' => 'Referral: No (:weight%)',
+                'ai_component' => 'AI match: :score/100',
+                'referral_yes' => 'Referral bonus: +:bonus%',
+                'referral_no' => 'Referral bonus: none',
+                'capped' => 'capped at 100',
             ],
         ],
         'sources' => [

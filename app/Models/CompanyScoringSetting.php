@@ -11,25 +11,22 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * @property int $company_id
- * @property int $analysis_weight
- * @property int $referral_weight
+ * @property int $referral_bonus_percentage
  */
-#[Fillable(['company_id', 'analysis_weight', 'referral_weight'])]
+#[Fillable(['company_id', 'referral_bonus_percentage'])]
 class CompanyScoringSetting extends Model
 {
     /** @use HasFactory<CompanyScoringSettingFactory> */
     use HasFactory;
 
     protected $attributes = [
-        'analysis_weight' => 60,
-        'referral_weight' => 40,
+        'referral_bonus_percentage' => 40,
     ];
 
     protected function casts(): array
     {
         return [
-            'analysis_weight' => 'integer',
-            'referral_weight' => 'integer',
+            'referral_bonus_percentage' => 'integer',
         ];
     }
 
@@ -40,7 +37,9 @@ class CompanyScoringSetting extends Model
     }
 
     /**
-     * Blend the AI fit analysis score with the referral bonus using this company's weights.
+     * The AI fit analysis is the score. A referral does not dilute it: it adds a
+     * percentage on top of it, capped at 100 — so an 80 with a 40% bonus reads as
+     * 100, and a referral can never drag a strong candidate down.
      *
      * Returns null when the application's analysis score isn't computed yet.
      */
@@ -50,12 +49,12 @@ class CompanyScoringSetting extends Model
             return null;
         }
 
-        $aiComponent = (float) $application->analysis_score;
-        $referralComponent = $application->source === ApplicationSource::Referral ? 100 : 0;
+        $score = (float) $application->analysis_score;
 
-        return round(
-            ($aiComponent * $this->analysis_weight + $referralComponent * $this->referral_weight) / 100,
-            2,
-        );
+        if ($application->source === ApplicationSource::Referral) {
+            $score *= 1 + ($this->referral_bonus_percentage / 100);
+        }
+
+        return round(min($score, 100), 2);
     }
 }

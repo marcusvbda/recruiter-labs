@@ -1,19 +1,47 @@
 <?php
 
 return [
-    'label' => 'Status',
-    'plural_label' => 'Statuses',
-    'navigation_label' => 'Statuses',
+    'label' => 'Stage',
+    'plural_label' => 'Stages',
+    'navigation_label' => 'Stages',
+    'relation_description' => 'Drag to reorder. The first stage is where new applications land.',
     'sections' => [
-        'details' => 'Status details',
+        'details' => 'Stage details',
+        'communication' => 'Communication',
+        'communication_description' => 'Optionally email the candidate when they reach this stage.',
     ],
     'fields' => [
         'name' => 'Name',
         'color' => 'Color',
-        'is_hired' => 'Hired status',
-        'is_hired_helper' => 'Applications in this status count as successful hires.',
+        'is_hired' => 'Hired stage',
+        'is_hired_helper' => 'Applications in this stage count as successful hires.',
+        'sends_email' => 'Send an email when a candidate enters this stage',
+        'sends_email_helper' => 'Sent automatically through your configured email provider.',
+        'email_subject' => 'Subject',
+        'email_subject_placeholder' => 'Application received - {{ job.title }}',
+        'email_body' => 'Message',
+        'email_body_helper' => 'Use the variables below to personalise the message.',
+        'applications_count' => 'Candidates',
+    ],
+    'badges' => [
+        'email_on' => 'Email on',
+        'email_off' => 'No email',
+    ],
+    'variables' => [
+        'title' => 'Available variables',
+        'description' => 'Click a variable to copy it, then paste it into the subject or message.',
+        'copied' => 'Copied',
+        'groups' => [
+            'candidate' => 'Candidate',
+            'job' => 'Job',
+            'company' => 'Company',
+            'application' => 'Application',
+        ],
+    ],
+    'actions' => [
+        'create' => 'Add stage',
     ],
     'notifications' => [
-        'has_applications' => "This status has candidates in it and can't be deleted.",
+        'has_applications_title' => "This stage can't be deleted",
     ],
 ];

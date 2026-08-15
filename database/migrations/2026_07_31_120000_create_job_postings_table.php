@@ -20,12 +20,14 @@ return new class extends Migration
         Schema::create('job_postings', function (Blueprint $table) {
             $table->id();
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
+            // A pipeline in use by a job must not be silently deletable: the job's
+            // whole recruitment workflow (and every application's status) lives in it.
+            $table->foreignId('pipeline_id')->constrained()->restrictOnDelete();
             $table->string('name');
             $table->string('application_locale')->default('en');
             $table->text('description')->nullable();
             $table->date('starts_at')->nullable();
             $table->date('ends_at')->nullable();
-            $table->text('campaign_expectation')->nullable();
             $table->uuid('key')->unique();
             $table->boolean('published')->default(false);
             $table->boolean('applications_paused')->default(false);

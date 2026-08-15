@@ -53,7 +53,6 @@ class ExtractJobCriteria implements Agent, HasStructuredOutput
             'title' => $this->job->name,
             'language' => $this->job->application_locale->value,
             'description' => $this->plainText($this->job->description),
-            'goal' => $this->job->campaign_expectation,
             'cover_letter' => $coverLetter,
             'questions' => $this->job->applicationQuestions->map(fn (JobApplicationQuestion $question): array => [
                 'question' => $question->question,

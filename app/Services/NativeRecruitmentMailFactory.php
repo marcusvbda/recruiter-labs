@@ -2,16 +2,14 @@
 
 namespace App\Services;
 
-use App\Data\ApplicationEmailContext;
 use App\Data\InterviewEmailContext;
 use App\Data\RecruitmentEmailContext;
+use App\Data\StatusEmailContext;
 use App\Enums\EmailNotificationType;
-use App\Mail\Recruitment\ApplicationHiredMail;
-use App\Mail\Recruitment\ApplicationReceivedMail;
-use App\Mail\Recruitment\ApplicationRejectedMail;
 use App\Mail\Recruitment\InterviewCancelledMail;
 use App\Mail\Recruitment\InterviewRescheduledMail;
 use App\Mail\Recruitment\InterviewScheduledMail;
+use App\Mail\Recruitment\PipelineStatusMail;
 use App\Mail\Recruitment\RecruitmentMail;
 use LogicException;
 
@@ -20,14 +18,8 @@ class NativeRecruitmentMailFactory
     public function make(EmailNotificationType $type, RecruitmentEmailContext $context): RecruitmentMail
     {
         return match ($type) {
-            EmailNotificationType::ApplicationReceived => new ApplicationReceivedMail(
-                $this->applicationContext($type, $context),
-            ),
-            EmailNotificationType::ApplicationRejected => new ApplicationRejectedMail(
-                $this->applicationContext($type, $context),
-            ),
-            EmailNotificationType::ApplicationHired => new ApplicationHiredMail(
-                $this->applicationContext($type, $context),
+            EmailNotificationType::PipelineStatus => new PipelineStatusMail(
+                $this->statusContext($type, $context),
             ),
             EmailNotificationType::InterviewScheduled => new InterviewScheduledMail(
                 $this->interviewContext($type, $context),
@@ -41,12 +33,12 @@ class NativeRecruitmentMailFactory
         };
     }
 
-    private function applicationContext(
+    private function statusContext(
         EmailNotificationType $type,
         RecruitmentEmailContext $context,
-    ): ApplicationEmailContext {
-        if (! $context instanceof ApplicationEmailContext) {
-            throw new LogicException("{$type->value} requires an application email context.");
+    ): StatusEmailContext {
+        if (! $context instanceof StatusEmailContext) {
+            throw new LogicException("{$type->value} requires a status email context.");
         }
 
         return $context;

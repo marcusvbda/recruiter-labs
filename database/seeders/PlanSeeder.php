@@ -19,7 +19,7 @@ class PlanSeeder extends Seeder
                 'features' => [Feature::Candidates->value],
                 'limits' => [
                     Limit::Users->value => 2,
-                    Limit::Jobs->value => 1,
+                    Limit::Jobs->value => 3,
                     Limit::Applications->value => 100,
                     Limit::AiAnalyses->value => 100,
                 ],

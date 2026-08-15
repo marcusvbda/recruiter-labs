@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Jobs\Pages;
 
 use App\Exceptions\PlanLimitExceededException;
 use App\Filament\Pages\Settings;
+use App\Filament\Resources\Jobs\Actions\JobStateActions;
 use App\Filament\Resources\Jobs\JobResource;
 use App\Filament\Resources\Jobs\Widgets\JobApplicationStatusChart;
 use App\Filament\Resources\Jobs\Widgets\JobOverviewStats;
@@ -65,6 +66,9 @@ class ViewJob extends ViewRecord
     {
         return [
             EditAction::make(),
+            JobStateActions::publish(),
+            JobStateActions::unpublish(),
+            JobStateActions::duplicate(),
         ];
     }
 

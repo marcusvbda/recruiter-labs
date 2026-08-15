@@ -17,7 +17,10 @@ class DatabaseSeeder extends Seeder
         $this->call(PlanSeeder::class);
         $this->call(CvFileTypeSeeder::class);
         $this->call(AdminUserSeeder::class);
+        $this->call(CompanySeeder::class);
+        // Pipelines before jobs: a job cannot exist without the workflow it runs on.
+        $this->call(PipelineSeeder::class);
         $this->call(JobSeeder::class);
-        $this->call(StatusSeeder::class);
+        $this->call(ApplicationSeeder::class);
     }
 }

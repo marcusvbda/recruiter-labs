@@ -56,10 +56,18 @@ class ApplicationAvailabilityService
         return $lockedJob->setRelation('company', $company);
     }
 
+    /**
+     * The status a new application enters: the first one, in configured order, of
+     * the pipeline the job was created with. There is deliberately no fallback to
+     * some other status of the company — a job whose pipeline has no statuses is a
+     * misconfiguration, and applications fail safely rather than landing in an
+     * arbitrary workflow.
+     */
     public function initialStatus(Job $job): Status
     {
         $status = Status::query()
             ->where('company_id', $job->company_id)
+            ->where('pipeline_id', $job->pipeline_id)
             ->orderBy('order')
             ->orderBy('id')
             ->lockForUpdate()

@@ -9,7 +9,7 @@ use App\Models\Company;
 use App\Models\CvFileType;
 use App\Models\Job;
 use App\Models\JobCriterion;
-use App\Models\Plan;
+use App\Models\Pipeline;
 use App\Models\Referral;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -21,19 +21,14 @@ class JobSeeder extends Seeder
     public function run(): void
     {
         DB::transaction(function (): void {
-            $company = Company::query()->updateOrCreate(
-                ['slug' => 'gravity-labs'],
-                [
-                    'name' => 'Gravity Labs',
-                    'plan_id' => Plan::default()->id,
-                ],
-            );
+            $company = Company::query()->where('slug', 'gravity-labs')->firstOrFail();
 
             $admin = User::query()
                 ->where('email', 'admin@user.com')
                 ->firstOrFail();
 
-            $admin->companies()->syncWithoutDetaching([$company->id]);
+            $externalPipeline = $company->pipelines()->where('name', 'External Recruitment')->firstOrFail();
+            $internalPipeline = $company->pipelines()->where('name', 'Internal Recruitment')->firstOrFail();
 
             $job = Job::query()->firstOrNew([
                 'company_id' => $company->id,
@@ -41,6 +36,7 @@ class JobSeeder extends Seeder
             ]);
 
             $job->fill([
+                'pipeline_id' => $externalPipeline->getKey(),
                 'application_locale' => ApplicationLocale::English,
                 'description' => <<<'HTML'
 <p>Join Gravity Labs to build thoughtful recruiting products used by growing teams around the world.</p>
@@ -76,7 +72,6 @@ class JobSeeder extends Seeder
 HTML,
                 'starts_at' => now()->subDays(7)->toDateString(),
                 'ends_at' => now()->addMonths(2)->toDateString(),
-                'campaign_expectation' => 'Hire one senior full stack engineer within 60 days, prioritizing strong Laravel and React experience, product thinking, communication, and pragmatic technical decisions.',
                 'published' => true,
                 'cover_letter_required' => true,
                 'cover_letter_type' => CoverLetterType::Text,
@@ -177,7 +172,64 @@ HTML,
             ]);
 
             $this->seedAnalytics($job, $admin);
+            $this->seedDraftJob($company, $externalPipeline);
+            $this->seedInternalJob($company, $internalPipeline);
         });
+    }
+
+    /**
+     * A never-published job, so the draft/published UI has something to show.
+     */
+    private function seedDraftJob(Company $company, Pipeline $pipeline): void
+    {
+        $job = Job::query()->firstOrNew([
+            'company_id' => $company->id,
+            'name' => 'Product Designer',
+        ]);
+
+        $job->fill([
+            'pipeline_id' => $pipeline->getKey(),
+            'application_locale' => ApplicationLocale::English,
+            'description' => '<p>Shape how recruiters experience Gravity Labs, from first sketch to shipped interface.</p>',
+            'published' => false,
+            'cover_letter_required' => false,
+            'cover_letter_type' => CoverLetterType::Text,
+        ]);
+
+        if (! $job->exists) {
+            $job->key = (string) Str::uuid();
+        }
+
+        $job->save();
+        $job->acceptedCvTypes()->sync(CvFileType::query()->orderBy('sort')->pluck('id'));
+    }
+
+    /**
+     * A published job on the non-default pipeline, so the Kanban board can be
+     * compared between two different workflows.
+     */
+    private function seedInternalJob(Company $company, Pipeline $pipeline): void
+    {
+        $job = Job::query()->firstOrNew([
+            'company_id' => $company->id,
+            'name' => 'Engineering Team Lead (Internal)',
+        ]);
+
+        $job->fill([
+            'pipeline_id' => $pipeline->getKey(),
+            'application_locale' => ApplicationLocale::English,
+            'description' => '<p>An internal move for an experienced engineer ready to lead a team.</p>',
+            'published' => true,
+            'cover_letter_required' => false,
+            'cover_letter_type' => CoverLetterType::Text,
+        ]);
+
+        if (! $job->exists) {
+            $job->key = (string) Str::uuid();
+        }
+
+        $job->save();
+        $job->acceptedCvTypes()->sync(CvFileType::query()->orderBy('sort')->pluck('id'));
     }
 
     private function seedAnalytics(Job $job, User $admin): void

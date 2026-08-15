@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Jobs\Widgets;
 
+use App\Actions\MoveApplicationToStatus;
 use App\Enums\ApplicationAnalysisStatus;
 use App\Enums\ApplicationSource;
 use App\Filament\Resources\Applications\ApplicationResource;
@@ -29,8 +30,7 @@ class JobPipelineKanban extends StateKanbanBoard
     /** @var Collection<int, Status>|null */
     protected ?Collection $pipelineStatuses = null;
 
-    /** @var array{analysis: int, referral: int}|null */
-    protected ?array $scoringWeights = null;
+    protected ?int $referralBonusPercentage = null;
 
     protected function getModel(): string
     {
@@ -203,21 +203,19 @@ class JobPipelineKanban extends StateKanbanBoard
     }
 
     /**
-     * Highest overall score on top within each column — the same blended
-     * value {@see Application::getOverallScoreData()} would return (AI fit
-     * score weighted with the company's referral bonus, per
-     * {@see CompanyScoringSetting::overallScore()}), computed inline in SQL
-     * so it can be applied before any per-column `LIMIT`. Unscored
-     * applications (`analysis_score IS NULL`) fall back to a score of 0,
-     * matching that method's null short-circuit — this also sidesteps the
-     * NULL-ordering differences across engines (MySQL/SQLite sort NULL last,
-     * PostgreSQL sorts it first) that a plain `ORDER BY analysis_score DESC`
-     * would otherwise hit, since the `CASE` expression never evaluates to
-     * NULL itself.
+     * Highest overall score on top within each column — the same value
+     * {@see Application::getOverallScoreData()} would return (the AI fit score
+     * plus this company's referral bonus, capped at 100, per
+     * {@see CompanyScoringSetting::overallScore()}), computed inline in SQL so
+     * it can be applied before any per-column `LIMIT`. Unscored applications
+     * (`analysis_score IS NULL`) fall back to a score of 0, matching that
+     * method's null short-circuit — this also sidesteps the NULL-ordering
+     * differences across engines (MySQL/SQLite sort NULL last, PostgreSQL sorts
+     * it first) that a plain `ORDER BY analysis_score DESC` would otherwise hit,
+     * since the `CASE` expression never evaluates to NULL itself.
      *
-     * The weights are bound as query parameters (not interpolated into the
-     * SQL string) even though they currently only come from trusted app
-     * data.
+     * The bonus is bound as a query parameter (not interpolated into the SQL
+     * string) even though it currently only comes from trusted app data.
      *
      * `created_at` asc then `updated_at` desc are kept as tie-breakers, for
      * parity with the parent class's default card ordering.
@@ -227,40 +225,40 @@ class JobPipelineKanban extends StateKanbanBoard
      */
     private function applyCardOrdering(Builder $query): Builder
     {
-        $weights = $this->getScoringWeights();
+        $referral = ApplicationSource::Referral->value;
+        // The bonus is bound as a whole percentage and divided in SQL rather than
+        // bound as a `1.4` multiplier: PostgreSQL infers the placeholder's type
+        // from the sibling `ELSE` branch, so an integer literal there would reject
+        // a decimal parameter outright. `analysis_score` is a `decimal(5,2)`, so
+        // the division stays exact rather than truncating.
+        $percentage = 100 + $this->getReferralBonusPercentage();
+        // Repeated rather than using LEAST()/MIN(): the former is missing on
+        // SQLite, the latter is aggregate-only on PostgreSQL.
+        $scored = 'ROUND(analysis_score * (CASE WHEN source = ? THEN ? ELSE 100 END) / 100)';
 
         return $query
             ->orderByRaw(
-                'CASE
+                "CASE
                     WHEN analysis_score IS NULL THEN 0
-                    ELSE ROUND((analysis_score * ? + (CASE WHEN source = ? THEN 100 ELSE 0 END) * ?) / 100)
-                END DESC',
-                [$weights['analysis'], ApplicationSource::Referral->value, $weights['referral']],
+                    WHEN {$scored} > 100 THEN 100
+                    ELSE {$scored}
+                END DESC",
+                [$referral, $percentage, $referral, $percentage],
             )
             ->orderBy('created_at')
             ->orderByDesc('updated_at');
     }
 
     /**
-     * Resolve and cache this company's AI/referral scoring weights, used to
-     * blend `analysis_score` into the overall score for {@see applyCardOrdering()}.
-     * {@see getQuery()} already scopes this widget to a single company, so
-     * the weights are constant for every row and only need resolving once.
-     *
-     * @return array{analysis: int, referral: int}
+     * Resolve and cache this company's referral bonus, used to score
+     * `analysis_score` for {@see applyCardOrdering()}. {@see getQuery()} already
+     * scopes this widget to a single company, so the bonus is constant for every
+     * row and only needs resolving once.
      */
-    private function getScoringWeights(): array
+    private function getReferralBonusPercentage(): int
     {
-        if ($this->scoringWeights !== null) {
-            return $this->scoringWeights;
-        }
-
-        $scoringSetting = $this->record->company->scoringSetting ?? new CompanyScoringSetting;
-
-        return $this->scoringWeights = [
-            'analysis' => $scoringSetting->analysis_weight,
-            'referral' => $scoringSetting->referral_weight,
-        ];
+        return $this->referralBonusPercentage ??= ($this->record->company->scoringSetting
+            ?? new CompanyScoringSetting)->referral_bonus_percentage;
     }
 
     /**
@@ -335,6 +333,26 @@ class JobPipelineKanban extends StateKanbanBoard
         return (int) $column;
     }
 
+    /**
+     * Drag and drop is just another caller of the domain operation: the widget
+     * never writes `status_id` itself, so tenant/pipeline integrity checks and the
+     * status's on-enter communication apply here exactly as everywhere else.
+     */
+    protected function persistStateChange(Model $record, mixed $currentState, string $targetColumn): void
+    {
+        if (! $record instanceof Application) {
+            throw new AuthorizationException;
+        }
+
+        $status = $this->findStatus($targetColumn);
+
+        if (! $status instanceof Status) {
+            throw new AuthorizationException;
+        }
+
+        app(MoveApplicationToStatus::class)->handle($record, $status);
+    }
+
     #[On('pipeline-updated')]
     public function refreshBoard(): void
     {
@@ -343,13 +361,18 @@ class JobPipelineKanban extends StateKanbanBoard
     }
 
     /**
+     * The board's columns are the statuses of the job's own pipeline — never every
+     * status the company happens to have.
+     *
      * @return Collection<int, Status>
      */
     protected function getPipelineStatuses(): Collection
     {
         return $this->pipelineStatuses ??= Status::query()
             ->where('company_id', $this->record->company_id)
+            ->where('pipeline_id', $this->record->pipeline_id)
             ->orderBy('order')
+            ->orderBy('id')
             ->get();
     }
 

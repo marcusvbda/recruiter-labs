@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Applications\Pages;
 
+use App\Actions\MoveApplicationToStatus;
 use App\Actions\ScheduleApplicationFitAnalysis;
 use App\Enums\ApplicationAnalysisStatus;
 use App\Enums\PhoneCountry;
@@ -28,7 +29,6 @@ use Filament\Support\Colors\Color;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Number;
 use Illuminate\Support\Str;
@@ -74,7 +74,7 @@ class ViewApplication extends ViewRecord
                 ->schema([
                     Select::make('status_id')
                         ->label(__('applications.admin.actions.choose_status'))
-                        ->options(fn (): array => $this->statusOptions($application->company_id))
+                        ->options(fn (): array => $this->statusOptions($application))
                         ->allowHtml()
                         ->default($application->status_id)
                         ->native(false)
@@ -83,21 +83,15 @@ class ViewApplication extends ViewRecord
                 ->action(function (array $data) use ($application): void {
                     Gate::authorize('update', $application);
 
-                    $this->record = DB::transaction(function () use ($application, $data): Application {
-                        $lockedApplication = Application::query()
-                            ->where('company_id', $application->company_id)
-                            ->where('job_id', $application->job_id)
-                            ->lockForUpdate()
-                            ->findOrFail((int) $application->getKey());
-                        $status = Status::query()
-                            ->where('company_id', $application->company_id)
-                            ->findOrFail((int) $data['status_id']);
+                    $status = Status::query()
+                        ->where('company_id', $application->company_id)
+                        ->where('pipeline_id', $application->job->pipeline_id)
+                        ->findOrFail((int) $data['status_id']);
 
-                        $lockedApplication->status()->associate($status);
-                        $lockedApplication->save();
+                    app(MoveApplicationToStatus::class)->handle($application, $status);
 
-                        return ApplicationResource::getEloquentQuery()->findOrFail((int) $lockedApplication->getKey());
-                    });
+                    $this->record = ApplicationResource::getEloquentQuery()
+                        ->findOrFail((int) $application->getKey());
 
                     Notification::make()
                         ->title(__('applications.admin.actions.status_updated'))
@@ -147,11 +141,13 @@ class ViewApplication extends ViewRecord
     }
 
     /** @return array<int, string> */
-    private function statusOptions(int $companyId): array
+    private function statusOptions(Application $application): array
     {
         return Status::query()
-            ->where('company_id', $companyId)
+            ->where('company_id', $application->company_id)
+            ->where('pipeline_id', $application->job->pipeline_id)
             ->orderBy('order')
+            ->orderBy('id')
             ->get()
             ->mapWithKeys(fn (Status $status): array => [
                 $status->getKey() => view('filament.resources.applications.components.status-option', [

@@ -20,8 +20,7 @@ class CompanyScoringSettingFactory extends Factory
     {
         return [
             'company_id' => Company::factory(),
-            'analysis_weight' => 60,
-            'referral_weight' => 40,
+            'referral_bonus_percentage' => 40,
         ];
     }
 }

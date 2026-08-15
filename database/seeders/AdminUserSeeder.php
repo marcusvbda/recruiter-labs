@@ -14,6 +14,7 @@ class AdminUserSeeder extends Seeder
             [
                 'name' => 'Admin',
                 'password' => env('ADMIN_PASSWORD'),
+                'email_verified_at' => now(),
             ],
         );
     }

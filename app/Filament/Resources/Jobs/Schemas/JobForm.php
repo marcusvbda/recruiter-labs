@@ -10,6 +10,7 @@ use App\Enums\JobCriteriaProcessingStatus;
 use App\Models\Company;
 use App\Models\CvFileType;
 use App\Models\Job;
+use App\Models\Pipeline;
 use Closure;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
@@ -73,39 +74,43 @@ class JobForm
     {
         return [
             Section::make(__('jobs.sections.details'))
+                ->description(__('jobs.sections.details_description'))
                 ->columnSpanFull()
-                ->columns(1)
+                ->columns(2)
                 ->schema([
                     TextInput::make('name')
                         ->label(__('jobs.fields.name'))
                         ->required()
-                        ->maxLength(255),
+                        ->maxLength(255)
+                        ->columnSpanFull(),
                     RichEditor::make('description')
                         ->label(__('jobs.fields.description'))
                         ->fileAttachments(false)
                         ->columnSpanFull(),
+                    self::pipelineSelect(),
+                    Select::make('application_locale')
+                        ->label(__('jobs.fields.application_locale'))
+                        ->helperText(__('jobs.fields.application_locale_helper'))
+                        ->options(ApplicationLocale::options())
+                        ->default(ApplicationLocale::English->value)
+                        ->native(false)
+                        ->required(),
                 ]),
-            Section::make(__('jobs.sections.application'))
-                ->description(__('jobs.application.section_description'))
+            Section::make(__('jobs.application.questions'))
+                ->description(__('jobs.application.questions_description'))
                 ->columnSpanFull()
                 ->columns(1)
                 ->schema([
-                    Section::make(__('jobs.application.visibility_section'))
-                        ->description(__('jobs.application.visibility_section_description'))
-                        ->columns(2)
-                        ->schema([
-                            Select::make('application_locale')
-                                ->label(__('jobs.fields.application_locale'))
-                                ->helperText(__('jobs.fields.application_locale_helper'))
-                                ->options(ApplicationLocale::options())
-                                ->default(ApplicationLocale::English->value)
-                                ->native(false)
-                                ->required(),
-                            Toggle::make('published')
-                                ->label(__('jobs.fields.published'))
-                                ->inline(false)
-                                ->default(false),
-                        ]),
+                    self::applicationQuestionsRepeater(),
+                ]),
+            Section::make(__('jobs.sections.advanced'))
+                ->description(__('jobs.sections.advanced_description'))
+                ->icon(Heroicon::OutlinedAdjustmentsHorizontal)
+                ->collapsible()
+                ->collapsed()
+                ->columnSpanFull()
+                ->columns(1)
+                ->schema([
                     Section::make(__('jobs.application.campaign_section'))
                         ->description(__('jobs.application.campaign_section_description'))
                         ->columns(2)
@@ -115,11 +120,6 @@ class JobForm
                             DatePicker::make('ends_at')
                                 ->label(__('jobs.fields.ends_at'))
                                 ->afterOrEqual('starts_at'),
-                            Textarea::make('campaign_expectation')
-                                ->label(__('jobs.fields.campaign_expectation'))
-                                ->rows(3)
-                                ->helperText(__('jobs.fields.campaign_expectation_helper'))
-                                ->columnSpanFull(),
                         ]),
                     Section::make(__('jobs.application.intake_section'))
                         ->description(__('jobs.application.intake_section_description'))
@@ -193,50 +193,84 @@ class JobForm
                                 ->visible(fn (Get $get): bool => $get('cover_letter_type') === CoverLetterType::File->value)
                                 ->columnSpanFull(),
                         ]),
-                    Repeater::make('applicationQuestions')
-                        ->label(__('jobs.application.questions'))
-                        ->relationship()
-                        ->orderColumn('sort')
-                        ->mutateRelationshipDataBeforeCreateUsing(function (array $data): array {
-                            $data['company_id'] = self::tenantCompanyId();
-
-                            return $data;
-                        })
-                        ->schema([
-                            TextInput::make('question')
-                                ->label(__('jobs.application.question'))
-                                ->required()
-                                ->maxLength(255)
-                                ->live(onBlur: true)
-                                ->columnSpanFull(),
-                            Select::make('response_type')
-                                ->label(__('jobs.application.response_type'))
-                                ->options(collect(ApplicationQuestionType::cases())
-                                    ->mapWithKeys(fn (ApplicationQuestionType $questionType) => [$questionType->value => $questionType->label()]))
-                                ->default(ApplicationQuestionType::Text->value)
-                                ->native(false)
-                                ->required(),
-                            Toggle::make('required')
-                                ->label(__('jobs.application.required'))
-                                ->inline(false)
-                                ->extraAttributes(['style' => 'margin-block: 0.4rem;'])
-                                ->default(true),
-                            Textarea::make('description')
-                                ->label(__('jobs.application.field_description'))
-                                ->helperText(__('jobs.application.field_description_helper'))
-                                ->rows(2)
-                                ->maxLength(500)
-                                ->columnSpanFull(),
-                        ])
-                        ->defaultItems(0)
-                        ->addActionLabel(__('jobs.application.add_question'))
-                        ->itemLabel(fn (array $state): ?string => $state['question'] ?? null)
-                        ->orderable(false)
-                        ->collapsible()
-                        ->collapsed()
-                        ->columns(2),
                 ]),
         ];
+    }
+
+    /**
+     * The pipeline a job runs on is fixed once candidates are in it: every
+     * application points at a status of that pipeline, and remapping them is
+     * deliberately unsupported. The field explains itself when locked.
+     */
+    private static function pipelineSelect(): Select
+    {
+        return Select::make('pipeline_id')
+            ->label(__('jobs.fields.pipeline'))
+            ->relationship(
+                name: 'pipeline',
+                titleAttribute: 'name',
+                modifyQueryUsing: fn (Builder $query): Builder => $query
+                    ->where('company_id', self::tenantCompanyId())
+                    ->orderBy('name'),
+            )
+            ->default(fn (): ?int => Pipeline::query()
+                ->where('company_id', self::tenantCompanyId())
+                ->where('is_default', true)
+                ->value('id'))
+            ->native(false)
+            ->preload()
+            ->required()
+            ->disabled(fn (?Job $record): bool => $record !== null && ! $record->canChangePipeline())
+            ->dehydrated(fn (?Job $record): bool => $record === null || $record->canChangePipeline())
+            ->helperText(fn (?Job $record): string => $record !== null && ! $record->canChangePipeline()
+                ? __('jobs.fields.pipeline_locked_helper')
+                : __('jobs.fields.pipeline_helper'));
+    }
+
+    private static function applicationQuestionsRepeater(): Repeater
+    {
+        return Repeater::make('applicationQuestions')
+            ->hiddenLabel()
+            ->relationship()
+            ->orderColumn('sort')
+            ->mutateRelationshipDataBeforeCreateUsing(function (array $data): array {
+                $data['company_id'] = self::tenantCompanyId();
+
+                return $data;
+            })
+            ->schema([
+                TextInput::make('question')
+                    ->label(__('jobs.application.question'))
+                    ->required()
+                    ->maxLength(255)
+                    ->live(onBlur: true)
+                    ->columnSpanFull(),
+                Select::make('response_type')
+                    ->label(__('jobs.application.response_type'))
+                    ->options(collect(ApplicationQuestionType::cases())
+                        ->mapWithKeys(fn (ApplicationQuestionType $questionType) => [$questionType->value => $questionType->label()]))
+                    ->default(ApplicationQuestionType::Text->value)
+                    ->native(false)
+                    ->required(),
+                Toggle::make('required')
+                    ->label(__('jobs.application.required'))
+                    ->inline(false)
+                    ->extraAttributes(['style' => 'margin-block: 0.4rem;'])
+                    ->default(true),
+                Textarea::make('description')
+                    ->label(__('jobs.application.field_description'))
+                    ->helperText(__('jobs.application.field_description_helper'))
+                    ->rows(2)
+                    ->maxLength(500)
+                    ->columnSpanFull(),
+            ])
+            ->defaultItems(0)
+            ->addActionLabel(__('jobs.application.add_question'))
+            ->itemLabel(fn (array $state): ?string => $state['question'] ?? null)
+            ->orderable(false)
+            ->collapsible()
+            ->collapsed()
+            ->columns(2);
     }
 
     /** @return array<Component> */

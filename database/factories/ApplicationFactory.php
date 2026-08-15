@@ -31,7 +31,22 @@ class ApplicationFactory extends Factory
             // status all belong to the same company as the application.
             'job_id' => fn (array $attributes) => Job::factory()->create(['company_id' => $attributes['company_id']])->id,
             'candidate_id' => fn (array $attributes) => Candidate::factory()->create(['company_id' => $attributes['company_id']])->id,
-            'status_id' => fn (array $attributes) => Status::factory()->create(['company_id' => $attributes['company_id']])->id,
+            // New applications always start in the first status of the job's
+            // own pipeline, exactly like a real submission would.
+            'status_id' => function (array $attributes): int {
+                $job = Job::query()->whereKey($attributes['job_id'])->firstOrFail();
+
+                $status = Status::query()
+                    ->where('pipeline_id', $job->pipeline_id)
+                    ->orderBy('order')
+                    ->orderBy('id')
+                    ->first();
+
+                return (int) ($status?->getKey() ?? Status::factory()->create([
+                    'company_id' => $job->company_id,
+                    'pipeline_id' => $job->pipeline_id,
+                ])->getKey());
+            },
             'referral_id' => null,
             'source' => ApplicationSource::Direct,
             'analysis_status' => ApplicationAnalysisStatus::Pending,

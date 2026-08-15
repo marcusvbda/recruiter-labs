@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Actions\ProvisionDefaultPipeline;
 use App\Enums\Feature;
 use App\Enums\Limit;
 use Database\Factories\CompanyFactory;
@@ -18,6 +19,15 @@ class Company extends Model
 {
     /** @use HasFactory<CompanyFactory> */
     use HasFactory;
+
+    protected static function booted(): void
+    {
+        // A company without a pipeline cannot post a job, so provisioning happens
+        // once, here, rather than being repaired lazily from forms and services.
+        static::created(function (Company $company): void {
+            app(ProvisionDefaultPipeline::class)->handle($company);
+        });
+    }
 
     /** @return BelongsToMany<User, $this> */
     public function users(): BelongsToMany
@@ -43,7 +53,25 @@ class Company extends Model
         return $this->hasMany(Referral::class);
     }
 
-    /** @return HasMany<Status, $this> */
+    /** @return HasMany<Pipeline, $this> */
+    public function pipelines(): HasMany
+    {
+        return $this->hasMany(Pipeline::class);
+    }
+
+    /** @return HasOne<Pipeline, $this> */
+    public function defaultPipeline(): HasOne
+    {
+        return $this->hasOne(Pipeline::class)->where('is_default', true);
+    }
+
+    /**
+     * Every status in the company, across all of its pipelines. Statuses belong to
+     * a pipeline — this exists for tenant-wide bookkeeping only, never to resolve
+     * the workflow of a job.
+     *
+     * @return HasMany<Status, $this>
+     */
     public function statuses(): HasMany
     {
         return $this->hasMany(Status::class);

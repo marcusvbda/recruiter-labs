@@ -58,21 +58,12 @@ class ScoringSettings extends Page
             ->modalIcon('heroicon-o-scale')
             ->modalSubmitActionLabel(__('scoring.update.save'))
             ->fillForm(fn (): array => [
-                'analysis_weight' => $this->scoringSettings['analysis_weight'],
-                'referral_weight' => $this->scoringSettings['referral_weight'],
+                'referral_bonus_percentage' => $this->scoringSettings['referral_bonus_percentage'],
             ])
             ->schema([
-                TextInput::make('analysis_weight')
-                    ->label(__('scoring.fields.analysis_weight'))
-                    ->helperText(__('scoring.update.sum_helper'))
-                    ->numeric()
-                    ->integer()
-                    ->required()
-                    ->minValue(0)
-                    ->maxValue(100)
-                    ->suffix('%'),
-                TextInput::make('referral_weight')
-                    ->label(__('scoring.fields.referral_weight'))
+                TextInput::make('referral_bonus_percentage')
+                    ->label(__('scoring.fields.referral_bonus'))
+                    ->helperText(__('scoring.update.bonus_helper'))
                     ->numeric()
                     ->integer()
                     ->required()
@@ -85,8 +76,7 @@ class ScoringSettings extends Page
                     $updateScoringSettings->run(
                         $this->getCompany(),
                         $this->getRecord(),
-                        (int) $data['analysis_weight'],
-                        (int) $data['referral_weight'],
+                        (int) $data['referral_bonus_percentage'],
                     );
                 } catch (InvalidArgumentException $exception) {
                     Notification::make()
@@ -132,8 +122,7 @@ class ScoringSettings extends Page
         $scoringSetting = $company->scoringSetting ?? new CompanyScoringSetting;
 
         $this->scoringSettings = [
-            'analysis_weight' => $scoringSetting->analysis_weight,
-            'referral_weight' => $scoringSetting->referral_weight,
+            'referral_bonus_percentage' => $scoringSetting->referral_bonus_percentage,
         ];
     }
 }

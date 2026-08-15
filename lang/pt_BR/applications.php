@@ -12,7 +12,7 @@ return [
         'select_candidate' => 'Candidato',
         'candidate_added' => 'Candidato adicionado ao pipeline.',
         'no_eligible_candidates' => 'Todos os candidatos já foram adicionados a este pipeline.',
-        'no_statuses' => 'Esta empresa ainda não tem status configurados, portanto não é possível adicionar um candidato ao pipeline.',
+        'no_statuses' => 'O pipeline desta vaga ainda não tem etapas configuradas, então não é possível adicionar um candidato.',
         'already_added' => 'Este candidato já foi adicionado a este pipeline.',
         'kanban' => [
             'heading' => 'Quadro do fluxo de recrutamento',
@@ -94,9 +94,10 @@ return [
             'overall_score' => [
                 'heading' => 'Pontuação geral da candidatura',
                 'not_available' => 'Disponível quando a análise de IA for concluída.',
-                'ai_component' => 'Compatibilidade de IA: :score/100 (:weight%)',
-                'referral_yes' => 'Indicação: Sim (:weight%)',
-                'referral_no' => 'Indicação: Não (:weight%)',
+                'ai_component' => 'Compatibilidade de IA: :score/100',
+                'referral_yes' => 'Bônus de indicação: +:bonus%',
+                'referral_no' => 'Bônus de indicação: nenhum',
+                'capped' => 'limitado a 100',
             ],
         ],
         'sources' => [

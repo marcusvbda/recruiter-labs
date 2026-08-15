@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\ApplicationLocale;
 use App\Enums\CoverLetterType;
 use App\Enums\JobCriteriaProcessingStatus;
+use App\Exceptions\RecruitmentWorkflowException;
 use App\Models\Concerns\HasUniqueKey;
 use Carbon\CarbonImmutable;
 use Database\Factories\JobFactory;
@@ -19,12 +20,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /**
  * @property int $id
  * @property int $company_id
+ * @property int $pipeline_id
  * @property string $name
  * @property ApplicationLocale $application_locale
  * @property string|null $description
  * @property CarbonImmutable|null $starts_at
  * @property CarbonImmutable|null $ends_at
- * @property string|null $campaign_expectation
  * @property bool $published
  * @property bool $applications_paused
  * @property int|null $application_limit
@@ -33,7 +34,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property JobCriteriaProcessingStatus $criteria_processing_status
  * @property int $criteria_generation
  */
-#[Fillable(['company_id', 'name', 'application_locale', 'description', 'starts_at', 'ends_at', 'campaign_expectation', 'published', 'applications_paused', 'application_limit', 'cover_letter_required', 'cover_letter_type', 'criteria_processing_status', 'criteria_generation'])]
+#[Fillable(['company_id', 'pipeline_id', 'name', 'application_locale', 'description', 'starts_at', 'ends_at', 'published', 'applications_paused', 'application_limit', 'cover_letter_required', 'cover_letter_type', 'criteria_processing_status', 'criteria_generation'])]
 class Job extends Model
 {
     /** @use HasFactory<JobFactory> */
@@ -52,6 +53,22 @@ class Job extends Model
         'criteria_processing_status' => JobCriteriaProcessingStatus::NotStarted->value,
         'criteria_generation' => 0,
     ];
+
+    protected static function booted(): void
+    {
+        // Changing the pipeline of a job that already has applications would leave
+        // every one of them pointing at a status from a different workflow. Pipeline
+        // migration/mapping is deliberately not supported, so the change is refused.
+        static::updating(function (Job $job): void {
+            if (! $job->isDirty('pipeline_id')) {
+                return;
+            }
+
+            if ($job->applications()->exists()) {
+                throw RecruitmentWorkflowException::pipelineLocked();
+            }
+        });
+    }
 
     protected function casts(): array
     {
@@ -103,6 +120,21 @@ class Job extends Model
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
+    }
+
+    /** @return BelongsTo<Pipeline, $this> */
+    public function pipeline(): BelongsTo
+    {
+        return $this->belongsTo(Pipeline::class);
+    }
+
+    /**
+     * Whether the recruitment pipeline can still be swapped: only while no
+     * candidate has entered it.
+     */
+    public function canChangePipeline(): bool
+    {
+        return ! $this->applications()->exists();
     }
 
     /** @return HasMany<JobCriterion, $this> */

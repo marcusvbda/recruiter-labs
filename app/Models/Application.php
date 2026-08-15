@@ -2,10 +2,11 @@
 
 namespace App\Models;
 
+use App\Actions\MoveApplicationToStatus;
 use App\Enums\ApplicationAnalysisStatus;
 use App\Enums\ApplicationCoverLetterType;
 use App\Enums\ApplicationSource;
-use App\Events\ApplicationHired;
+use App\Events\ApplicationEnteredStatus;
 use Carbon\CarbonImmutable;
 use Database\Factories\ApplicationFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -44,30 +45,16 @@ class Application extends Model
 
     protected static function booted(): void
     {
-        static::updated(function (Application $application): void {
-            if (! $application->wasChanged('status_id')) {
-                return;
-            }
-
-            $newStatus = Status::query()
-                ->where('company_id', $application->company_id)
-                ->whereKey($application->status_id)
-                ->first();
-
-            if ($newStatus?->is_hired !== true) {
-                return;
-            }
-
-            $originalStatus = Status::query()
-                ->where('company_id', $application->company_id)
-                ->whereKey($application->getRawOriginal('status_id'))
-                ->first();
-
-            if ($originalStatus?->is_hired === true) {
-                return;
-            }
-
-            ApplicationHired::dispatch((int) $application->getKey());
+        // Creating an application *is* entering its first status. Every later
+        // movement goes through {@see MoveApplicationToStatus}, which emits the
+        // same event itself; this hook only covers the entry point, so no
+        // creation path can silently skip the status's communication.
+        static::created(function (Application $application): void {
+            ApplicationEnteredStatus::dispatch(
+                (int) $application->getKey(),
+                (int) $application->status_id,
+                null,
+            );
         });
     }
 
@@ -146,9 +133,9 @@ class Application extends Model
     /**
      * @return array{
      *     value: int,
-     *     analysis_weight: int,
-     *     referral_weight: int,
+     *     referral_bonus_percentage: int,
      *     is_referral: bool,
+     *     is_capped: bool,
      *     ai_score: int,
      * }|null
      */
@@ -163,12 +150,16 @@ class Application extends Model
             return null;
         }
 
+        $aiScore = (float) $this->analysis_score;
+        $isReferral = $this->source === ApplicationSource::Referral;
+
         return [
             'value' => (int) round($score),
-            'analysis_weight' => $scoringSetting->analysis_weight,
-            'referral_weight' => $scoringSetting->referral_weight,
-            'is_referral' => $this->source === ApplicationSource::Referral,
-            'ai_score' => (int) round((float) $this->analysis_score),
+            'referral_bonus_percentage' => $scoringSetting->referral_bonus_percentage,
+            'is_referral' => $isReferral,
+            'is_capped' => $isReferral
+                && $aiScore * (1 + ($scoringSetting->referral_bonus_percentage / 100)) > 100,
+            'ai_score' => (int) round($aiScore),
         ];
     }
 }

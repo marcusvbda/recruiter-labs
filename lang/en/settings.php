@@ -72,7 +72,7 @@ return [
     ],
     'limits' => [
         'users' => 'Users',
-        'jobs' => 'Active jobs',
+        'jobs' => 'Jobs',
         'applications' => 'Applications',
         'ai_analyses' => 'AI analyses',
     ],
@@ -196,6 +196,6 @@ return [
     'errors' => [
         'plan_limit_reached' => 'Your current plan limit for :limit has been reached.',
         'plan_feature_unavailable' => 'The :feature feature is not available on your current plan.',
-        'job_limit_reached' => 'The active job limit for this plan has been reached. Close a job or change your plan to create another.',
+        'job_limit_reached' => 'This plan\'s job limit has been reached. Delete a job or change your plan to create another. Drafts count towards the limit.',
     ],
 ];

@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Models\Company;
+use App\Models\Pipeline;
 use App\Models\Status;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -19,11 +19,19 @@ class StatusFactory extends Factory
     public function definition(): array
     {
         return [
-            'company_id' => Company::factory(),
+            // Resolved before `company_id` on purpose: the status's tenant is
+            // always the tenant of the pipeline that owns it.
+            'pipeline_id' => Pipeline::factory(),
+            'company_id' => fn (array $attributes) => Pipeline::query()
+                ->whereKey($attributes['pipeline_id'])
+                ->value('company_id'),
             'name' => $this->faker->unique()->word(),
             'color' => $this->faker->hexColor(),
             'order' => 0,
             'is_hired' => false,
+            'sends_email' => false,
+            'email_subject' => null,
+            'email_body' => null,
         ];
     }
 }

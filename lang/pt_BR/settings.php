@@ -72,7 +72,7 @@ return [
     ],
     'limits' => [
         'users' => 'Usuários',
-        'jobs' => 'Vagas ativas',
+        'jobs' => 'Vagas',
         'applications' => 'Candidaturas',
         'ai_analyses' => 'Análises de IA',
     ],
@@ -196,6 +196,6 @@ return [
     'errors' => [
         'plan_limit_reached' => 'O limite do plano atual para :limit foi atingido.',
         'plan_feature_unavailable' => 'O recurso :feature não está disponível no seu plano atual.',
-        'job_limit_reached' => 'O limite de vagas ativas deste plano foi atingido. Encerre uma vaga ou altere o plano para criar outra.',
+        'job_limit_reached' => 'O limite de vagas deste plano foi atingido. Exclua uma vaga ou altere o plano para criar outra. Rascunhos contam para o limite.',
     ],
 ];

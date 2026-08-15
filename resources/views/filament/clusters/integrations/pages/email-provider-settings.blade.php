@@ -79,7 +79,7 @@
                             @endif
                         </div>
 
-                        <div class="mt-4 flex flex-wrap gap-2 p-5">
+                        <div class="flex flex-wrap gap-2 p-5">
                             <x-filament::button size="sm" color="gray" outlined
                                 wire:click="mountAction('configureProvider', { provider: '{{ $provider['provider'] }}' })">
                                 {{ __('email_provider.actions.replace') }}
@@ -102,7 +102,7 @@
                             </x-filament::button>
                         </div>
                     @else
-                        <div class="mt-4">
+                        <div class="p-4 pt-0">
                             <p class="text-sm text-gray-500 dark:text-gray-400">
                                 {{ __('email_provider.empty.description') }}
                             </p>
@@ -140,7 +140,7 @@
                 </summary>
 
                 <div class="mx-5">
-                    <p class="mt-4 text-xs font-semibold tracking-wide text-gray-400 uppercase dark:text-gray-500">
+                    <p class="text-xs font-semibold tracking-wide text-gray-400 uppercase dark:text-gray-500">
                         {{ $gmail['plugin_category'] }}
                     </p>
 
@@ -194,7 +194,7 @@
                     </dl>
                 @endif
 
-                <div class="mt-4 flex flex-wrap gap-2 p-5">
+                <div class="flex flex-wrap gap-2 p-5 pt-0 mt-3">
                     <x-filament::button tag="a" size="sm" :href="$gmail['has_credentials'] ? $gmail['reconnect_url'] : $gmail['connect_url']" :color="$gmail['is_connected'] ? 'gray' : 'primary'"
                         :outlined="$gmail['is_connected']">
                         {{ $gmail['has_credentials']

@@ -42,10 +42,12 @@ class JobDashboardService
 
         $statusDistribution = array_values(Status::query()
             ->where('company_id', $job->company_id)
+            ->where('pipeline_id', $job->pipeline_id)
             ->withCount([
                 'applications' => fn (Builder $query): Builder => $query->where('job_id', $job->getKey()),
             ])
             ->orderBy('order')
+            ->orderBy('id')
             ->get()
             ->map(fn (Status $status): array => [
                 'name' => $status->name,

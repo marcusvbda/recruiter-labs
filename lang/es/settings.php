@@ -72,7 +72,7 @@ return [
     ],
     'limits' => [
         'users' => 'Usuarios',
-        'jobs' => 'Vacantes activas',
+        'jobs' => 'Vacantes',
         'applications' => 'Candidaturas',
         'ai_analyses' => 'Análisis de IA',
     ],
@@ -196,6 +196,6 @@ return [
     'errors' => [
         'plan_limit_reached' => 'Se ha alcanzado el límite del plan actual para :limit.',
         'plan_feature_unavailable' => 'La función :feature no está disponible en tu plan actual.',
-        'job_limit_reached' => 'Se ha alcanzado el límite de vacantes activas de este plan. Cierra una vacante o cambia de plan para crear otra.',
+        'job_limit_reached' => 'Se ha alcanzado el límite de vacantes de este plan. Elimina una vacante o cambia de plan para crear otra. Los borradores cuentan para el límite.',
     ],
 ];

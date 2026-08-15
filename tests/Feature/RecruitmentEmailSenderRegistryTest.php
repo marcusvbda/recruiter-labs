@@ -1,7 +1,7 @@
 <?php
 
 use App\Contracts\RecruitmentEmailSender;
-use App\Data\ApplicationEmailContext;
+use App\Data\StatusEmailContext;
 use App\Enums\EmailCredentialStatus;
 use App\Enums\EmailNotificationType;
 use App\Enums\EmailProvider;
@@ -54,8 +54,8 @@ test('the queued job sends only through the selected tenant provider', function 
     $job = new SendRecruitmentEmail(
         $company->id,
         $setting->id,
-        EmailNotificationType::ApplicationReceived,
-        new ApplicationEmailContext(99, 'Taylor', 'candidate@example.com', 'Engineer', $company->name),
+        EmailNotificationType::PipelineStatus,
+        new StatusEmailContext(99, 7, 'candidate@example.com', $company->name, 'Your application', '<p>Hi Taylor</p>', 1700000000),
     );
 
     $job->handle(new NativeRecruitmentMailFactory, new RecruitmentEmailSenderRegistry([$resend, $gmail]));

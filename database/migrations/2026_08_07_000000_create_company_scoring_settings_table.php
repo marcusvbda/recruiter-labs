@@ -14,8 +14,9 @@ return new class extends Migration
         Schema::create('company_scoring_settings', function (Blueprint $table) {
             $table->id();
             $table->foreignId('company_id')->unique()->constrained()->cascadeOnDelete();
-            $table->unsignedTinyInteger('analysis_weight')->default(60);
-            $table->unsignedTinyInteger('referral_weight')->default(40);
+            // The AI fit score is the base; a referral adds this percentage on
+            // top of it, capped at 100.
+            $table->unsignedTinyInteger('referral_bonus_percentage')->default(40);
             $table->timestamps();
         });
     }

@@ -16,7 +16,7 @@ class CreateJob extends CreateRecord
     /** @param array<string, mixed> $data */
     protected function handleRecordCreation(array $data): Model
     {
-        $this->ensureJobCanBeSaved($data);
+        $this->ensureJobCanBeCreated();
 
         return parent::handleRecordCreation($data);
     }
