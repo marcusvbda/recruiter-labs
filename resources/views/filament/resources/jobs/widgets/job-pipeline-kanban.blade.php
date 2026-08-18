@@ -96,7 +96,6 @@
                             @forelse ($records as $record)
                                 @php
                                     $isReferral = $this->isReferralApplication($record);
-                                    $overallScore = @$record->getOverallScoreData();
                                 @endphp
                                 <div data-record-id="{{ $record->getKey() }}"
                                     data-referral="{{ $isReferral ? 'true' : 'false' }}" @class([
@@ -140,32 +139,19 @@
                                                 </span>
                                             </div>
                                         @endif
-                                        @if ($overallScore !== null)
-                                            <div class="flex my-2">
-                                                <x-filament::badge :color="$this->getScoreColor($overallScore, 'value')">
-                                                    {{ (int) round((float) $overallScore['value']) }}/100
+                                        <div class="flex my-2">
+                                            @if ($this->showsScoreBadge($record))
+                                                <x-filament::badge color="gray" :icon="$this->getAnalysisIcon($record)">
+                                                    {{ $this->getAnalysisLabel($record) }}
+                                                    ·
+                                                    {{ __('applications.admin.ai.criteria.fit_label', ['score' => (int) round((float) $record->analysis_score)]) }}
                                                 </x-filament::badge>
-                                            </div>
-                                        @else
-                                            <div class="flex my-2">
-                                                <x-filament::badge color="gray">
-                                                    {{ __('applications.pipeline.kanban.fit_evaluation_pending') }}
+                                            @else
+                                                <x-filament::badge :color="$this->getAnalysisColor($record)" :icon="$this->getAnalysisIcon($record)">
+                                                    {{ $this->getAnalysisLabel($record) }}
                                                 </x-filament::badge>
-                                            </div>
-                                        @endif
-                                        @if ($this->showsAnalysisBadge($record))
-                                            <div class="flex my-2">
-                                                @if ($this->showsScoreBadge($record))
-                                                    <x-filament::badge :color="$this->getScoreColor($record)" icon="heroicon-m-sparkles">
-                                                        {{ (int) round((float) $record->analysis_score) }}/100
-                                                    </x-filament::badge>
-                                                @else
-                                                    <x-filament::badge :color="$this->getAnalysisColor($record)" :icon="$this->getAnalysisIcon($record)">
-                                                        {{ $this->getAnalysisLabel($record) }}
-                                                    </x-filament::badge>
-                                                @endif
-                                            </div>
-                                        @endif
+                                            @endif
+                                        </div>
 
                                         <a href="{{ $this->getApplicationUrl($record) }}" wire:navigate
                                             x-on:pointerdown.stop x-on:click.stop

@@ -23,7 +23,6 @@ return [
             'applications' => '{1} postulación|[2,*] postulaciones',
             'up_to_per_column' => '(hasta :count por columna)',
             'allowed_transitions_from' => 'Transiciones permitidas desde :status',
-            'fit_evaluation_pending' => 'Evaluación de ajuste pendiente',
             'can_move_to' => 'Se puede mover a',
             'terminal_status' => 'Estado final',
             'applied_on' => 'Enviada el :date',
@@ -99,15 +98,6 @@ return [
             'documents' => 'Documentos de la postulación',
             'documents_description' => 'Los archivos son privados y solo están disponibles mediante acceso autorizado.',
         ],
-        'overview' => [
-            'overall_score' => [
-                'heading' => 'Puntuación general de la postulación',
-                'not_available' => 'Disponible cuando se complete la evaluación de ajuste.',
-                'ai_component' => 'Evaluación de ajuste: :score/100 × :weight%',
-                'referral_yes' => 'Contribución de referencia: :weight%',
-                'referral_no' => 'Contribución de referencia: 0%',
-            ],
-        ],
         'sources' => [
             'direct' => 'Postulación directa',
             'referral' => 'Enlace de referencia',
@@ -149,6 +139,8 @@ return [
                 'scheduled_at' => 'Fecha y hora',
                 'duration' => 'Duración',
                 'timezone' => 'Zona horaria',
+                'timezone_helper' => 'La fecha y hora seleccionadas se interpretan en esta zona horaria.',
+                'calendar_account' => 'El evento se crea en el calendario de :account.',
                 'last_synced_at' => 'Última sincronización de calendario',
                 'cancelled_at' => 'Cancelada el',
             ],
@@ -223,7 +215,7 @@ return [
             'reprocess_confirmation' => 'Esto pondrá en cola una nueva evaluación del candidato. Los resultados actuales seguirán disponibles hasta que se complete el reemplazo.',
             'overall_score_label' => 'Puntuación de ajuste',
             'analyzed_at' => 'Evaluado el :date',
-            'criteria_heading' => 'Detalles de la evaluación',
+            'criteria_heading' => 'Evidencia por criterio',
             'confidence_label' => 'Confianza de la evidencia:',
             'confidence' => [
                 'high' => 'Alta',
@@ -231,7 +223,7 @@ return [
                 'low' => 'Baja',
             ],
             'criteria' => [
-                'needs_validation_heading' => 'Requiere validación',
+                'needs_validation_heading' => 'Áreas importantes que requieren validación',
                 'established_evidence_heading' => 'Evidencia establecida',
                 'needs_validation_count' => '{0} Ninguna área importante requiere validación|{1} :count área importante requiere validación|[2,*] :count áreas importantes requieren validación',
                 'established_evidence_count' => '{0} Ningún criterio tiene evidencia clara|{1} :count criterio tiene evidencia clara|[2,*] :count criterios tienen evidencia clara',

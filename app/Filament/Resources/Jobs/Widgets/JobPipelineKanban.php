@@ -9,7 +9,6 @@ use App\Filament\Resources\Applications\ApplicationResource;
 use App\Filament\Resources\Jobs\JobResource;
 use App\Models\Application;
 use App\Models\Candidate;
-use App\Models\CompanyScoringSetting;
 use App\Models\Job;
 use App\Models\Status;
 use Filament\Facades\Filament;
@@ -29,9 +28,6 @@ class JobPipelineKanban extends StateKanbanBoard
 
     /** @var Collection<int, Status>|null */
     protected ?Collection $pipelineStatuses = null;
-
-    /** @var array{analysis: int, referral: int}|null */
-    protected ?array $scoringWeights = null;
 
     protected function getModel(): string
     {
@@ -140,7 +136,7 @@ class JobPipelineKanban extends StateKanbanBoard
 
         return match ($value) {
             'processing' => 'info',
-            'completed' => 'success',
+            'completed' => 'gray',
             'failed' => 'danger',
             'pending_quota' => 'warning',
             default => 'gray',
@@ -153,39 +149,17 @@ class JobPipelineKanban extends StateKanbanBoard
 
         return match ($value) {
             'processing' => 'heroicon-m-arrow-path',
-            'completed' => 'heroicon-m-sparkles',
+            'completed' => 'heroicon-m-document-check',
             'failed' => 'heroicon-m-exclamation-triangle',
             'pending_quota' => 'heroicon-m-bolt-slash',
             default => 'heroicon-m-clock',
         };
     }
 
-    public function showsAnalysisBadge(Application $application): bool
-    {
-        return $this->enumValue($application->analysis_status) !== ApplicationAnalysisStatus::AwaitingCriteria->value;
-    }
-
     public function showsScoreBadge(Application $application): bool
     {
         return $application->analysis_status === ApplicationAnalysisStatus::Completed
             && $application->analysis_score !== null;
-    }
-
-    public function showAverageScoreBadge(Application $application): bool
-    {
-        return $application->analysis_status === ApplicationAnalysisStatus::Completed
-            && $application->analysis_score !== null;
-    }
-
-    public function getScoreColor(mixed $obj, string $index = 'analysis_score'): string
-    {
-        $score = (float) data_get($obj, $index, 0);
-
-        return match (true) {
-            $score >= 70 => 'success',
-            $score >= 40 => 'warning',
-            default => 'danger',
-        };
     }
 
     private function enumValue(mixed $value): string
@@ -204,19 +178,9 @@ class JobPipelineKanban extends StateKanbanBoard
     }
 
     /**
-     * Highest overall score on top within each column — the same blended
-     * value {@see Application::getOverallScoreData()} would return (fit evaluation
-     * score weighted with the company's referral component, per
-     * {@see CompanyScoringSetting::overallScore()}), computed inline in SQL so
-     * it can be applied before any per-column `LIMIT`. Unscored applications
-     * (`analysis_score IS NULL`) fall back to a score of 0, matching that
-     * method's null short-circuit — this also sidesteps the NULL-ordering
-     * differences across engines (MySQL/SQLite sort NULL last, PostgreSQL sorts
-     * it first) that a plain `ORDER BY analysis_score DESC` would otherwise hit,
-     * since the `CASE` expression never evaluates to NULL itself.
-     *
-     * The weights are bound as query parameters (not interpolated into the
-     * SQL string) even though they currently only come from trusted app data.
+     * Highest Candidate Evaluation score appears first within each column.
+     * Explicit null ordering keeps evaluated zero scores ahead of applications
+     * that do not have a completed score and behaves consistently on PostgreSQL.
      *
      * `created_at` asc then `updated_at` desc are kept as tie-breakers, for
      * parity with the parent class's default card ordering.
@@ -228,40 +192,11 @@ class JobPipelineKanban extends StateKanbanBoard
      */
     private function applyCardOrdering(Builder $query): Builder
     {
-        $weights = $this->getScoringWeights();
-
         return $query
-            ->orderByRaw(
-                'CASE
-                    WHEN analysis_score IS NULL THEN 0
-                    ELSE ROUND((analysis_score * ? + (CASE WHEN source = ? THEN 100 ELSE 0 END) * ?) / 100)
-                END DESC',
-                [$weights['analysis'], ApplicationSource::Referral->value, $weights['referral']],
-            )
+            ->orderByRaw('CASE WHEN analysis_score IS NULL THEN 1 ELSE 0 END')
+            ->orderByDesc('analysis_score')
             ->orderBy('created_at')
             ->orderByDesc('updated_at');
-    }
-
-    /**
-     * Resolve and cache this company's fit-evaluation/referral scoring weights, used to
-     * blend `analysis_score` into the overall score for {@see applyCardOrdering()}.
-     * {@see getQuery()} already
-     * scopes this widget to a single company, so the bonus is constant for every
-     * row and only needs resolving once.
-     */
-    /** @return array{analysis: int, referral: int} */
-    private function getScoringWeights(): array
-    {
-        if ($this->scoringWeights !== null) {
-            return $this->scoringWeights;
-        }
-
-        $scoringSetting = $this->record->company->scoringSetting ?? new CompanyScoringSetting;
-
-        return $this->scoringWeights = [
-            'analysis' => $scoringSetting->analysis_weight,
-            'referral' => $scoringSetting->referral_weight,
-        ];
     }
 
     /**

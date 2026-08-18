@@ -10,7 +10,6 @@ use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\Settings;
 use App\Filament\Pages\Tenancy\EditCompanyProfile;
 use App\Filament\Pages\Tenancy\RegisterCompany;
-use App\Filament\Resources\Jobs\JobResource;
 use App\Http\Middleware\ApplyTenantScopes;
 use App\Http\Middleware\SetLocale;
 use App\Models\Company;
@@ -95,10 +94,6 @@ class AdminPanelProvider extends PanelProvider
                     'current' => auth()->user()?->locale ?? config('app.locale'),
                 ])->render(),
             )
-            ->renderHook(
-                PanelsRenderHook::SIDEBAR_NAV_END,
-                fn (): string => $this->renderSidebarWorkspaceCard(),
-            )
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
@@ -128,24 +123,6 @@ class AdminPanelProvider extends PanelProvider
 
         return view('filament.topbar-company-usage', [
             'summary' => $this->topbarViewData($summary),
-        ])->render();
-    }
-
-    private function renderSidebarWorkspaceCard(): string
-    {
-        $company = Filament::getTenant();
-
-        if (! $company instanceof Company || ! Filament::auth()->check()) {
-            return '';
-        }
-
-        $summary = app(CompanyTopbarSummary::class)->for($company);
-
-        return view('filament.sidebar-workspace-card', [
-            'companyName' => $company->name,
-            'planName' => $summary->planName,
-            'newJobUrl' => JobResource::getUrl('create', tenant: $company),
-            'settingsUrl' => Settings::getUrl(tenant: $company),
         ])->render();
     }
 

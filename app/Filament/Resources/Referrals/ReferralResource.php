@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\Referrals;
 
-use App\Filament\Clusters\Recruitment\RecruitmentCluster;
 use App\Filament\Resources\Referrals\Pages\CreateReferral;
 use App\Filament\Resources\Referrals\Pages\EditReferral;
 use App\Filament\Resources\Referrals\Pages\ListReferrals;
@@ -21,8 +20,6 @@ class ReferralResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserPlus;
 
-    protected static ?string $cluster = RecruitmentCluster::class;
-
     protected static ?int $navigationSort = 4;
 
     public static function getModelLabel(): string
@@ -38,6 +35,11 @@ class ReferralResource extends Resource
     public static function getNavigationBadge(): ?string
     {
         return static::getModel()::count();
+    }
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('clusters.recruitment');
     }
 
     public static function getNavigationLabel(): string

@@ -141,33 +141,4 @@ class Application extends Model
     {
         return $this->hasMany(Interview::class);
     }
-
-    /**
-     * @return array{
-     *     value: int,
-     *     analysis_weight: int,
-     *     referral_weight: int,
-     *     is_referral: bool,
-     *     ai_score: int,
-     * }|null
-     */
-    public function getOverallScoreData(): ?array
-    {
-        $company = $this->company;
-        $scoringSetting = $company->scoringSetting ?? new CompanyScoringSetting;
-
-        $score = $scoringSetting->overallScore($this);
-
-        if ($score === null) {
-            return null;
-        }
-
-        return [
-            'value' => (int) round($score),
-            'analysis_weight' => $scoringSetting->analysis_weight,
-            'referral_weight' => $scoringSetting->referral_weight,
-            'is_referral' => $this->source === ApplicationSource::Referral,
-            'ai_score' => (int) round((float) $this->analysis_score),
-        ];
-    }
 }

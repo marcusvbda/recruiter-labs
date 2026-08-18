@@ -200,6 +200,10 @@ class RescheduleInterview
             throw new \InvalidArgumentException('The interview end time must be after its start time.');
         }
 
+        if (! $scheduledAt->isFuture()) {
+            throw new \InvalidArgumentException('An interview must start in the future.');
+        }
+
         if (! in_array($timezone, DateTimeZone::listIdentifiers(), true)) {
             throw new \InvalidArgumentException('The interview timezone must be a valid IANA timezone identifier.');
         }

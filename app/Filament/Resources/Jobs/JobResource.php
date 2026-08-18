@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\Jobs;
 
-use App\Filament\Clusters\Recruitment\RecruitmentCluster;
 use App\Filament\Resources\Jobs\Pages\CreateJob;
 use App\Filament\Resources\Jobs\Pages\EditJob;
 use App\Filament\Resources\Jobs\Pages\ListJobs;
@@ -22,8 +21,6 @@ class JobResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBriefcase;
 
-    protected static ?string $cluster = RecruitmentCluster::class;
-
     protected static ?int $navigationSort = 3;
 
     public static function getNavigationBadge(): ?string
@@ -39,6 +36,11 @@ class JobResource extends Resource
     public static function getPluralModelLabel(): string
     {
         return __('jobs.plural_label');
+    }
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('clusters.recruitment');
     }
 
     public static function getNavigationLabel(): string

@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\Pipelines;
 
-use App\Filament\Clusters\Recruitment\RecruitmentCluster;
 use App\Filament\Resources\Pipelines\Pages\CreatePipeline;
 use App\Filament\Resources\Pipelines\Pages\EditPipeline;
 use App\Filament\Resources\Pipelines\Pages\ListPipelines;
@@ -22,8 +21,6 @@ class PipelineResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowsRightLeft;
 
-    protected static ?string $cluster = RecruitmentCluster::class;
-
     protected static ?int $navigationSort = 2;
 
     protected static ?string $recordTitleAttribute = 'name';
@@ -36,6 +33,11 @@ class PipelineResource extends Resource
     public static function getPluralModelLabel(): string
     {
         return __('pipelines.plural_label');
+    }
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('clusters.recruitment');
     }
 
     public static function getNavigationLabel(): string

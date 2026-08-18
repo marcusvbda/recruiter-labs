@@ -1,22 +1,29 @@
 <div class="flex flex-col gap-6" data-state="completed">
-    <div
-        class="flex flex-col items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-6 py-6 text-center dark:border-white/10 dark:bg-white/5">
-        <x-filament::icon :icon="$analysis['icon']" class="size-6 text-gray-500 dark:text-gray-400" />
-
-        <p class="text-xs font-medium text-gray-500 dark:text-gray-400">
-            {{ __('applications.admin.ai.assisted_label') }}</p>
+    <div class="flex flex-col gap-4 rounded-xl border border-gray-200 bg-gray-50 px-5 py-5 dark:border-white/10 dark:bg-white/5 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex items-center gap-3">
+            <div class="flex size-10 shrink-0 items-center justify-center rounded-lg bg-white text-gray-500 ring-1 ring-gray-200 dark:bg-white/5 dark:text-gray-400 dark:ring-white/10">
+                <x-filament::icon :icon="$analysis['icon']" class="size-5" />
+            </div>
+            <div>
+                <p class="text-sm font-semibold text-gray-950 dark:text-white">{{ $analysis['title'] }}</p>
+                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    {{ __('applications.admin.ai.assisted_label') }}
+                    @if ($analysis['analyzed_at'])
+                        · {{ __('applications.admin.ai.analyzed_at', ['date' => $analysis['analyzed_at']]) }}
+                    @endif
+                </p>
+            </div>
+        </div>
 
         @if ($analysis['score'] !== null)
-            <p class="text-5xl font-bold {{ $analysis['score'] >= 70 ? 'text-success-600 dark:text-success-400' : ($analysis['score'] >= 40 ? 'text-warning-600 dark:text-warning-400' : 'text-danger-600 dark:text-danger-400') }}">{{ $analysis['score'] }}<span
-                    class="text-sm font-medium text-gray-500 dark:text-gray-400">/100</span></p>
-            <p class="text-sm font-medium text-gray-600 dark:text-gray-300">
-                {{ __('applications.admin.ai.overall_score_label') }}</p>
-        @endif
-
-        @if ($analysis['analyzed_at'])
-            <p class="text-xs text-gray-500 dark:text-gray-400">
-                {{ __('applications.admin.ai.analyzed_at', ['date' => $analysis['analyzed_at']]) }}
-            </p>
+            <div class="sm:text-right">
+                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    {{ __('applications.admin.ai.overall_score_label') }}
+                </p>
+                <p class="mt-1 text-2xl font-semibold text-gray-950 dark:text-white">
+                    {{ $analysis['score'] }}<span class="text-sm font-medium text-gray-500 dark:text-gray-400">/100</span>
+                </p>
+            </div>
         @endif
     </div>
 

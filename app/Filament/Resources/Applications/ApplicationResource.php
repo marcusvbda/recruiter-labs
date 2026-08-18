@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\Applications;
 
-use App\Filament\Clusters\Recruitment\RecruitmentCluster;
 use App\Filament\Resources\Applications\Pages\ViewApplication;
 use App\Models\Application;
 use App\Models\Company;
@@ -13,8 +12,6 @@ use Illuminate\Database\Eloquent\Builder;
 class ApplicationResource extends Resource
 {
     protected static ?string $model = Application::class;
-
-    protected static ?string $cluster = RecruitmentCluster::class;
 
     protected static bool $shouldRegisterNavigation = false;
 

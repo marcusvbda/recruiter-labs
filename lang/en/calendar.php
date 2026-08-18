@@ -2,6 +2,7 @@
 
 return [
     'navigation_label' => 'Calendar',
+    'integration_navigation_label' => 'Calendar integration',
     'title' => 'Calendar',
     'subtitle' => 'Connect your calendar account to schedule interviews and sync candidate responses.',
     'eyebrow' => 'Calendar integration',

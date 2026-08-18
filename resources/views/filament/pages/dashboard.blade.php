@@ -140,25 +140,26 @@
                 </p>
             </div>
 
-            <div class="grid gap-4">
-                <a href="{{ $recruitmentUrl }}"
-                    class="group flex items-center gap-5 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary-300 hover:shadow-md dark:border-white/10 dark:bg-gray-900 dark:hover:border-primary-500/50">
-                    <span
-                        class="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-primary-50 text-primary-600 transition group-hover:bg-primary-600 group-hover:text-white dark:bg-primary-500/10 dark:text-primary-400">
-                        <x-filament::icon icon="heroicon-o-briefcase" class="size-7" />
-                    </span>
-                    <span class="min-w-0 flex-1">
-                        <span class="block font-semibold text-gray-950 dark:text-white">
-                            {{ __('dashboard.welcome.recruitment_title') }}
+            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                @foreach ($quickAccess as $item)
+                    <a href="{{ $item['url'] }}" wire:navigate
+                        class="group flex items-start gap-4 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary-300 hover:shadow-md dark:border-white/10 dark:bg-gray-900 dark:hover:border-primary-500/50">
+                        <span
+                            class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary-600 transition group-hover:bg-primary-600 group-hover:text-white dark:bg-primary-500/10 dark:text-primary-400">
+                            <x-filament::icon :icon="$item['icon']" class="size-6" />
                         </span>
-                        <span class="mt-1 block text-sm leading-6 text-gray-500 dark:text-gray-400">
-                            {{ __('dashboard.welcome.recruitment_description') }}
+                        <span class="min-w-0 flex-1">
+                            <span class="flex items-center gap-1.5">
+                                <span class="font-semibold text-gray-950 dark:text-white">{{ $item['label'] }}</span>
+                                <x-filament::icon icon="heroicon-m-arrow-right"
+                                    class="size-4 shrink-0 text-gray-400 transition group-hover:translate-x-0.5 group-hover:text-primary-600" />
+                            </span>
+                            <span class="mt-1 block text-sm leading-6 text-gray-500 dark:text-gray-400">
+                                {{ $item['description'] }}
+                            </span>
                         </span>
-                    </span>
-                    <x-filament::icon icon="heroicon-o-arrow-right"
-                        class="size-5 shrink-0 text-gray-400 transition group-hover:translate-x-1 group-hover:text-primary-600" />
-                </a>
-
+                    </a>
+                @endforeach
             </div>
         </section>
     </div>

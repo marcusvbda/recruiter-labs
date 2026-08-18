@@ -8,6 +8,7 @@ use App\Enums\ConnectedIntegrationStatus;
 use App\Enums\EmailNotificationType;
 use App\Enums\InterviewCalendarSyncStatus;
 use App\Enums\InterviewStatus;
+use App\Exceptions\InterviewCalendarOperationUnavailable;
 use App\Exceptions\InterviewCalendarTerminalFailure;
 use App\Jobs\SyncInterviewResponseJob;
 use App\Models\Application;
@@ -19,12 +20,16 @@ use App\Services\GoogleCalendarInterviewEventClient;
 use App\Services\RecruitmentEmailDispatcher;
 use Carbon\CarbonImmutable;
 use DateTimeZone;
+use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 
 class ScheduleInterview
 {
+    private const int OperationLockSeconds = 240;
+
     public function __construct(
         private GoogleCalendarInterviewEventClient $calendar,
         private RecruitmentEmailDispatcher $emails,
@@ -41,6 +46,36 @@ class ScheduleInterview
         Gate::forUser($user)->authorize('update', $company);
         $this->validateTimes($scheduledAt, $endsAt, $timezone);
 
+        try {
+            return Cache::lock($this->lockKey($application), self::OperationLockSeconds)->block(5, fn (): Interview => $this->scheduleInterview(
+                $company,
+                $user,
+                $application,
+                $scheduledAt,
+                $endsAt,
+                $timezone,
+            ));
+        } catch (LockTimeoutException $exception) {
+            throw new InterviewCalendarOperationUnavailable(
+                'Another interview is already being scheduled for this application.',
+                previous: $exception,
+            );
+        }
+    }
+
+    /**
+     * Serialized by {@see handle()} on the application, so a double-submitted
+     * scheduling request cannot create two Google Calendar events (and two
+     * "interview scheduled" emails) for the same click.
+     */
+    private function scheduleInterview(
+        Company $company,
+        User $user,
+        Application $application,
+        CarbonImmutable $scheduledAt,
+        CarbonImmutable $endsAt,
+        string $timezone,
+    ): Interview {
         $interview = DB::transaction(function () use ($company, $user, $application, $scheduledAt, $endsAt, $timezone): Interview {
             $lockedApplication = Application::query()
                 ->withoutGlobalScopes()
@@ -112,10 +147,19 @@ class ScheduleInterview
         return $interview;
     }
 
+    private function lockKey(Application $application): string
+    {
+        return 'interview-schedule-application:'.$application->getKey();
+    }
+
     private function validateTimes(CarbonImmutable $scheduledAt, CarbonImmutable $endsAt, string $timezone): void
     {
         if (! $endsAt->isAfter($scheduledAt)) {
             throw new \InvalidArgumentException('The interview end time must be after its start time.');
+        }
+
+        if (! $scheduledAt->isFuture()) {
+            throw new \InvalidArgumentException('An interview must start in the future.');
         }
 
         if (! in_array($timezone, DateTimeZone::listIdentifiers(), true)) {

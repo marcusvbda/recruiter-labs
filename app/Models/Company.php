@@ -143,12 +143,6 @@ class Company extends Model
         return $this->hasMany(ConnectedIntegration::class);
     }
 
-    /** @return HasOne<CompanyScoringSetting, $this> */
-    public function scoringSetting(): HasOne
-    {
-        return $this->hasOne(CompanyScoringSetting::class);
-    }
-
     /** @return HasMany<AiUsageRecord, $this> */
     public function aiUsageRecords(): HasMany
     {

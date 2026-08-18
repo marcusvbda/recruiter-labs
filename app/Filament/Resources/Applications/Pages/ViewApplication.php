@@ -271,7 +271,6 @@ class ViewApplication extends ViewRecord
                     ])
                     ->all(),
             ],
-            'overall_score' => $application->getOverallScoreData(),
         ];
     }
 

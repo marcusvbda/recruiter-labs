@@ -23,7 +23,6 @@ return [
             'applications' => '{1} candidatura|[2,*] candidaturas',
             'up_to_per_column' => '(até :count por coluna)',
             'allowed_transitions_from' => 'Transições permitidas a partir de :status',
-            'fit_evaluation_pending' => 'Avaliação de aderência pendente',
             'can_move_to' => 'Pode mover para',
             'terminal_status' => 'Status final',
             'applied_on' => 'Enviada em :date',
@@ -99,15 +98,6 @@ return [
             'documents' => 'Documentos da candidatura',
             'documents_description' => 'Os arquivos são privados e ficam disponíveis apenas por acesso autorizado.',
         ],
-        'overview' => [
-            'overall_score' => [
-                'heading' => 'Pontuação geral da candidatura',
-                'not_available' => 'Disponível quando a avaliação de aderência for concluída.',
-                'ai_component' => 'Avaliação de aderência: :score/100 × :weight%',
-                'referral_yes' => 'Contribuição de indicação: :weight%',
-                'referral_no' => 'Contribuição de indicação: 0%',
-            ],
-        ],
         'sources' => [
             'direct' => 'Candidatura direta',
             'referral' => 'Link de indicação',
@@ -149,6 +139,8 @@ return [
                 'scheduled_at' => 'Data e hora',
                 'duration' => 'Duração',
                 'timezone' => 'Fuso horário',
+                'timezone_helper' => 'A data e a hora selecionadas são interpretadas neste fuso horário.',
+                'calendar_account' => 'O evento é criado na agenda de :account.',
                 'last_synced_at' => 'Última sincronização do calendário',
                 'cancelled_at' => 'Cancelada em',
             ],
@@ -223,7 +215,7 @@ return [
             'reprocess_confirmation' => 'Isso colocará uma nova avaliação do candidato na fila. Os resultados atuais continuarão disponíveis até a conclusão da substituição.',
             'overall_score_label' => 'Pontuação de aderência',
             'analyzed_at' => 'Avaliado em :date',
-            'criteria_heading' => 'Detalhes da avaliação',
+            'criteria_heading' => 'Evidências por critério',
             'confidence_label' => 'Confiança da evidência:',
             'confidence' => [
                 'high' => 'Alta',
@@ -231,7 +223,7 @@ return [
                 'low' => 'Baixa',
             ],
             'criteria' => [
-                'needs_validation_heading' => 'Requer validação',
+                'needs_validation_heading' => 'Áreas importantes que precisam de validação',
                 'established_evidence_heading' => 'Evidência estabelecida',
                 'needs_validation_count' => '{0} Nenhuma área importante requer validação|{1} :count área importante requer validação|[2,*] :count áreas importantes requerem validação',
                 'established_evidence_count' => '{0} Nenhum critério tem evidência clara|{1} :count critério tem evidência clara|[2,*] :count critérios têm evidência clara',

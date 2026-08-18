@@ -30,6 +30,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
+use Filament\Schemas\Components\Component;
 use Filament\Support\Exceptions\Halt;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -69,7 +70,7 @@ trait ManagesApplicationInterviews
                         $endsAt,
                         $timezone,
                     );
-                } catch (AuthorizationException|ConnectedIntegrationReauthorizationRequired|InterviewCalendarTerminalFailure|ConnectionException|RequestException|ModelNotFoundException|\InvalidArgumentException|LogicException $exception) {
+                } catch (AuthorizationException|ConnectedIntegrationReauthorizationRequired|InterviewCalendarOperationUnavailable|InterviewCalendarTerminalFailure|ConnectionException|RequestException|ModelNotFoundException|\InvalidArgumentException|LogicException $exception) {
                     $this->sendInterviewFailureNotification($exception, $application->company);
                 }
 
@@ -201,12 +202,13 @@ trait ManagesApplicationInterviews
             });
     }
 
-    /** @return array<int, \Filament\Schemas\Components\Component> */
+    /** @return array<int, Component> */
     private function interviewSchedulingSchema(): array
     {
         return [
             DateTimePicker::make('scheduled_at')
                 ->label(__('applications.admin.interviews.fields.scheduled_at'))
+                ->helperText($this->calendarAccountHint())
                 ->native(false)
                 ->seconds(false)
                 ->after(now()->format('Y-m-d H:i:s'))
@@ -222,11 +224,32 @@ trait ManagesApplicationInterviews
                 ->required(),
             Select::make('timezone')
                 ->label(__('applications.admin.interviews.fields.timezone'))
+                ->helperText(__('applications.admin.interviews.fields.timezone_helper'))
                 ->options($this->timezoneOptions())
                 ->default(config('app.timezone'))
                 ->searchable()
                 ->required(),
         ];
+    }
+
+    /**
+     * Names the Google account whose calendar will own the event, so the
+     * recruiter is not left guessing which calendar the invitation comes from.
+     */
+    private function calendarAccountHint(): ?string
+    {
+        $accountEmail = ConnectedIntegration::query()
+            ->whereBelongsTo($this->getApplication()->company)
+            ->whereBelongsTo($this->getCurrentUser())
+            ->where('plugin_key', 'google-calendar')
+            ->where('status', ConnectedIntegrationStatus::Connected->value)
+            ->value('account_email');
+
+        if (! is_string($accountEmail) || blank($accountEmail)) {
+            return null;
+        }
+
+        return __('applications.admin.interviews.fields.calendar_account', ['account' => $accountEmail]);
     }
 
     /**
@@ -331,7 +354,7 @@ trait ManagesApplicationInterviews
     }
 
     /** @param array<string, mixed> $data
-     *  @return array{CarbonImmutable, CarbonImmutable, string}
+     * @return array{CarbonImmutable, CarbonImmutable, string}
      */
     private function interviewTimes(array $data): array
     {
@@ -400,8 +423,8 @@ trait ManagesApplicationInterviews
             ->value('status');
 
         return [
-            'is_connected' => $status === ConnectedIntegrationStatus::Connected->value,
-            'needs_reauthorization' => $status === ConnectedIntegrationStatus::ReauthorizationRequired->value,
+            'is_connected' => $status === ConnectedIntegrationStatus::Connected,
+            'needs_reauthorization' => $status === ConnectedIntegrationStatus::ReauthorizationRequired,
             'settings_url' => CalendarSettings::getUrl(tenant: $company),
         ];
     }

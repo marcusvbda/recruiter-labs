@@ -23,7 +23,6 @@ return [
             'applications' => '{1} application|[2,*] applications',
             'up_to_per_column' => '(up to :count per column)',
             'allowed_transitions_from' => 'Allowed transitions from :status',
-            'fit_evaluation_pending' => 'Fit Evaluation pending',
             'can_move_to' => 'Can move to',
             'terminal_status' => 'Terminal status',
             'applied_on' => 'Applied :date',
@@ -99,15 +98,6 @@ return [
             'documents' => 'Application documents',
             'documents_description' => 'Files are private and available only through authorized access.',
         ],
-        'overview' => [
-            'overall_score' => [
-                'heading' => 'Overall application score',
-                'not_available' => 'Available once the Fit Evaluation completes.',
-                'ai_component' => 'Fit Evaluation: :score/100 × :weight%',
-                'referral_yes' => 'Referral contribution: :weight%',
-                'referral_no' => 'Referral contribution: 0%',
-            ],
-        ],
         'sources' => [
             'direct' => 'Direct application',
             'referral' => 'Referral link',
@@ -149,6 +139,8 @@ return [
                 'scheduled_at' => 'Date and time',
                 'duration' => 'Duration',
                 'timezone' => 'Timezone',
+                'timezone_helper' => 'The selected date and time is interpreted in this timezone.',
+                'calendar_account' => 'The event is created on the calendar of :account.',
                 'last_synced_at' => 'Last calendar sync',
                 'cancelled_at' => 'Cancelled at',
             ],
@@ -223,7 +215,7 @@ return [
             'reprocess_confirmation' => 'This will queue a fresh candidate evaluation. Current results will remain available until the replacement is complete.',
             'overall_score_label' => 'Fit score',
             'analyzed_at' => 'Evaluated on :date',
-            'criteria_heading' => 'Evaluation details',
+            'criteria_heading' => 'Evidence by criterion',
             'confidence_label' => 'Evidence confidence:',
             'confidence' => [
                 'high' => 'High',
@@ -231,7 +223,7 @@ return [
                 'low' => 'Low',
             ],
             'criteria' => [
-                'needs_validation_heading' => 'Needs validation',
+                'needs_validation_heading' => 'Important areas requiring validation',
                 'established_evidence_heading' => 'Evidence established',
                 'needs_validation_count' => '{0} No important areas need validation|{1} :count important area needs validation|[2,*] :count important areas need validation',
                 'established_evidence_count' => '{0} No criteria have clear evidence|{1} :count criterion has clear evidence|[2,*] :count criteria have clear evidence',

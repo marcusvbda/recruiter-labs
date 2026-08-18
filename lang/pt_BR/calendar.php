@@ -2,6 +2,7 @@
 
 return [
     'navigation_label' => 'Calendário',
+    'integration_navigation_label' => 'Integração de agenda',
     'title' => 'Calendário',
     'subtitle' => 'Conecte sua conta de calendário para agendar entrevistas e sincronizar respostas de candidatos.',
     'eyebrow' => 'Integração de calendário',
