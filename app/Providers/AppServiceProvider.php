@@ -6,6 +6,7 @@ use App\Contracts\OAuthIntegrationPlugin;
 use App\Jobs\AnalyzeApplicationFit;
 use App\Jobs\AnalyzeJobCriteria;
 use App\Jobs\SendRecruitmentEmail;
+use App\Jobs\SyncInterviewResponseJob;
 use App\Notifications\ResetPasswordNotification;
 use App\Notifications\VerifyEmailNotification;
 use App\Services\CompanyTopbarSummary;
@@ -69,6 +70,10 @@ class AppServiceProvider extends ServiceProvider
             DevCommands::artisan(
                 'queue:listen --queue='.SendRecruitmentEmail::QUEUE.' --timeout=60',
                 'recruitment-email-queue',
+            );
+            DevCommands::artisan(
+                'queue:listen --queue='.SyncInterviewResponseJob::QUEUE.' --timeout=60',
+                'interview-sync-queue',
             );
         }
     }

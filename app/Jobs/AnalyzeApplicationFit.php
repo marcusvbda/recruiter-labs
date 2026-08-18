@@ -94,15 +94,16 @@ class AnalyzeApplicationFit implements ShouldBeUnique, ShouldQueue
 
         $agent = new ScoreApplicationAgainstCriteria($application);
         $context = $agent->applicationContext($resumeText);
-        $fingerprint = $agent->instructions()."\n---\n".$context;
+        $fingerprint = ScoreApplicationAgainstCriteria::CACHE_SCHEMA_VERSION."\n---\n".$agent->instructions()."\n---\n".$context;
 
         $cached = AiAgentResponseCache::lookup(self::OPERATION, $model, $fingerprint);
 
         if ($cached !== null) {
             $scores = $cached['scores'] ?? null;
+            $interviewBriefItems = $cached['interview_brief_items'] ?? null;
 
-            if (! is_array($scores)) {
-                throw new UnexpectedValueException('The cached application fit response did not contain scores.');
+            if (! is_array($scores) || ! is_array($interviewBriefItems)) {
+                throw new UnexpectedValueException('The cached application fit response did not contain the expected structured output.');
             }
 
             $markedAsProcessing = Application::query()
@@ -114,7 +115,7 @@ class AnalyzeApplicationFit implements ShouldBeUnique, ShouldQueue
                 return;
             }
 
-            $replaceApplicationFitAnalysis->handle($application, $scores, $this->generation);
+            $replaceApplicationFitAnalysis->handle($application, $scores, $interviewBriefItems, $this->generation);
 
             return;
         }
@@ -161,12 +162,13 @@ class AnalyzeApplicationFit implements ShouldBeUnique, ShouldQueue
             }
 
             $scores = $response->toArray()['scores'] ?? null;
+            $interviewBriefItems = $response->toArray()['interview_brief_items'] ?? null;
 
-            if (! is_array($scores)) {
-                throw new UnexpectedValueException('The application fit agent response did not contain scores.');
+            if (! is_array($scores) || ! is_array($interviewBriefItems)) {
+                throw new UnexpectedValueException('The application fit agent response did not contain the expected structured output.');
             }
 
-            $replaceApplicationFitAnalysis->handle($application, $scores, $this->generation);
+            $replaceApplicationFitAnalysis->handle($application, $scores, $interviewBriefItems, $this->generation);
             $usageTracker->complete($usageRecord, $response->usage, $this->elapsedMilliseconds($startedAt));
             AiAgentResponseCache::remember(self::OPERATION, $model, $fingerprint, $response->toArray());
         } catch (Throwable $exception) {

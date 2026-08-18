@@ -6,6 +6,7 @@ use App\Enums\AnalysisConfidence;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property int $id
@@ -41,5 +42,11 @@ class ApplicationCriterionScore extends Model
     public function application(): BelongsTo
     {
         return $this->belongsTo(Application::class);
+    }
+
+    /** @return HasMany<ApplicationInterviewBriefItem, $this> */
+    public function interviewBriefItems(): HasMany
+    {
+        return $this->hasMany(ApplicationInterviewBriefItem::class);
     }
 }

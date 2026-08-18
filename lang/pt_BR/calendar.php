@@ -3,10 +3,10 @@
 return [
     'navigation_label' => 'Calendário',
     'title' => 'Calendário',
-    'subtitle' => 'Conecte sua conta de calendário para futuros recursos de agendamento de recrutamento.',
+    'subtitle' => 'Conecte sua conta de calendário para agendar entrevistas e sincronizar respostas de candidatos.',
     'eyebrow' => 'Integração de calendário',
     'heading' => 'Conecte seu calendário de recrutamento',
-    'description' => 'Autorize o RecruiterLabs a acessar seu calendário. Esta conexão ainda não cria entrevistas nem eventos de calendário.',
+    'description' => 'Autorize o RecruiterLabs a criar e gerenciar eventos de entrevista em seu calendário de recrutamento.',
     'status' => [
         'connected' => 'Conectado',
         'reauthorization_required' => 'Reconexão necessária',
@@ -32,5 +32,9 @@ return [
     ],
     'notifications' => [
         'disconnected' => ':plugin desconectado',
+    ],
+    'event' => [
+        'summary' => 'Entrevista: :job',
+        'description' => "Candidato: :candidate\nCargo: :job",
     ],
 ];

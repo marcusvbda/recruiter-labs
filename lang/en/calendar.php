@@ -3,10 +3,10 @@
 return [
     'navigation_label' => 'Calendar',
     'title' => 'Calendar',
-    'subtitle' => 'Connect your calendar account for future recruitment scheduling features.',
+    'subtitle' => 'Connect your calendar account to schedule interviews and sync candidate responses.',
     'eyebrow' => 'Calendar integration',
     'heading' => 'Connect your recruitment calendar',
-    'description' => 'Authorize RecruiterLabs to access your calendar. This connection does not create interviews or calendar events yet.',
+    'description' => 'Authorize RecruiterLabs to create and manage interview events in your recruitment calendar.',
     'status' => [
         'connected' => 'Connected',
         'reauthorization_required' => 'Reconnect required',
@@ -32,5 +32,9 @@ return [
     ],
     'notifications' => [
         'disconnected' => ':plugin disconnected',
+    ],
+    'event' => [
+        'summary' => 'Interview: :job',
+        'description' => "Candidate: :candidate\nRole: :job",
     ],
 ];

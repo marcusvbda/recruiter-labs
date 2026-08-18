@@ -84,15 +84,16 @@ class AnalyzeJobCriteria implements ShouldBeUnique, ShouldQueue
 
         $agent = new ExtractJobCriteria($job);
         $context = $agent->jobContext();
-        $fingerprint = $agent->instructions()."\n---\n".$context;
+        $fingerprint = ExtractJobCriteria::CACHE_SCHEMA_VERSION."\n---\n".$agent->instructions()."\n---\n".$context;
 
         $cached = AiAgentResponseCache::lookup(self::OPERATION, $model, $fingerprint);
 
         if ($cached !== null) {
             $criteria = $cached['criteria'] ?? null;
+            $reviewAlerts = $cached['review_alerts'] ?? null;
 
-            if (! is_array($criteria)) {
-                throw new UnexpectedValueException('The cached job criteria response did not contain criteria.');
+            if (! is_array($criteria) || ! is_array($reviewAlerts)) {
+                throw new UnexpectedValueException('The cached job criteria response did not contain the expected structured output.');
             }
 
             $markedAsProcessing = Job::query()
@@ -104,7 +105,7 @@ class AnalyzeJobCriteria implements ShouldBeUnique, ShouldQueue
                 return;
             }
 
-            $replaceJobCriteria->handle($job, $criteria, $this->generation);
+            $replaceJobCriteria->handle($job, $criteria, $reviewAlerts, $this->generation);
 
             return;
         }
@@ -151,12 +152,13 @@ class AnalyzeJobCriteria implements ShouldBeUnique, ShouldQueue
             }
 
             $criteria = $response->toArray()['criteria'] ?? null;
+            $reviewAlerts = $response->toArray()['review_alerts'] ?? null;
 
-            if (! is_array($criteria)) {
-                throw new UnexpectedValueException('The job criteria agent response did not contain criteria.');
+            if (! is_array($criteria) || ! is_array($reviewAlerts)) {
+                throw new UnexpectedValueException('The job criteria agent response did not contain the expected structured output.');
             }
 
-            $replaceJobCriteria->handle($job, $criteria, $this->generation);
+            $replaceJobCriteria->handle($job, $criteria, $reviewAlerts, $this->generation);
             $usageTracker->complete($usageRecord, $response->usage, $this->elapsedMilliseconds($startedAt));
             AiAgentResponseCache::remember(self::OPERATION, $model, $fingerprint, $response->toArray());
         } catch (Throwable $exception) {

@@ -8,11 +8,13 @@ use App\Enums\ApplicationAnalysisStatus;
 use App\Enums\PhoneCountry;
 use App\Enums\SocialNetwork;
 use App\Filament\Resources\Applications\ApplicationResource;
+use App\Filament\Resources\Applications\Pages\Concerns\ManagesApplicationInterviews;
 use App\Filament\Resources\Jobs\JobResource;
 use App\Models\Application;
 use App\Models\ApplicationAnswer;
 use App\Models\ApplicationCriterionScore;
 use App\Models\ApplicationDocument;
+use App\Models\ApplicationInterviewBriefItem;
 use App\Models\ApplicationUtmParameter;
 use App\Models\Candidate;
 use App\Models\Status;
@@ -36,6 +38,8 @@ use LogicException;
 
 class ViewApplication extends ViewRecord
 {
+    use ManagesApplicationInterviews;
+
     protected static string $resource = ApplicationResource::class;
 
     public function getTitle(): string|Htmlable
@@ -67,7 +71,7 @@ class ViewApplication extends ViewRecord
         $application = $this->getApplication();
 
         return [
-            $this->reprocessApplicationAnalysisAction($application),
+            $this->scheduleInterviewAction($application),
             Action::make('moveStatus')
                 ->label(__('applications.admin.actions.move_status'))
                 ->icon(Heroicon::OutlinedArrowsRightLeft)
@@ -98,6 +102,10 @@ class ViewApplication extends ViewRecord
                         ->success()
                         ->send();
                 }),
+            $this->rescheduleInterviewAction(),
+            $this->cancelInterviewAction(),
+            $this->refreshInterviewAction(),
+            $this->reprocessApplicationAnalysisAction($application),
             Action::make('backToPipeline')
                 ->label(__('applications.admin.actions.back_to_pipeline'))
                 ->icon(Heroicon::OutlinedViewColumns)
@@ -122,10 +130,10 @@ class ViewApplication extends ViewRecord
             ->label($isAwaitingCriteria
                 ? __('applications.admin.ai.start_action')
                 : __('applications.admin.ai.reprocess_action'))
-            ->icon(Heroicon::OutlinedSparkles)
-            ->button()
+            ->icon($isAwaitingCriteria ? Heroicon::OutlinedDocumentMagnifyingGlass : Heroicon::OutlinedArrowPath)
+            ->color('gray')
             ->requiresConfirmation(! $isAwaitingCriteria)
-            ->modalDescription($isAwaitingCriteria ? null : __('applications.admin.ai.reprocess_confirmation'))
+            ->modalDescription($isAwaitingCriteria ? null : (string) __('applications.admin.ai.reprocess_confirmation'))
             ->action(function (): void {
                 $application = $this->getApplication();
 
@@ -185,8 +193,15 @@ class ViewApplication extends ViewRecord
                             View::make('filament.resources.applications.components.documents')
                                 ->viewData(['documents' => $this->documentsData($application)]),
                         ]),
+                    Tab::make(__('applications.admin.tabs.interviews'))
+                        ->icon(Heroicon::OutlinedCalendarDays)
+                        ->badge($this->activeInterviewCount($application))
+                        ->schema([
+                            View::make('filament.resources.applications.components.interviews')
+                                ->viewData(['interviews' => $this->interviewsData($application)]),
+                        ]),
                     Tab::make(__('applications.admin.tabs.ai_analysis'))
-                        ->icon(Heroicon::OutlinedSparkles)
+                        ->icon(Heroicon::OutlinedClipboardDocumentCheck)
                         ->schema([
                             View::make(@$this->analysisViewName($application))
                                 ->viewData(['analysis' => $this->analysisData($application)]),
@@ -364,15 +379,52 @@ class ViewApplication extends ViewRecord
                 ? (int) round((float) $application->analysis_score)
                 : null;
             $data['analyzed_at'] = $application->analyzed_at?->translatedFormat('M j, Y · H:i');
-            $data['criteria'] = $application->criterionScores
-                ->sortByDesc('score')
+            $criteria = $application->criterionScores
                 ->map(fn (ApplicationCriterionScore $score): array => [
                     'criterion' => $score->criterion,
                     'score' => $score->score,
+                    'weight' => $score->weight,
+                    'importance' => $this->importanceForWeight($score->weight),
                     'reason' => $score->reason,
                     'confidence' => $score->confidence->value,
+                    'confidence_rank' => $this->confidenceRank($score->confidence->value),
+                ])
+                ->values();
+            $needsValidation = $criteria
+                ->filter(fn (array $criterion): bool => $criterion['confidence'] !== 'high')
+                ->sortBy([
+                    ['weight', 'desc'],
+                    ['confidence_rank', 'asc'],
+                    ['criterion', 'asc'],
                 ])
                 ->values()
+                ->all();
+            $establishedEvidence = $criteria
+                ->filter(fn (array $criterion): bool => $criterion['confidence'] === 'high')
+                ->sortBy([
+                    ['weight', 'desc'],
+                    ['criterion', 'asc'],
+                ])
+                ->values()
+                ->all();
+
+            $data['criteria'] = [
+                'needs_validation' => $needsValidation,
+                'established_evidence' => $establishedEvidence,
+                'needs_validation_count' => collect($needsValidation)
+                    ->where('importance', 'high')
+                    ->count(),
+                'established_evidence_count' => count($establishedEvidence),
+            ];
+            $application->loadMissing('interviewBriefItems');
+
+            $data['interview_brief_items'] = $application->interviewBriefItems
+                ->map(fn (ApplicationInterviewBriefItem $item): array => [
+                    'criterion' => $item->criterion,
+                    'priority' => $item->priority,
+                    'reason' => $item->reason,
+                    'question' => $item->question,
+                ])
                 ->all();
         }
 
@@ -383,7 +435,7 @@ class ViewApplication extends ViewRecord
     {
         return match ($status) {
             'processing' => 'heroicon-o-arrow-path',
-            'completed' => 'heroicon-o-check-badge',
+            'completed' => 'heroicon-o-document-magnifying-glass',
             'failed' => 'heroicon-o-x-circle',
             'pending_quota' => 'heroicon-o-bolt-slash',
             default => 'heroicon-o-clock',
@@ -394,10 +446,28 @@ class ViewApplication extends ViewRecord
     {
         return match ($status) {
             'processing' => 'info',
-            'completed' => 'success',
+            'completed' => 'gray',
             'failed' => 'danger',
             'pending_quota' => 'warning',
             default => 'gray',
+        };
+    }
+
+    private function importanceForWeight(int $weight): string
+    {
+        return match (true) {
+            $weight >= 7 => 'high',
+            $weight >= 4 => 'medium',
+            default => 'low',
+        };
+    }
+
+    private function confidenceRank(string $confidence): int
+    {
+        return match ($confidence) {
+            'low' => 0,
+            'medium' => 1,
+            default => 2,
         };
     }
 

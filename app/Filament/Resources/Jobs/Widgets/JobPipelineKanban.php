@@ -30,7 +30,8 @@ class JobPipelineKanban extends StateKanbanBoard
     /** @var Collection<int, Status>|null */
     protected ?Collection $pipelineStatuses = null;
 
-    protected ?int $referralBonusPercentage = null;
+    /** @var array{analysis: int, referral: int}|null */
+    protected ?array $scoringWeights = null;
 
     protected function getModel(): string
     {
@@ -203,9 +204,9 @@ class JobPipelineKanban extends StateKanbanBoard
     }
 
     /**
-     * Highest overall score on top within each column — the same value
-     * {@see Application::getOverallScoreData()} would return (the AI fit score
-     * plus this company's referral bonus, capped at 100, per
+     * Highest overall score on top within each column — the same blended
+     * value {@see Application::getOverallScoreData()} would return (fit evaluation
+     * score weighted with the company's referral component, per
      * {@see CompanyScoringSetting::overallScore()}), computed inline in SQL so
      * it can be applied before any per-column `LIMIT`. Unscored applications
      * (`analysis_score IS NULL`) fall back to a score of 0, matching that
@@ -214,51 +215,53 @@ class JobPipelineKanban extends StateKanbanBoard
      * it first) that a plain `ORDER BY analysis_score DESC` would otherwise hit,
      * since the `CASE` expression never evaluates to NULL itself.
      *
-     * The bonus is bound as a query parameter (not interpolated into the SQL
-     * string) even though it currently only comes from trusted app data.
+     * The weights are bound as query parameters (not interpolated into the
+     * SQL string) even though they currently only come from trusted app data.
      *
      * `created_at` asc then `updated_at` desc are kept as tie-breakers, for
      * parity with the parent class's default card ordering.
      *
-     * @param  Builder<Application>  $query
-     * @return Builder<Application>
+     * @template TModel of Model
+     *
+     * @param  Builder<TModel>  $query
+     * @return Builder<TModel>
      */
     private function applyCardOrdering(Builder $query): Builder
     {
-        $referral = ApplicationSource::Referral->value;
-        // The bonus is bound as a whole percentage and divided in SQL rather than
-        // bound as a `1.4` multiplier: PostgreSQL infers the placeholder's type
-        // from the sibling `ELSE` branch, so an integer literal there would reject
-        // a decimal parameter outright. `analysis_score` is a `decimal(5,2)`, so
-        // the division stays exact rather than truncating.
-        $percentage = 100 + $this->getReferralBonusPercentage();
-        // Repeated rather than using LEAST()/MIN(): the former is missing on
-        // SQLite, the latter is aggregate-only on PostgreSQL.
-        $scored = 'ROUND(analysis_score * (CASE WHEN source = ? THEN ? ELSE 100 END) / 100)';
+        $weights = $this->getScoringWeights();
 
         return $query
             ->orderByRaw(
-                "CASE
+                'CASE
                     WHEN analysis_score IS NULL THEN 0
-                    WHEN {$scored} > 100 THEN 100
-                    ELSE {$scored}
-                END DESC",
-                [$referral, $percentage, $referral, $percentage],
+                    ELSE ROUND((analysis_score * ? + (CASE WHEN source = ? THEN 100 ELSE 0 END) * ?) / 100)
+                END DESC',
+                [$weights['analysis'], ApplicationSource::Referral->value, $weights['referral']],
             )
             ->orderBy('created_at')
             ->orderByDesc('updated_at');
     }
 
     /**
-     * Resolve and cache this company's referral bonus, used to score
-     * `analysis_score` for {@see applyCardOrdering()}. {@see getQuery()} already
+     * Resolve and cache this company's fit-evaluation/referral scoring weights, used to
+     * blend `analysis_score` into the overall score for {@see applyCardOrdering()}.
+     * {@see getQuery()} already
      * scopes this widget to a single company, so the bonus is constant for every
      * row and only needs resolving once.
      */
-    private function getReferralBonusPercentage(): int
+    /** @return array{analysis: int, referral: int} */
+    private function getScoringWeights(): array
     {
-        return $this->referralBonusPercentage ??= ($this->record->company->scoringSetting
-            ?? new CompanyScoringSetting)->referral_bonus_percentage;
+        if ($this->scoringWeights !== null) {
+            return $this->scoringWeights;
+        }
+
+        $scoringSetting = $this->record->company->scoringSetting ?? new CompanyScoringSetting;
+
+        return $this->scoringWeights = [
+            'analysis' => $scoringSetting->analysis_weight,
+            'referral' => $scoringSetting->referral_weight,
+        ];
     }
 
     /**

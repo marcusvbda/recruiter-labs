@@ -40,7 +40,10 @@
 
             <div class="mt-5 flex flex-wrap gap-2">
                 <x-filament::badge color="primary" size="lg">
-                    {{ __('scoring.fields.referral_bonus') }}: +{{ $settings['referral_bonus_percentage'] }}%
+                    {{ __('scoring.fields.fit_evaluation_weight') }}: {{ $settings['analysis_weight'] }}%
+                </x-filament::badge>
+                <x-filament::badge color="gray" size="lg">
+                    {{ __('scoring.fields.referral_weight') }}: {{ $settings['referral_weight'] }}%
                 </x-filament::badge>
             </div>
         </section>

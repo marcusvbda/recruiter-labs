@@ -143,6 +143,12 @@ class Job extends Model
         return $this->hasMany(JobCriterion::class);
     }
 
+    /** @return HasMany<JobReviewAlert, $this> */
+    public function reviewAlerts(): HasMany
+    {
+        return $this->hasMany(JobReviewAlert::class);
+    }
+
     /** @return HasMany<AiUsageRecord, $this> */
     public function aiUsageRecords(): HasMany
     {

@@ -92,4 +92,10 @@ class User extends Authenticatable implements FilamentUser, HasLocalePreference,
     {
         return $this->hasMany(ConnectedIntegration::class);
     }
+
+    /** @return HasMany<Interview, $this> */
+    public function calendarInterviews(): HasMany
+    {
+        return $this->hasMany(Interview::class, 'calendar_user_id');
+    }
 }

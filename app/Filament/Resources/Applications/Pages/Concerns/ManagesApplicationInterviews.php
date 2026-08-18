@@ -1,0 +1,463 @@
+<?php
+
+namespace App\Filament\Resources\Applications\Pages\Concerns;
+
+use App\Actions\CancelInterview;
+use App\Actions\RescheduleInterview;
+use App\Actions\ScheduleInterview;
+use App\Actions\SyncInterviewResponse;
+use App\Enums\ConnectedIntegrationStatus;
+use App\Enums\InterviewCalendarSyncStatus;
+use App\Enums\InterviewStatus;
+use App\Exceptions\ConnectedIntegrationReauthorizationRequired;
+use App\Exceptions\InterviewCalendarOperationUnavailable;
+use App\Exceptions\InterviewCalendarTerminalFailure;
+use App\Filament\Clusters\Integrations\Pages\CalendarSettings;
+use App\Filament\Resources\Applications\ApplicationResource;
+use App\Models\Application;
+use App\Models\ApplicationInterviewBriefItem;
+use App\Models\Company;
+use App\Models\ConnectedIntegration;
+use App\Models\Interview;
+use App\Models\User;
+use Carbon\CarbonImmutable;
+use DateTimeInterface;
+use DateTimeZone;
+use Filament\Actions\Action;
+use Filament\Facades\Filament;
+use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
+use Filament\Support\Exceptions\Halt;
+use Filament\Support\Icons\Heroicon;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\RequestException;
+use Illuminate\Support\Facades\Gate;
+use LogicException;
+
+trait ManagesApplicationInterviews
+{
+    private function scheduleInterviewAction(Application $application): Action
+    {
+        return Action::make('scheduleInterview')
+            ->label(__('applications.admin.actions.schedule_interview'))
+            ->icon(Heroicon::OutlinedCalendarDays)
+            ->button()
+            ->schema($this->interviewSchedulingSchema())
+            ->modalHeading(__('applications.admin.interviews.schedule.heading'))
+            ->modalDescription(__('applications.admin.interviews.schedule.description'))
+            ->modalSubmitActionLabel(__('applications.admin.interviews.schedule.confirm'))
+            ->action(function (array $data, ScheduleInterview $scheduleInterview): void {
+                $application = $this->getApplication();
+                $user = $this->getCurrentUser();
+
+                Gate::forUser($user)->authorize('update', $application);
+                $this->ensureInterviewCanBeScheduled($application, $user);
+
+                [$scheduledAt, $endsAt, $timezone] = $this->interviewTimes($data);
+
+                try {
+                    $interview = $scheduleInterview->handle(
+                        $application->company,
+                        $user,
+                        $application,
+                        $scheduledAt,
+                        $endsAt,
+                        $timezone,
+                    );
+                } catch (AuthorizationException|ConnectedIntegrationReauthorizationRequired|InterviewCalendarTerminalFailure|ConnectionException|RequestException|ModelNotFoundException|\InvalidArgumentException|LogicException $exception) {
+                    $this->sendInterviewFailureNotification($exception, $application->company);
+                }
+
+                $this->refreshApplicationRecord($application);
+
+                $notification = Notification::make()->title(__('applications.admin.interviews.notifications.scheduled'));
+
+                if ($interview->status === InterviewStatus::Scheduled) {
+                    $notification->success();
+                } else {
+                    $notification
+                        ->title(__('applications.admin.interviews.notifications.pending'))
+                        ->warning();
+                }
+
+                $notification->send();
+            });
+    }
+
+    private function rescheduleInterviewAction(): Action
+    {
+        return Action::make('rescheduleInterview')
+            ->label(__('applications.admin.actions.reschedule_interview'))
+            ->icon(Heroicon::OutlinedCalendarDays)
+            ->hidden()
+            ->schema($this->interviewSchedulingSchema())
+            ->fillForm(function (array $arguments): array {
+                $interview = $this->resolveInterview($arguments);
+
+                return [
+                    'scheduled_at' => $interview->scheduled_at->setTimezone($interview->timezone)->format('Y-m-d H:i'),
+                    'duration_minutes' => (int) $interview->scheduled_at->diffInMinutes($interview->ends_at),
+                    'timezone' => $interview->timezone,
+                ];
+            })
+            ->modalHeading(__('applications.admin.interviews.reschedule.heading'))
+            ->modalDescription(__('applications.admin.interviews.reschedule.description'))
+            ->modalSubmitActionLabel(__('applications.admin.interviews.reschedule.confirm'))
+            ->action(function (array $data, array $arguments, RescheduleInterview $rescheduleInterview): void {
+                $application = $this->getApplication();
+                $user = $this->getCurrentUser();
+                $interview = $this->resolveInterview($arguments);
+
+                Gate::forUser($user)->authorize('update', $application);
+                $this->ensureCalendarConnected($application->company, $user);
+
+                [$scheduledAt, $endsAt, $timezone] = $this->interviewTimes($data);
+
+                try {
+                    $rescheduleInterview->handle($application->company, $user, $interview, $scheduledAt, $endsAt, $timezone);
+                } catch (AuthorizationException|ConnectedIntegrationReauthorizationRequired|InterviewCalendarOperationUnavailable|InterviewCalendarTerminalFailure|ConnectionException|RequestException|ModelNotFoundException|\InvalidArgumentException|LogicException $exception) {
+                    $this->sendInterviewFailureNotification($exception, $application->company);
+                }
+
+                $this->refreshApplicationRecord($application);
+
+                Notification::make()
+                    ->title(__('applications.admin.interviews.notifications.rescheduled'))
+                    ->success()
+                    ->send();
+            });
+    }
+
+    private function cancelInterviewAction(): Action
+    {
+        return Action::make('cancelInterview')
+            ->label(__('applications.admin.actions.cancel_interview'))
+            ->icon(Heroicon::OutlinedXCircle)
+            ->color('danger')
+            ->hidden()
+            ->requiresConfirmation()
+            ->schema([
+                Textarea::make('reason')
+                    ->label(__('applications.admin.interviews.cancel.reason'))
+                    ->maxLength(1000),
+            ])
+            ->modalHeading(__('applications.admin.interviews.cancel.heading'))
+            ->modalDescription(__('applications.admin.interviews.cancel.description'))
+            ->modalSubmitActionLabel(__('applications.admin.interviews.cancel.confirm'))
+            ->action(function (array $data, array $arguments, CancelInterview $cancelInterview): void {
+                $application = $this->getApplication();
+                $user = $this->getCurrentUser();
+                $interview = $this->resolveInterview($arguments);
+
+                Gate::forUser($user)->authorize('update', $application);
+                $this->ensureCalendarConnected($application->company, $user);
+
+                try {
+                    $cancelInterview->handle($application->company, $user, $interview, $data['reason'] ?? null);
+                } catch (AuthorizationException|ConnectedIntegrationReauthorizationRequired|InterviewCalendarOperationUnavailable|InterviewCalendarTerminalFailure|ConnectionException|RequestException|ModelNotFoundException|\InvalidArgumentException|LogicException $exception) {
+                    $this->sendInterviewFailureNotification($exception, $application->company);
+                }
+
+                $this->refreshApplicationRecord($application);
+
+                Notification::make()
+                    ->title(__('applications.admin.interviews.notifications.cancelled'))
+                    ->success()
+                    ->send();
+            });
+    }
+
+    private function refreshInterviewAction(): Action
+    {
+        return Action::make('refreshInterview')
+            ->label(__('applications.admin.actions.refresh_interview'))
+            ->icon(Heroicon::OutlinedArrowPath)
+            ->hidden()
+            ->action(function (array $arguments, SyncInterviewResponse $syncInterviewResponse): void {
+                $application = $this->getApplication();
+                $user = $this->getCurrentUser();
+                $interview = $this->resolveInterview($arguments);
+
+                Gate::forUser($user)->authorize('update', $application);
+                $this->ensureCalendarConnected($application->company, $user);
+
+                try {
+                    $syncInterviewResponse->handle($application->company, $user, $interview);
+                } catch (AuthorizationException|ConnectedIntegrationReauthorizationRequired|InterviewCalendarOperationUnavailable|InterviewCalendarTerminalFailure|ConnectionException|RequestException|ModelNotFoundException|\InvalidArgumentException|LogicException $exception) {
+                    $this->sendInterviewFailureNotification($exception, $application->company);
+                }
+
+                $this->refreshApplicationRecord($application);
+
+                Notification::make()
+                    ->title(__('applications.admin.interviews.notifications.refreshed'))
+                    ->success()
+                    ->send();
+            });
+    }
+
+    /** @return array<int, \Filament\Schemas\Components\Component> */
+    private function interviewSchedulingSchema(): array
+    {
+        return [
+            DateTimePicker::make('scheduled_at')
+                ->label(__('applications.admin.interviews.fields.scheduled_at'))
+                ->native(false)
+                ->seconds(false)
+                ->after(now()->format('Y-m-d H:i:s'))
+                ->default(now()->addHour()->startOfHour()->format('Y-m-d H:i'))
+                ->required(),
+            TextInput::make('duration_minutes')
+                ->label(__('applications.admin.interviews.fields.duration'))
+                ->integer()
+                ->minValue(15)
+                ->maxValue(480)
+                ->default(60)
+                ->suffix(__('applications.admin.interviews.minutes_short'))
+                ->required(),
+            Select::make('timezone')
+                ->label(__('applications.admin.interviews.fields.timezone'))
+                ->options($this->timezoneOptions())
+                ->default(config('app.timezone'))
+                ->searchable()
+                ->required(),
+        ];
+    }
+
+    /**
+     * @return array{connection: array{is_connected: bool, needs_reauthorization: bool, settings_url: string}, upcoming: list<array<string, bool|int|string|null>>, past: list<array<string, bool|int|string|null>>, cancelled: list<array<string, bool|int|string|null>>, brief_items: array<int, array<string, string>>}
+     */
+    private function interviewsData(Application $application): array
+    {
+        $application->loadMissing('interviews', 'interviewBriefItems');
+        $user = $this->getCurrentUser();
+        $now = CarbonImmutable::now();
+        $interviews = ['upcoming' => [], 'past' => [], 'cancelled' => []];
+
+        foreach ($application->interviews->sortBy('scheduled_at') as $interview) {
+            $section = match (true) {
+                $interview->status === InterviewStatus::Cancelled => 'cancelled',
+                $interview->ends_at->isBefore($now) => 'past',
+                default => 'upcoming',
+            };
+
+            $interviews[$section][] = $this->interviewCardData($interview, $user);
+        }
+
+        return [
+            'connection' => $this->calendarConnectionData($application->company, $user),
+            'upcoming' => $interviews['upcoming'],
+            'past' => $interviews['past'],
+            'cancelled' => $interviews['cancelled'],
+            'brief_items' => $application->interviewBriefItems
+                ->map(fn (ApplicationInterviewBriefItem $item): array => [
+                    'criterion' => $item->criterion,
+                    'priority' => $item->priority,
+                    'reason' => $item->reason,
+                    'question' => $item->question,
+                ])
+                ->values()
+                ->all(),
+        ];
+    }
+
+    /** @return array<string, bool|int|string|null> */
+    private function interviewCardData(Interview $interview, User $user): array
+    {
+        $status = $this->enumValue($interview->status);
+        $syncStatus = $this->enumValue($interview->calendar_sync_status);
+        $isCancelled = $status === InterviewStatus::Cancelled->value;
+        $isCalendarOwner = (int) $interview->calendar_user_id === (int) $user->getKey();
+        $hasRecoverablePendingCalendarFailure = $status === InterviewStatus::Pending->value
+            && ($interview->calendar_sync_terminal || $syncStatus === InterviewCalendarSyncStatus::Failed->value);
+        $startsAt = $interview->scheduled_at->setTimezone($interview->timezone);
+        $endsAt = $interview->ends_at->setTimezone($interview->timezone);
+
+        return [
+            'id' => (int) $interview->getKey(),
+            'status' => $status,
+            'status_label' => $syncStatus === InterviewCalendarSyncStatus::Failed->value && ! $isCancelled
+                ? 'applications.admin.interviews.statuses.attention'
+                : "applications.admin.interviews.statuses.{$status}",
+            'status_color' => match ($status) {
+                InterviewStatus::Scheduled->value => $syncStatus === InterviewCalendarSyncStatus::Synced->value ? 'success' : 'danger',
+                InterviewStatus::Cancelled->value => 'gray',
+                default => 'warning',
+            },
+            'sync_status' => $syncStatus,
+            'sync_status_label' => "applications.admin.interviews.sync_statuses.{$syncStatus}",
+            'sync_status_color' => match ($syncStatus) {
+                InterviewCalendarSyncStatus::Synced->value => 'success',
+                InterviewCalendarSyncStatus::Failed->value => 'danger',
+                default => 'warning',
+            },
+            'sync_error' => $syncStatus === InterviewCalendarSyncStatus::Failed->value ? $interview->calendar_sync_error : null,
+            'scheduled_at' => $startsAt->translatedFormat('M j, Y · H:i'),
+            'ends_at' => $endsAt->translatedFormat('H:i'),
+            'timezone' => $interview->timezone,
+            'duration' => (int) $startsAt->diffInMinutes($endsAt),
+            'rsvp_status' => $this->enumValue($interview->rsvp_status),
+            'last_synced_at' => $interview->last_calendar_synced_at?->translatedFormat('M j, Y · H:i'),
+            'cancelled_at' => $interview->cancelled_at?->translatedFormat('M j, Y · H:i'),
+            'cancellation_reason' => $interview->cancellation_reason,
+            'meeting_url' => filter_var($interview->meeting_url, FILTER_VALIDATE_URL) ? $interview->meeting_url : null,
+            'can_reschedule' => $isCalendarOwner && ($status === InterviewStatus::Scheduled->value || $hasRecoverablePendingCalendarFailure),
+            'can_cancel' => $isCalendarOwner && ! $isCancelled,
+            'can_refresh' => $isCalendarOwner && ! $isCancelled,
+        ];
+    }
+
+    private function activeInterviewCount(Application $application): int
+    {
+        $application->loadMissing('interviews');
+        $now = CarbonImmutable::now();
+
+        return $application->interviews
+            ->filter(fn (Interview $interview): bool => $interview->status !== InterviewStatus::Cancelled && $interview->ends_at->isAfter($now))
+            ->count();
+    }
+
+    /** @return array<string, string> */
+    private function timezoneOptions(): array
+    {
+        return collect(DateTimeZone::listIdentifiers())
+            ->mapWithKeys(fn (string $timezone): array => [$timezone => $timezone])
+            ->all();
+    }
+
+    /** @param array<string, mixed> $data
+     *  @return array{CarbonImmutable, CarbonImmutable, string}
+     */
+    private function interviewTimes(array $data): array
+    {
+        $timezone = (string) $data['timezone'];
+        $scheduledValue = $data['scheduled_at'];
+        $scheduledAt = $scheduledValue instanceof DateTimeInterface
+            ? CarbonImmutable::instance($scheduledValue)->setTimezone($timezone)
+            : CarbonImmutable::parse((string) $scheduledValue, $timezone);
+        $endsAt = $scheduledAt->addMinutes((int) $data['duration_minutes']);
+
+        if (! $scheduledAt->isFuture()) {
+            Notification::make()->title(__('applications.admin.interviews.notifications.start_must_be_future'))->danger()->send();
+
+            throw new Halt;
+        }
+
+        return [$scheduledAt, $endsAt, $timezone];
+    }
+
+    private function ensureInterviewCanBeScheduled(Application $application, User $user): void
+    {
+        if (filter_var($application->candidate->email, FILTER_VALIDATE_EMAIL) === false) {
+            Notification::make()->title(__('applications.admin.interviews.notifications.candidate_email_required'))->danger()->send();
+
+            throw new Halt;
+        }
+
+        $this->ensureCalendarConnected($application->company, $user);
+    }
+
+    private function ensureCalendarConnected(Company $company, User $user): void
+    {
+        $connection = $this->calendarConnectionData($company, $user);
+
+        if ($connection['is_connected']) {
+            return;
+        }
+
+        $requiresReconnection = $connection['needs_reauthorization'];
+
+        Notification::make()
+            ->title(__($requiresReconnection
+                ? 'applications.admin.interviews.notifications.calendar_reconnect_required'
+                : 'applications.admin.interviews.notifications.calendar_connection_required'))
+            ->warning()
+            ->actions([
+                Action::make('openCalendarSettings')
+                    ->label(__($requiresReconnection
+                        ? 'applications.admin.actions.reconnect_calendar'
+                        : 'applications.admin.actions.connect_calendar'))
+                    ->url($connection['settings_url'])
+                    ->button(),
+            ])
+            ->send();
+
+        throw new Halt;
+    }
+
+    /** @return array{is_connected: bool, needs_reauthorization: bool, settings_url: string} */
+    private function calendarConnectionData(Company $company, User $user): array
+    {
+        $status = ConnectedIntegration::query()
+            ->whereBelongsTo($company)
+            ->whereBelongsTo($user)
+            ->where('plugin_key', 'google-calendar')
+            ->value('status');
+
+        return [
+            'is_connected' => $status === ConnectedIntegrationStatus::Connected->value,
+            'needs_reauthorization' => $status === ConnectedIntegrationStatus::ReauthorizationRequired->value,
+            'settings_url' => CalendarSettings::getUrl(tenant: $company),
+        ];
+    }
+
+    /** @param array<string, mixed> $arguments */
+    private function resolveInterview(array $arguments): Interview
+    {
+        $interviewId = $arguments['interview'] ?? null;
+
+        abort_unless(is_numeric($interviewId), 404);
+
+        $application = $this->getApplication();
+        $user = $this->getCurrentUser();
+
+        Gate::forUser($user)->authorize('update', $application);
+
+        return Interview::query()
+            ->whereBelongsTo($application)
+            ->whereBelongsTo($application->company)
+            ->findOrFail((int) $interviewId);
+    }
+
+    private function refreshApplicationRecord(Application $application): void
+    {
+        $this->record = ApplicationResource::getEloquentQuery()->findOrFail((int) $application->getKey());
+    }
+
+    private function sendInterviewFailureNotification(\Throwable $exception, Company $company): never
+    {
+        $needsReauthorization = $exception instanceof ConnectedIntegrationReauthorizationRequired;
+        $notification = Notification::make()
+            ->title(__($needsReauthorization
+                ? 'applications.admin.interviews.notifications.calendar_reconnect_required'
+                : 'applications.admin.interviews.notifications.action_failed'))
+            ->danger();
+
+        if ($needsReauthorization) {
+            $notification->actions([
+                Action::make('reconnectCalendar')
+                    ->label(__('applications.admin.actions.reconnect_calendar'))
+                    ->url(CalendarSettings::getUrl(tenant: $company))
+                    ->button(),
+            ]);
+        }
+
+        $notification->send();
+
+        throw new Halt;
+    }
+
+    private function getCurrentUser(): User
+    {
+        $user = Filament::auth()->user();
+
+        abort_unless($user instanceof User, 403);
+
+        return $user;
+    }
+}

@@ -83,6 +83,12 @@ class Company extends Model
         return $this->hasMany(Application::class);
     }
 
+    /** @return HasMany<Interview, $this> */
+    public function interviews(): HasMany
+    {
+        return $this->hasMany(Interview::class);
+    }
+
     /** @return HasMany<ApplicationAnswer, $this> */
     public function applicationAnswers(): HasMany
     {

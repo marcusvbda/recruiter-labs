@@ -124,18 +124,30 @@ class Application extends Model
         return $this->hasMany(ApplicationCriterionScore::class);
     }
 
+    /** @return HasMany<ApplicationInterviewBriefItem, $this> */
+    public function interviewBriefItems(): HasMany
+    {
+        return $this->hasMany(ApplicationInterviewBriefItem::class)->orderBy('sort_order');
+    }
+
     /** @return HasMany<AiUsageRecord, $this> */
     public function aiUsageRecords(): HasMany
     {
         return $this->hasMany(AiUsageRecord::class);
     }
 
+    /** @return HasMany<Interview, $this> */
+    public function interviews(): HasMany
+    {
+        return $this->hasMany(Interview::class);
+    }
+
     /**
      * @return array{
      *     value: int,
-     *     referral_bonus_percentage: int,
+     *     analysis_weight: int,
+     *     referral_weight: int,
      *     is_referral: bool,
-     *     is_capped: bool,
      *     ai_score: int,
      * }|null
      */
@@ -150,16 +162,12 @@ class Application extends Model
             return null;
         }
 
-        $aiScore = (float) $this->analysis_score;
-        $isReferral = $this->source === ApplicationSource::Referral;
-
         return [
             'value' => (int) round($score),
-            'referral_bonus_percentage' => $scoringSetting->referral_bonus_percentage,
-            'is_referral' => $isReferral,
-            'is_capped' => $isReferral
-                && $aiScore * (1 + ($scoringSetting->referral_bonus_percentage / 100)) > 100,
-            'ai_score' => (int) round($aiScore),
+            'analysis_weight' => $scoringSetting->analysis_weight,
+            'referral_weight' => $scoringSetting->referral_weight,
+            'is_referral' => $this->source === ApplicationSource::Referral,
+            'ai_score' => (int) round((float) $this->analysis_score),
         ];
     }
 }

@@ -9,7 +9,7 @@
                 <h2 class="truncate text-xl font-bold text-gray-950 sm:text-2xl dark:text-white">
                     {{ $header['candidate_name'] }}
                 </h2>
-                <x-filament::badge :color="$header['analysis_color']" icon="heroicon-m-sparkles">
+                <x-filament::badge :color="$header['analysis_color']" icon="heroicon-m-document-magnifying-glass">
                     {{ $header['analysis_label'] }}
                 </x-filament::badge>
             </div>

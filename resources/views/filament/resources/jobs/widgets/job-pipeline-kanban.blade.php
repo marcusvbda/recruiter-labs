@@ -140,11 +140,19 @@
                                                 </span>
                                             </div>
                                         @endif
-                                        <div class="flex my-2">
-                                            <x-filament::badge :color="$this->getScoreColor($overallScore, 'value')">
-                                                {{ (int) round((float) data_get($overallScore, 'value', 0)) }}/100
-                                            </x-filament::badge>
-                                        </div>
+                                        @if ($overallScore !== null)
+                                            <div class="flex my-2">
+                                                <x-filament::badge :color="$this->getScoreColor($overallScore, 'value')">
+                                                    {{ (int) round((float) $overallScore['value']) }}/100
+                                                </x-filament::badge>
+                                            </div>
+                                        @else
+                                            <div class="flex my-2">
+                                                <x-filament::badge color="gray">
+                                                    {{ __('applications.pipeline.kanban.fit_evaluation_pending') }}
+                                                </x-filament::badge>
+                                            </div>
+                                        @endif
                                         @if ($this->showsAnalysisBadge($record))
                                             <div class="flex my-2">
                                                 @if ($this->showsScoreBadge($record))

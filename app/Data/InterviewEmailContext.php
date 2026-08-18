@@ -8,6 +8,7 @@ readonly class InterviewEmailContext implements RecruitmentEmailContext
 {
     public function __construct(
         public int $interviewId,
+        public int $notificationSequence,
         public string $candidateName,
         public string $candidateEmail,
         public string $jobTitle,
@@ -29,7 +30,7 @@ readonly class InterviewEmailContext implements RecruitmentEmailContext
 
     public function idempotencyKey(): string
     {
-        return 'interview:'.$this->interviewId;
+        return 'interview:'.$this->interviewId.':'.$this->notificationSequence;
     }
 
     public function formattedDate(): string

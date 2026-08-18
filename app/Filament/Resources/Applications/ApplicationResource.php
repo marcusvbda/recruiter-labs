@@ -36,6 +36,8 @@ class ApplicationResource extends Resource
             'candidate',
             'company',
             'documents',
+            'interviewBriefItems',
+            'interviews',
             'job',
             'referral.user',
             'status',

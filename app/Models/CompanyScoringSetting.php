@@ -11,22 +11,25 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * @property int $company_id
- * @property int $referral_bonus_percentage
+ * @property int $analysis_weight
+ * @property int $referral_weight
  */
-#[Fillable(['company_id', 'referral_bonus_percentage'])]
+#[Fillable(['company_id', 'analysis_weight', 'referral_weight'])]
 class CompanyScoringSetting extends Model
 {
     /** @use HasFactory<CompanyScoringSettingFactory> */
     use HasFactory;
 
     protected $attributes = [
-        'referral_bonus_percentage' => 40,
+        'analysis_weight' => 60,
+        'referral_weight' => 40,
     ];
 
     protected function casts(): array
     {
         return [
-            'referral_bonus_percentage' => 'integer',
+            'analysis_weight' => 'integer',
+            'referral_weight' => 'integer',
         ];
     }
 
@@ -37,9 +40,7 @@ class CompanyScoringSetting extends Model
     }
 
     /**
-     * The AI fit analysis is the score. A referral does not dilute it: it adds a
-     * percentage on top of it, capped at 100 — so an 80 with a 40% bonus reads as
-     * 100, and a referral can never drag a strong candidate down.
+     * Blend the fit evaluation score with the referral component using this company's weights.
      *
      * Returns null when the application's analysis score isn't computed yet.
      */
@@ -49,12 +50,12 @@ class CompanyScoringSetting extends Model
             return null;
         }
 
-        $score = (float) $application->analysis_score;
+        $analysisComponent = (float) $application->analysis_score;
+        $referralComponent = $application->source === ApplicationSource::Referral ? 100 : 0;
 
-        if ($application->source === ApplicationSource::Referral) {
-            $score *= 1 + ($this->referral_bonus_percentage / 100);
-        }
-
-        return round(min($score, 100), 2);
+        return round(
+            ($analysisComponent * $this->analysis_weight + $referralComponent * $this->referral_weight) / 100,
+            2,
+        );
     }
 }

@@ -53,7 +53,7 @@ class JobForm
                             ->icon(Heroicon::OutlinedPencilSquare)
                             ->schema(self::jobDetailsComponents()),
                         'ai-criteria' => Tab::make(__('jobs.edit_tabs.ai_criteria'))
-                            ->icon(Heroicon::OutlinedSparkles)
+                            ->icon(Heroicon::OutlinedDocumentMagnifyingGlass)
                             ->schema(self::aiCriteriaComponents()),
                         'preview' => Tab::make(__('jobs.edit_tabs.preview'))
                             ->icon(Heroicon::OutlinedEye)
@@ -352,6 +352,13 @@ class JobForm
                         ->collapsed()
                         ->addActionLabel(__('jobs.criteria.add'))
                         ->reorderable(false),
+                ])
+                ->visible(fn (Job $record): bool => $record->criteria_processing_status === JobCriteriaProcessingStatus::Completed),
+            View::make('filament.resources.jobs.components.ai-review-alerts')
+                ->viewData(fn (Job $record): array => [
+                    'alerts' => $record->reviewAlerts()
+                        ->orderBy('sort_order')
+                        ->get(),
                 ])
                 ->visible(fn (Job $record): bool => $record->criteria_processing_status === JobCriteriaProcessingStatus::Completed),
         ];

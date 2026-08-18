@@ -13,17 +13,25 @@ class ReplaceJobCriteria
 {
     /**
      * @param  array<int, mixed>  $criteria
+     * @param  array<int, mixed>  $reviewAlerts
      */
-    public function handle(Job $job, array $criteria, int $expectedGeneration): bool
+    public function handle(Job $job, array $criteria, array $reviewAlerts, int $expectedGeneration): bool
     {
         $validated = Validator::make(
-            ['criteria' => $criteria],
+            ['criteria' => $criteria, 'review_alerts' => $reviewAlerts],
             [
                 'criteria' => ['required', 'array', 'min:1', 'max:20'],
                 'criteria.*' => ['required', 'array:criterion,weight,reason'],
                 'criteria.*.criterion' => ['required', 'string', 'max:150'],
                 'criteria.*.weight' => ['required', 'integer', 'between:0,10'],
-                'criteria.*.reason' => ['required', 'string'],
+                'criteria.*.reason' => ['required', 'string', 'max:150'],
+                'review_alerts' => ['required', 'array', 'max:5'],
+                'review_alerts.*' => ['required', 'array:category,severity,excerpt,issue,suggestion'],
+                'review_alerts.*.category' => ['required', 'string', 'max:80'],
+                'review_alerts.*.severity' => ['required', 'string', 'in:high,medium,low'],
+                'review_alerts.*.excerpt' => ['nullable', 'string', 'max:220'],
+                'review_alerts.*.issue' => ['required', 'string', 'max:220'],
+                'review_alerts.*.suggestion' => ['required', 'string', 'max:220'],
             ],
         )->validate();
 
@@ -42,6 +50,19 @@ class ReplaceJobCriteria
                 ],
                 $validated['criteria'],
             ));
+
+            $alertRows = [];
+
+            foreach ($validated['review_alerts'] as $sortOrder => $alert) {
+                $alertRows[] = [
+                    ...$alert,
+                    'company_id' => $lockedJob->company_id,
+                    'sort_order' => $sortOrder,
+                ];
+            }
+
+            $lockedJob->reviewAlerts()->delete();
+            $lockedJob->reviewAlerts()->createMany($alertRows);
 
             $lockedJob->forceFill([
                 'criteria_processing_status' => JobCriteriaProcessingStatus::Completed,

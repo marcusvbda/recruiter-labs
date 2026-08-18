@@ -14,6 +14,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 
 class ScoringSettings extends Page
@@ -58,12 +59,21 @@ class ScoringSettings extends Page
             ->modalIcon('heroicon-o-scale')
             ->modalSubmitActionLabel(__('scoring.update.save'))
             ->fillForm(fn (): array => [
-                'referral_bonus_percentage' => $this->scoringSettings['referral_bonus_percentage'],
+                'analysis_weight' => $this->scoringSettings['analysis_weight'],
+                'referral_weight' => $this->scoringSettings['referral_weight'],
             ])
             ->schema([
-                TextInput::make('referral_bonus_percentage')
-                    ->label(__('scoring.fields.referral_bonus'))
-                    ->helperText(__('scoring.update.bonus_helper'))
+                TextInput::make('analysis_weight')
+                    ->label(__('scoring.fields.fit_evaluation_weight'))
+                    ->helperText(__('scoring.update.sum_helper'))
+                    ->numeric()
+                    ->integer()
+                    ->required()
+                    ->minValue(0)
+                    ->maxValue(100)
+                    ->suffix('%'),
+                TextInput::make('referral_weight')
+                    ->label(__('scoring.fields.referral_weight'))
                     ->numeric()
                     ->integer()
                     ->required()
@@ -72,19 +82,25 @@ class ScoringSettings extends Page
                     ->suffix('%'),
             ])
             ->action(function (array $data, UpdateCompanyScoringSettings $updateScoringSettings): void {
+                if (((int) $data['analysis_weight'] + (int) $data['referral_weight']) !== 100) {
+                    throw ValidationException::withMessages([
+                        'analysis_weight' => __('scoring.validation.weights_must_sum'),
+                        'referral_weight' => __('scoring.validation.weights_must_sum'),
+                    ]);
+                }
+
                 try {
                     $updateScoringSettings->run(
                         $this->getCompany(),
                         $this->getRecord(),
-                        (int) $data['referral_bonus_percentage'],
+                        (int) $data['analysis_weight'],
+                        (int) $data['referral_weight'],
                     );
-                } catch (InvalidArgumentException $exception) {
-                    Notification::make()
-                        ->title($exception->getMessage())
-                        ->danger()
-                        ->send();
-
-                    return;
+                } catch (InvalidArgumentException) {
+                    throw ValidationException::withMessages([
+                        'analysis_weight' => __('scoring.validation.weights_must_sum'),
+                        'referral_weight' => __('scoring.validation.weights_must_sum'),
+                    ]);
                 }
 
                 $this->refreshScoringState();
@@ -122,7 +138,8 @@ class ScoringSettings extends Page
         $scoringSetting = $company->scoringSetting ?? new CompanyScoringSetting;
 
         $this->scoringSettings = [
-            'referral_bonus_percentage' => $scoringSetting->referral_bonus_percentage,
+            'analysis_weight' => $scoringSetting->analysis_weight,
+            'referral_weight' => $scoringSetting->referral_weight,
         ];
     }
 }

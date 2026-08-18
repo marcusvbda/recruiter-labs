@@ -12,6 +12,7 @@ $queues = [
     'default',
     'ai-application-analysis',
     'ai-criteria-extraction',
+    'interview-sync',
     'recruitment-emails',
 ];
 
@@ -24,3 +25,8 @@ foreach ($queues as $queue) {
         ->withoutOverlapping(2)
         ->runInBackground();
 }
+
+Schedule::command('interviews:sync-upcoming')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping(15)
+    ->runInBackground();

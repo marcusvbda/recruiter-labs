@@ -60,17 +60,15 @@
                 <p class="mt-3 text-sm text-gray-600 dark:text-gray-300">
                     {{ __('applications.admin.overview.overall_score.ai_component', [
                         'score' => $overallScore['ai_score'],
+                        'weight' => $overallScore['analysis_weight'],
                     ]) }}
                     ·
                     {{ __(
                         $overallScore['is_referral']
                             ? 'applications.admin.overview.overall_score.referral_yes'
                             : 'applications.admin.overview.overall_score.referral_no',
-                        ['bonus' => $overallScore['referral_bonus_percentage']],
+                        ['weight' => $overallScore['referral_weight']],
                     ) }}
-                    @if ($overallScore['is_capped'])
-                        · {{ __('applications.admin.overview.overall_score.capped') }}
-                    @endif
                 </p>
             @endif
         </x-filament::section>

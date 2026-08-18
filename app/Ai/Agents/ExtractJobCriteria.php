@@ -23,6 +23,8 @@ class ExtractJobCriteria implements Agent, HasStructuredOutput
     use BuildsCompactAgentContext;
     use Promptable;
 
+    public const CACHE_SCHEMA_VERSION = 'criteria-and-job-review-alerts-v1';
+
     public function __construct(private readonly Job $job) {}
 
     public function instructions(): Stringable|string
@@ -32,7 +34,9 @@ class ExtractJobCriteria implements Agent, HasStructuredOutput
 
             Context format: TOON — unquoted keys, indentation for nesting, arrays as `[n]{field1,field2}:` followed by one comma-separated row per line.
 
-            Weight each criterion 0-10 by importance and give a one-sentence reason. Use the job's own language. Don't invent requirements the context doesn't support. Plain text only, no HTML.
+            Weight each criterion 0-10 by importance and give a one-sentence reason. Also return up to five concise job-review alerts for concrete ambiguity, conflicts, missing information, or risks that could affect recruiting. Each alert needs a category, high/medium/low severity, an exact supporting excerpt when available (otherwise null), a one-sentence issue, and a practical one-sentence suggestion. Sort alerts most severe first.
+
+            Use the job's own language. Don't invent requirements the context doesn't support. Plain text only, no HTML.
             INSTRUCTIONS;
     }
 
@@ -81,6 +85,17 @@ class ExtractJobCriteria implements Agent, HasStructuredOutput
                 ])->withoutAdditionalProperties())
                 ->min(1)
                 ->max(20)
+                ->required(),
+            'review_alerts' => $schema->array()
+                ->items($schema->object(fn (JsonSchema $schema): array => [
+                    'category' => $schema->string()->max(80)->required(),
+                    'severity' => $schema->string()->enum(['high', 'medium', 'low'])->required(),
+                    'excerpt' => $schema->string()->max(220)->nullable()->required(),
+                    'issue' => $schema->string()->max(220)->required(),
+                    'suggestion' => $schema->string()->max(220)->required(),
+                ])->withoutAdditionalProperties())
+                ->min(0)
+                ->max(5)
                 ->required(),
         ];
     }
