@@ -35,6 +35,12 @@ class ScheduleInterview
         private RecruitmentEmailDispatcher $emails,
     ) {}
 
+    /**
+     * @param  string  $requestKey  Identifies one scheduling request. Replaying it
+     *                              (double submit, retry after a timeout) returns
+     *                              the interview it already produced; a new key is
+     *                              what books an additional interview.
+     */
     public function handle(
         Company $company,
         User $user,
@@ -42,9 +48,17 @@ class ScheduleInterview
         CarbonImmutable $scheduledAt,
         CarbonImmutable $endsAt,
         string $timezone,
+        string $requestKey,
     ): Interview {
         Gate::forUser($user)->authorize('update', $company);
         $this->validateTimes($scheduledAt, $endsAt, $timezone);
+        $this->validateRequestKey($requestKey);
+
+        $existing = $this->interviewForRequest($company, $requestKey);
+
+        if ($existing instanceof Interview) {
+            return $existing;
+        }
 
         try {
             return Cache::lock($this->lockKey($application), self::OperationLockSeconds)->block(5, fn (): Interview => $this->scheduleInterview(
@@ -54,6 +68,7 @@ class ScheduleInterview
                 $scheduledAt,
                 $endsAt,
                 $timezone,
+                $requestKey,
             ));
         } catch (LockTimeoutException $exception) {
             throw new InterviewCalendarOperationUnavailable(
@@ -64,9 +79,11 @@ class ScheduleInterview
     }
 
     /**
-     * Serialized by {@see handle()} on the application, so a double-submitted
-     * scheduling request cannot create two Google Calendar events (and two
-     * "interview scheduled" emails) for the same click.
+     * Serialized by {@see handle()} on the application, and keyed by the
+     * scheduling request inside that lock: whichever call gets there first
+     * creates the interview, everyone replaying the same request reuses it. So a
+     * double-submitted request cannot produce two interviews, two Google
+     * Calendar events, two Meet rooms or two "interview scheduled" emails.
      */
     private function scheduleInterview(
         Company $company,
@@ -75,8 +92,15 @@ class ScheduleInterview
         CarbonImmutable $scheduledAt,
         CarbonImmutable $endsAt,
         string $timezone,
+        string $requestKey,
     ): Interview {
-        $interview = DB::transaction(function () use ($company, $user, $application, $scheduledAt, $endsAt, $timezone): Interview {
+        $alreadyScheduled = $this->interviewForRequest($company, $requestKey);
+
+        if ($alreadyScheduled instanceof Interview) {
+            return $alreadyScheduled;
+        }
+
+        $interview = DB::transaction(function () use ($company, $user, $application, $scheduledAt, $endsAt, $timezone, $requestKey): Interview {
             $lockedApplication = Application::query()
                 ->withoutGlobalScopes()
                 ->with(['candidate', 'job'])
@@ -101,6 +125,7 @@ class ScheduleInterview
                 'application_id' => $lockedApplication->getKey(),
                 'calendar_user_id' => $user->getKey(),
                 'calendar_integration_id' => $integration->getKey(),
+                'schedule_request_key' => $requestKey,
                 'status' => InterviewStatus::Pending,
                 'scheduled_at' => $scheduledAt,
                 'ends_at' => $endsAt,
@@ -150,6 +175,28 @@ class ScheduleInterview
     private function lockKey(Application $application): string
     {
         return 'interview-schedule-application:'.$application->getKey();
+    }
+
+    /**
+     * The interview a previous run of this exact scheduling request produced, if
+     * any. Its calendar event, Meet room and notification already exist, so it is
+     * returned untouched rather than re-created.
+     */
+    private function interviewForRequest(Company $company, string $requestKey): ?Interview
+    {
+        return Interview::query()
+            ->withoutGlobalScopes()
+            ->with(['application.candidate', 'application.job'])
+            ->whereBelongsTo($company)
+            ->where('schedule_request_key', $requestKey)
+            ->first();
+    }
+
+    private function validateRequestKey(string $requestKey): void
+    {
+        if (! Str::isUuid($requestKey)) {
+            throw new \InvalidArgumentException('A scheduling request key must be a UUID.');
+        }
     }
 
     private function validateTimes(CarbonImmutable $scheduledAt, CarbonImmutable $endsAt, string $timezone): void

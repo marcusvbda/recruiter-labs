@@ -21,6 +21,8 @@
 
                 @if ($summary['stage']['role'] === 'hired')
                     <x-filament::badge color="success" size="sm">{{ __('statuses.badges.hired') }}</x-filament::badge>
+                @elseif ($summary['stage']['role'] === 'closed')
+                    <x-filament::badge color="danger" size="sm">{{ __('statuses.badges.closed') }}</x-filament::badge>
                 @elseif ($summary['stage']['role'] === 'final_stage')
                     <x-filament::badge color="warning" size="sm">{{ __('statuses.badges.final_stage') }}</x-filament::badge>
                 @endif

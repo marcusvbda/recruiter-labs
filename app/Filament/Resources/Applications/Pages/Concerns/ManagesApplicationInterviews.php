@@ -26,11 +26,13 @@ use DateTimeZone;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Component;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Support\Exceptions\Halt;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -38,6 +40,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 use LogicException;
 
 trait ManagesApplicationInterviews
@@ -48,7 +51,14 @@ trait ManagesApplicationInterviews
             ->label(__('applications.admin.actions.schedule_interview'))
             ->icon(Heroicon::OutlinedCalendarDays)
             ->button()
-            ->schema($this->interviewSchedulingSchema())
+            ->schema([
+                // One key per opened form, kept across resubmissions of that same
+                // form, so a double click or a retry reuses the interview it
+                // already booked instead of booking a second one.
+                Hidden::make('schedule_request_key')
+                    ->default(fn (): string => (string) Str::uuid()),
+                ...$this->interviewSchedulingSchema(),
+            ])
             ->modalHeading(__('applications.admin.interviews.schedule.heading'))
             ->modalDescription(__('applications.admin.interviews.schedule.description'))
             ->modalSubmitActionLabel(__('applications.admin.interviews.schedule.confirm'))
@@ -69,6 +79,7 @@ trait ManagesApplicationInterviews
                         $scheduledAt,
                         $endsAt,
                         $timezone,
+                        (string) $data['schedule_request_key'],
                     );
                 } catch (AuthorizationException|ConnectedIntegrationReauthorizationRequired|InterviewCalendarOperationUnavailable|InterviewCalendarTerminalFailure|ConnectionException|RequestException|ModelNotFoundException|\InvalidArgumentException|LogicException $exception) {
                     $this->sendInterviewFailureNotification($exception, $application->company);
@@ -211,8 +222,10 @@ trait ManagesApplicationInterviews
                 ->helperText($this->calendarAccountHint())
                 ->native(false)
                 ->seconds(false)
-                ->after(now()->format('Y-m-d H:i:s'))
-                ->default(now()->addHour()->startOfHour()->format('Y-m-d H:i'))
+                // The value entered is wall-clock time in the selected timezone,
+                // so "in the future" has to be judged in that same timezone.
+                ->after(fn (Get $get): string => now($this->selectedTimezone($get))->format('Y-m-d H:i:s'))
+                ->default(fn (): string => now($this->defaultTimezone())->addHour()->startOfHour()->format('Y-m-d H:i'))
                 ->required(),
             TextInput::make('duration_minutes')
                 ->label(__('applications.admin.interviews.fields.duration'))
@@ -226,10 +239,34 @@ trait ManagesApplicationInterviews
                 ->label(__('applications.admin.interviews.fields.timezone'))
                 ->helperText(__('applications.admin.interviews.fields.timezone_helper'))
                 ->options($this->timezoneOptions())
-                ->default(config('app.timezone'))
+                ->default(fn (): string => $this->defaultTimezone())
                 ->searchable()
+                ->live()
                 ->required(),
         ];
+    }
+
+    /**
+     * The timezone the agenda already resolved from this recruiter's browser,
+     * falling back to the application's. It is only a default: the field stays
+     * editable, and whatever is selected is what the date and time mean.
+     */
+    private function defaultTimezone(): string
+    {
+        $sessionTimezone = session('agenda.timezone');
+
+        return is_string($sessionTimezone) && in_array($sessionTimezone, DateTimeZone::listIdentifiers(), true)
+            ? $sessionTimezone
+            : (string) config('app.timezone');
+    }
+
+    private function selectedTimezone(Get $get): string
+    {
+        $timezone = $get('timezone');
+
+        return is_string($timezone) && in_array($timezone, DateTimeZone::listIdentifiers(), true)
+            ? $timezone
+            : $this->defaultTimezone();
     }
 
     /**

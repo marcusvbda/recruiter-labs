@@ -4,7 +4,6 @@ namespace App\Models;
 
 use App\Enums\ApplicationLocale;
 use App\Enums\CoverLetterType;
-use App\Enums\InterviewStatus;
 use App\Enums\JobCriteriaProcessingStatus;
 use App\Exceptions\RecruitmentWorkflowException;
 use App\Models\Concerns\HasUniqueKey;
@@ -88,6 +87,12 @@ class Job extends Model
     }
 
     /**
+     * An active hiring process: published, and inside its campaign window. It
+     * deliberately ignores `applications_paused` — a job can stop taking new
+     * candidates while the ones already in it are still being interviewed.
+     * "Accepting applications" is the different question {@see acceptsApplications()}
+     * answers.
+     *
      * @param  Builder<Job>  $query
      * @return Builder<Job>
      */
@@ -105,6 +110,10 @@ class Job extends Model
                 ->orWhereDate('ends_at', '>=', $today));
     }
 
+    /**
+     * Whether the public page may still take new candidates. Narrower than
+     * {@see scopeCurrentlyActive()}: pausing intake does not end the process.
+     */
     public function acceptsApplications(): bool
     {
         $today = CarbonImmutable::instance(today());
@@ -163,42 +172,27 @@ class Job extends Model
     }
 
     /**
-     * Applications with at least one interview that has not been cancelled.
-     * This is what "interviewing" means operationally: a commitment exists.
+     * Candidates with an interview still ahead of them. The meaning lives in
+     * {@see Application::scopeInterviewing()} so the jobs list, the overview and
+     * the job workspace cannot drift apart.
      *
      * @return HasMany<Application, $this>
      */
     public function interviewingApplications(): HasMany
     {
-        return $this->applications()->whereHas(
-            'interviews',
-            fn (Builder $query): Builder => $query->where('status', '!=', InterviewStatus::Cancelled->value),
-        );
+        return $this->applications()->interviewing();
     }
 
-    /**
-     * Applications sitting in a stage explicitly marked as late/final by the
-     * workflow. The hired stage is the outcome, so it is excluded here.
-     *
-     * @return HasMany<Application, $this>
-     */
+    /** @return HasMany<Application, $this> */
     public function finalStageApplications(): HasMany
     {
-        return $this->applications()->whereHas(
-            'status',
-            fn (Builder $query): Builder => $query
-                ->where('is_final_stage', true)
-                ->where('is_hired', false),
-        );
+        return $this->applications()->inFinalStage();
     }
 
     /** @return HasMany<Application, $this> */
     public function hiredApplications(): HasMany
     {
-        return $this->applications()->whereHas(
-            'status',
-            fn (Builder $query): Builder => $query->where('is_hired', true),
-        );
+        return $this->applications()->hired();
     }
 
     /** @return HasMany<JobClick, $this> */

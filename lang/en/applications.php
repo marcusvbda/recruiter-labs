@@ -101,6 +101,10 @@ return [
                     'title' => 'Hired',
                     'description' => 'This process is complete for this candidate.',
                 ],
+                'closed' => [
+                    'title' => 'Process closed',
+                    'description' => 'This candidate reached a closing stage. No further recruiting step is expected.',
+                ],
             ],
             'fit_heading' => 'Candidate evaluation',
             'fit_score' => 'Fit :score',

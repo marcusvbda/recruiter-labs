@@ -4,7 +4,6 @@ namespace App\Filament\Pages;
 
 use App\Data\CalendarAgendaEvent;
 use App\Enums\ConnectedIntegrationStatus;
-use App\Enums\InterviewStatus;
 use App\Filament\Clusters\Settings\Pages\CalendarSettings;
 use App\Filament\Resources\Applications\ApplicationResource;
 use App\Models\Company;
@@ -194,7 +193,7 @@ class Calendar extends Page
         return Interview::query()
             ->whereBelongsTo($company)
             ->with(['application.candidate', 'application.job'])
-            ->where('status', '!=', InterviewStatus::Cancelled->value)
+            ->notCancelled()
             ->when(
                 $this->selectedRecruiterId() !== null,
                 fn ($query) => $query->where('calendar_user_id', $this->selectedRecruiterId()),

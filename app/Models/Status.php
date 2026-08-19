@@ -19,11 +19,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $order
  * @property bool $is_hired
  * @property bool $is_final_stage
+ * @property bool $is_terminal
  * @property bool $sends_email
  * @property string|null $email_subject
  * @property string|null $email_body
  */
-#[Fillable(['company_id', 'pipeline_id', 'name', 'color', 'order', 'is_hired', 'is_final_stage', 'sends_email', 'email_subject', 'email_body'])]
+#[Fillable(['company_id', 'pipeline_id', 'name', 'color', 'order', 'is_hired', 'is_final_stage', 'is_terminal', 'sends_email', 'email_subject', 'email_body'])]
 class Status extends Model
 {
     /** @use HasFactory<StatusFactory> */
@@ -32,11 +33,26 @@ class Status extends Model
     protected $attributes = [
         'is_hired' => false,
         'is_final_stage' => false,
+        'is_terminal' => false,
         'sends_email' => false,
     ];
 
     protected static function booted(): void
     {
+        // The three stage flags describe one position in the process, so only
+        // four combinations are meaningful: intermediate, late stage, hired and
+        // closed. Normalising on save keeps the impossible ones out of the
+        // database instead of teaching every query to work around them.
+        static::saving(function (Status $status): void {
+            if ($status->is_hired) {
+                $status->is_terminal = true;
+            }
+
+            if ($status->is_terminal) {
+                $status->is_final_stage = false;
+            }
+        });
+
         // Deleting a status with applications would erase where those candidates
         // are in the process. The `restrict` foreign key on `applications` also
         // blocks it; this hook makes the reason reportable.
@@ -54,6 +70,7 @@ class Status extends Model
         return [
             'is_hired' => 'boolean',
             'is_final_stage' => 'boolean',
+            'is_terminal' => 'boolean',
             'sends_email' => 'boolean',
         ];
     }
@@ -83,6 +100,15 @@ class Status extends Model
     public function isLateStage(): bool
     {
         return $this->is_final_stage && ! $this->is_hired;
+    }
+
+    /**
+     * Whether this stage closed the process without a hire: rejected, withdrawn,
+     * disqualified and anything else a workspace models as a negative outcome.
+     */
+    public function isClosedWithoutHire(): bool
+    {
+        return $this->is_terminal && ! $this->is_hired;
     }
 
     /**

@@ -277,11 +277,7 @@ class ViewApplication extends ViewRecord
             ], tenant: $application->company),
             'status' => $application->status->name,
             'status_color' => $application->status->color,
-            'stage_role' => match (true) {
-                $application->status->is_hired => 'hired',
-                $application->status->is_final_stage => 'final_stage',
-                default => null,
-            },
+            'stage_role' => $this->stageRole($application),
             'score' => $fit['score'],
             'needs_validation_count' => $fit['needs_validation_count'],
             'analysis_status' => $analysisStatus,
@@ -323,11 +319,7 @@ class ViewApplication extends ViewRecord
                 'color' => $application->status->color,
                 'position' => $currentIndex === false ? null : $currentIndex + 1,
                 'total' => $stages->count(),
-                'role' => match (true) {
-                    $application->status->is_hired => 'hired',
-                    $application->status->is_final_stage => 'final_stage',
-                    default => null,
-                },
+                'role' => $this->stageRole($application),
                 'flow' => $stages
                     ->map(fn (Status $status): array => [
                         'name' => $status->name,
@@ -404,10 +396,27 @@ class ViewApplication extends ViewRecord
 
         return match (true) {
             $application->status->is_hired => 'hired',
+            // Rejected, withdrawn, disqualified: the process ended, so the page
+            // must stop proposing recruiting steps for this candidate.
+            $application->status->is_terminal => 'closed',
             $nextInterview !== null => 'prepare_interview',
             in_array($analysisStatus, ['pending', 'processing', 'awaiting_criteria'], strict: true) => 'await_evaluation',
             $application->status->is_final_stage => 'decide',
             default => 'schedule_interview',
+        };
+    }
+
+    /**
+     * How the current stage reads in the process: the definitive hire, a
+     * process closed without one, a late stage, or none of those.
+     */
+    private function stageRole(Application $application): ?string
+    {
+        return match (true) {
+            $application->status->is_hired => 'hired',
+            $application->status->is_terminal => 'closed',
+            $application->status->is_final_stage => 'final_stage',
+            default => null,
         };
     }
 

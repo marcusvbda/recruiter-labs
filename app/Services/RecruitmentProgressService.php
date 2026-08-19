@@ -2,14 +2,14 @@
 
 namespace App\Services;
 
-use App\Enums\InterviewStatus;
 use App\Models\Application;
 use App\Models\Company;
 use App\Models\Interview;
 use App\Models\Job;
-use Carbon\CarbonImmutable;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Str;
 
 /**
@@ -17,7 +17,8 @@ use Illuminate\Support\Str;
  *
  * Every surface that answers that question — the overview, the jobs list and the
  * job workspace — reads its counts from here, so the same words always mean the
- * same thing.
+ * same thing. The meaning of each count lives in the model scopes this service
+ * composes ({@see Application::scopeInterviewing()} and friends).
  */
 class RecruitmentProgressService
 {
@@ -73,10 +74,15 @@ class RecruitmentProgressService
     /**
      * Workspace-wide operational figures for the overview page.
      *
+     * Everything here is scoped to the recruiter's *current* recruitment: only
+     * jobs that are active hiring processes today, so a hire from a campaign
+     * that ended months ago cannot inflate "what is happening right now". The
+     * interview figure is personal — the signed-in recruiter's own commitments.
+     *
      * @return array{
-     *     open_jobs: int,
+     *     active_jobs: int,
      *     draft_jobs: int,
-     *     open_applications: int,
+     *     active_applications: int,
      *     interviewing: int,
      *     finalists: int,
      *     hired: int,
@@ -84,50 +90,28 @@ class RecruitmentProgressService
      *     needs_attention: int
      * }
      */
-    public function workspaceSummary(Company $company): array
+    public function workspaceSummary(Company $company, User $recruiter): array
     {
-        $openJobIds = Job::query()
-            ->whereBelongsTo($company)
-            ->currentlyActive()
-            ->pluck('id');
+        $activeJobIds = $this->activeJobIds($company);
 
         return [
-            'open_jobs' => $openJobIds->count(),
+            'active_jobs' => $activeJobIds->count(),
             'draft_jobs' => Job::query()
                 ->whereBelongsTo($company)
                 ->where('published', false)
                 ->count(),
-            'open_applications' => Application::query()
-                ->whereBelongsTo($company)
-                ->whereIn('job_id', $openJobIds)
-                ->whereHas('status', fn (Builder $query): Builder => $query->where('is_hired', false))
-                ->count(),
-            'interviewing' => Application::query()
-                ->whereBelongsTo($company)
-                ->whereHas(
-                    'interviews',
-                    fn (Builder $query): Builder => $query->where('status', '!=', InterviewStatus::Cancelled->value),
-                )
-                ->whereHas('status', fn (Builder $query): Builder => $query->where('is_hired', false))
-                ->count(),
-            'finalists' => Application::query()
-                ->whereBelongsTo($company)
-                ->whereHas('status', fn (Builder $query): Builder => $query
-                    ->where('is_final_stage', true)
-                    ->where('is_hired', false))
-                ->count(),
-            'hired' => Application::query()
-                ->whereBelongsTo($company)
-                ->whereHas('status', fn (Builder $query): Builder => $query->where('is_hired', true))
-                ->count(),
-            'upcoming_interviews' => $this->upcomingInterviewsQuery($company)->count(),
+            'active_applications' => $this->activeJobApplications($company, $activeJobIds)->inProcess()->count(),
+            'interviewing' => $this->activeJobApplications($company, $activeJobIds)->interviewing()->count(),
+            'finalists' => $this->activeJobApplications($company, $activeJobIds)->inFinalStage()->count(),
+            'hired' => $this->activeJobApplications($company, $activeJobIds)->hired()->count(),
+            'upcoming_interviews' => $this->upcomingInterviewsQuery($company, $recruiter)->count(),
             'needs_attention' => $this->jobsNeedingAttention($company)->count(),
         ];
     }
 
     /**
-     * Published jobs that are not making progress: either nobody applied, or
-     * applicants arrived and none of them moved forward.
+     * Active hiring processes that are not making progress: either nobody
+     * applied, or applicants arrived and none of them moved forward.
      *
      * @return Collection<int, Job>
      */
@@ -145,14 +129,43 @@ class RecruitmentProgressService
     }
 
     /**
+     * Interviews still to be kept. Passing a recruiter narrows it to the ones
+     * they personally own, which is what the overview promises; the agenda page
+     * omits it and applies its own recruiter filter instead.
+     *
      * @return Builder<Interview>
      */
-    public function upcomingInterviewsQuery(Company $company): Builder
+    public function upcomingInterviewsQuery(Company $company, ?User $recruiter = null): Builder
     {
         return Interview::query()
             ->whereBelongsTo($company)
-            ->where('status', '!=', InterviewStatus::Cancelled->value)
-            ->where('ends_at', '>=', CarbonImmutable::now())
+            ->upcoming()
+            ->when(
+                $recruiter !== null,
+                fn (Builder $query): Builder => $query->where('calendar_user_id', $recruiter->getKey()),
+            )
             ->orderBy('scheduled_at');
+    }
+
+    /**
+     * @return SupportCollection<int, int>
+     */
+    private function activeJobIds(Company $company): SupportCollection
+    {
+        return Job::query()
+            ->whereBelongsTo($company)
+            ->currentlyActive()
+            ->pluck('id');
+    }
+
+    /**
+     * @param  SupportCollection<int, int>  $activeJobIds
+     * @return Builder<Application>
+     */
+    private function activeJobApplications(Company $company, SupportCollection $activeJobIds): Builder
+    {
+        return Application::query()
+            ->whereBelongsTo($company)
+            ->whereIn('job_id', $activeJobIds);
     }
 }

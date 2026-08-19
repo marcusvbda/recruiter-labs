@@ -17,6 +17,8 @@ return [
         'is_hired_helper' => 'Candidaturas nesta etapa contam como contratações realizadas.',
         'is_final_stage' => 'Etapa final',
         'is_final_stage_helper' => 'Candidatos aqui estão perto da decisão de contratação. Usado para contar finalistas.',
+        'is_terminal' => 'Etapa de encerramento',
+        'is_terminal_helper' => 'Chegar a esta etapa encerra o processo: reprovado, desistente, desqualificado. Uma etapa de contratação também sempre encerra o processo.',
         'stage_role' => 'Papel no processo',
         'sends_email' => 'Enviar um e-mail quando o candidato entrar nesta etapa',
         'sends_email_helper' => 'Enviado automaticamente pelo provedor de e-mail configurado.',
@@ -29,6 +31,7 @@ return [
     'badges' => [
         'hired' => 'Contratado',
         'final_stage' => 'Etapa final',
+        'closed' => 'Encerrado',
         'intermediate' => 'Em andamento',
         'email_on' => 'Com e-mail',
         'email_off' => 'Sem e-mail',

@@ -82,14 +82,46 @@ navigation group: the whole product is recruitment.
   `JobProgressColumn`. Any new progress signal is added there and to
   `RecruitmentProgressService`, which is the single source of truth for those
   counts — do not recompute them ad hoc in a page or widget.
-- **Late-stage is explicit, never inferred from a stage name.** `Status` carries
-  `is_final_stage` (close to a decision) alongside `is_hired` (the definitive
-  hired state). Do not pattern-match on names such as "Offer" or "Final
-  interview", and do not grow this into a stage taxonomy.
+- **An active hiring process and a job accepting applications are different
+  questions.** `Job::scopeCurrentlyActive()` means published and inside its
+  campaign window; it deliberately ignores `applications_paused`, because a
+  paused job still has candidates being interviewed. Only
+  `Job::acceptsApplications()` — and copy that literally promises new
+  submissions — respects the pause. Never label a `currentlyActive()` count as
+  "open for applications".
+- **Overview metrics all use the same active-job scope.** Active applications,
+  interviewing, finalists and hired on the Overview count only applications
+  belonging to currently active jobs, so a hire from a campaign that ended
+  months ago cannot inflate "what is happening now". Historical figures belong
+  on the job's own analytics, not there.
+- **Interviewing means a pending commitment, not interview history.** An
+  application is interviewing when it has a non-cancelled interview that has not
+  finished yet (upcoming or running). An interview that already ended does not
+  keep a candidate in the metric, and hired or otherwise terminal applications
+  never count. The definitions live in `Application`'s scopes (`inProcess`,
+  `interviewing`, `inFinalStage`, `hired`) and `Interview::scopeUpcoming()`;
+  every surface — job relations, Overview, jobs table, filters — composes those
+  instead of rewriting the condition.
+- **Late-stage and closing stages are explicit, never inferred from a stage
+  name.** `Status` carries three persisted flags: `is_final_stage` (close to a
+  decision), `is_hired` (the definitive positive outcome) and `is_terminal` (the
+  process ended, whether hired, rejected, withdrawn or disqualified). `is_hired`
+  is always a terminal outcome. Only four combinations are valid — intermediate,
+  late stage, hired, closed — and `Status` normalises on save to keep it that
+  way (hired implies terminal; terminal is never a finalist stage). Do not
+  pattern-match on names such as "Offer" or "Rejected" at runtime, do not grow
+  this into a stage taxonomy, and configure the flags in workflow provisioning
+  (`ProvisionDefaultPipeline`, seeders) instead.
 - **An application's current stage must always be immediately visible.** It is
   the first thing in the application header, above fit, evidence and any
   interview. The evaluation's *processing* state is background-job status and
   must never be more prominent than the stage.
+- **Next-action guidance stops at terminal outcomes.** The application summary
+  suggests the recruiter's likely next step; for a hired application it shows
+  the hire, for any other terminal stage it shows the process as closed. It must
+  never propose scheduling an interview for a candidate who was rejected,
+  withdrew or was disqualified. It stays guidance — never automate a
+  recruitment decision.
 - **Candidate Evaluation is contextual evidence, not the primary workflow
   state.** It informs the recruiter; the pipeline stage is what the product
   tracks. Keep the evaluation inside its own tab and summarise it, at most, as
@@ -101,6 +133,25 @@ navigation group: the whole product is recruitment.
 - **Calendar is operational; calendar integration is configuration.** The
   agenda page stays in primary navigation; connecting Google Calendar stays in
   Settings → integrations. Do not merge them.
+- **Overview interviews are personal; the calendar is operational.** The
+  Overview's interview count and table show only interviews owned by the
+  authenticated recruiter's calendar account — never another recruiter's
+  commitments presented as theirs. Company-wide visibility and recruiter filters
+  stay on the Calendar page, under its existing authorization rules.
+- **Interview scheduling is idempotent per scheduling request.** Each opened
+  scheduling form carries a UUID `schedule_request_key`, persisted on the
+  interview and unique in the database. Replaying that request (double click,
+  retry) reuses the interview it already created — one interview, one calendar
+  event, one Meet room, one notification — while a new request key still books
+  an additional, intentional interview. Idempotency belongs to the request, not
+  to the application, and must not weaken the existing deterministic calendar
+  event ID, locking or sync-recovery behaviour.
+- **Interview scheduling defaults to the agenda's timezone.** The scheduling
+  form defaults to `session('agenda.timezone')` — the timezone the Calendar page
+  resolved from the browser — and falls back to `config('app.timezone')`. The
+  field stays explicit and editable, the selected timezone is what the chosen
+  date and time mean, and future-time and IANA validation stay in the domain.
+  Do not build a user timezone settings subsystem.
 - **One canonical location per piece of information.** Contextual summaries
   that link to the canonical page are fine; the same block of facts repeated in
   a header, a tab and a card is not. When adding information, first check

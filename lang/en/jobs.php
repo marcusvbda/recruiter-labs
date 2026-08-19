@@ -159,7 +159,7 @@ return [
         'filters' => [
             'hired' => 'With a hire',
             'finalists' => 'With finalists',
-            'interviewing' => 'With interviews',
+            'interviewing' => 'With interviews scheduled',
             'stalled' => 'Applications but no progress',
             'no_applications' => 'No applications yet',
         ],

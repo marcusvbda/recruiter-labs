@@ -16,15 +16,19 @@ class ProvisionDefaultPipeline
      * The workflow every new pipeline starts from, here and in the Filament
      * pipeline creator. Recruiters edit it down from there.
      *
-     * @var list<array{name: string, color: string, is_hired: bool}>
+     * Each stage declares its role explicitly — which one is close to a decision
+     * (`is_final_stage`) and which ones end the process (`is_terminal`) — because
+     * nothing may infer that from a stage's name at runtime.
+     *
+     * @var list<array{name: string, color: string, is_final_stage: bool, is_hired: bool, is_terminal: bool}>
      */
     public const array STARTER_STATUSES = [
-        ['name' => 'Applied', 'color' => '#3b82f6', 'is_hired' => false],
-        ['name' => 'Screening', 'color' => '#f59e0b', 'is_hired' => false],
-        ['name' => 'Interview', 'color' => '#8b5cf6', 'is_hired' => false],
-        ['name' => 'Offer', 'color' => '#06b6d4', 'is_hired' => false],
-        ['name' => 'Hired', 'color' => '#22c55e', 'is_hired' => true],
-        ['name' => 'Rejected', 'color' => '#ef4444', 'is_hired' => false],
+        ['name' => 'Applied', 'color' => '#3b82f6', 'is_final_stage' => false, 'is_hired' => false, 'is_terminal' => false],
+        ['name' => 'Screening', 'color' => '#f59e0b', 'is_final_stage' => false, 'is_hired' => false, 'is_terminal' => false],
+        ['name' => 'Interview', 'color' => '#8b5cf6', 'is_final_stage' => false, 'is_hired' => false, 'is_terminal' => false],
+        ['name' => 'Offer', 'color' => '#06b6d4', 'is_final_stage' => true, 'is_hired' => false, 'is_terminal' => false],
+        ['name' => 'Hired', 'color' => '#22c55e', 'is_final_stage' => false, 'is_hired' => true, 'is_terminal' => true],
+        ['name' => 'Rejected', 'color' => '#ef4444', 'is_final_stage' => false, 'is_hired' => false, 'is_terminal' => true],
     ];
 
     public function handle(Company $company): Pipeline
@@ -66,7 +70,9 @@ class ProvisionDefaultPipeline
                 'name' => $status['name'],
                 'color' => $status['color'],
                 'order' => $order + 1,
+                'is_final_stage' => $status['is_final_stage'],
                 'is_hired' => $status['is_hired'],
+                'is_terminal' => $status['is_terminal'],
             ]);
         }
     }

@@ -101,6 +101,10 @@ return [
                     'title' => 'Contratado',
                     'description' => 'O processo está concluído para este candidato.',
                 ],
+                'closed' => [
+                    'title' => 'Processo encerrado',
+                    'description' => 'Este candidato chegou a uma etapa de encerramento. Nenhuma próxima ação de recrutamento é esperada.',
+                ],
             ],
             'fit_heading' => 'Avaliação do candidato',
             'fit_score' => 'Aderência :score',

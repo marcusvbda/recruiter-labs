@@ -19,7 +19,7 @@ class JobDashboardService
      *     running_days: int,
      *     remaining_days: int|null,
      *     has_ended: bool,
-     *     status_distribution: list<array{name: string, color: string, count: int, is_hired: bool, is_final_stage: bool}>,
+     *     status_distribution: list<array{name: string, color: string, count: int, is_hired: bool, is_final_stage: bool, is_terminal: bool}>,
      *     utm_ranking: LengthAwarePaginator<int, array{name: string, value: string, clicks: int}>
      * }
      */
@@ -55,13 +55,12 @@ class JobDashboardService
                 'count' => (int) $status->applications_count,
                 'is_hired' => $status->is_hired,
                 'is_final_stage' => $status->is_final_stage,
+                'is_terminal' => $status->is_terminal,
             ])
             ->values()
             ->all());
 
-        $hiredCount = $job->applications()
-            ->whereHas('status', fn (Builder $query): Builder => $query->where('is_hired', true))
-            ->count();
+        $hiredCount = $job->hiredApplications()->count();
 
         $utmRanking = JobClickUtmParameter::query()
             ->select(['name', 'value'])

@@ -90,6 +90,7 @@ class ViewCandidate extends ViewRecord
                     'status_color' => $application->status->color,
                     'stage_role' => match (true) {
                         $application->status->is_hired => 'hired',
+                        $application->status->is_terminal => 'closed',
                         $application->status->is_final_stage => 'final_stage',
                         default => null,
                     },

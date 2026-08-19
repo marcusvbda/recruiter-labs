@@ -64,11 +64,13 @@ class StatusesRelationManager extends RelationManager
                     ->badge()
                     ->state(fn (Status $record): string => match (true) {
                         $record->is_hired => __('statuses.badges.hired'),
+                        $record->isClosedWithoutHire() => __('statuses.badges.closed'),
                         $record->is_final_stage => __('statuses.badges.final_stage'),
                         default => __('statuses.badges.intermediate'),
                     })
                     ->color(fn (Status $record): string => match (true) {
                         $record->is_hired => 'success',
+                        $record->isClosedWithoutHire() => 'danger',
                         $record->is_final_stage => 'warning',
                         default => 'gray',
                     }),

@@ -5,6 +5,7 @@ namespace App\Filament\Widgets;
 use App\Filament\Pages\Calendar;
 use App\Filament\Resources\Jobs\JobResource;
 use App\Models\Company;
+use App\Models\User;
 use App\Services\RecruitmentProgressService;
 use Filament\Facades\Filament;
 use Filament\Support\Icons\Heroicon;
@@ -14,6 +15,9 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 /**
  * The first thing a recruiter sees: the volume currently in play, and where it
  * is concentrated. Every stat links to the page where the work happens.
+ *
+ * Everything counted here belongs to an active hiring process; interviews are
+ * the signed-in recruiter's own.
  */
 class RecruitmentOverviewStats extends StatsOverviewWidget
 {
@@ -24,20 +28,21 @@ class RecruitmentOverviewStats extends StatsOverviewWidget
     protected function getStats(): array
     {
         $company = Filament::getTenant();
+        $recruiter = Filament::auth()->user();
 
-        if (! $company instanceof Company) {
+        if (! $company instanceof Company || ! $recruiter instanceof User) {
             return [];
         }
 
-        $summary = app(RecruitmentProgressService::class)->workspaceSummary($company);
+        $summary = app(RecruitmentProgressService::class)->workspaceSummary($company, $recruiter);
 
         return [
-            Stat::make(__('dashboard.stats.open_jobs'), $summary['open_jobs'])
+            Stat::make(__('dashboard.stats.active_jobs'), $summary['active_jobs'])
                 ->icon(Heroicon::OutlinedBriefcase)
                 ->description(trans_choice('dashboard.stats.draft_jobs', $summary['draft_jobs'], ['count' => $summary['draft_jobs']]))
-                ->color($summary['open_jobs'] > 0 ? 'primary' : 'gray')
+                ->color($summary['active_jobs'] > 0 ? 'primary' : 'gray')
                 ->url(JobResource::getUrl()),
-            Stat::make(__('dashboard.stats.active_applications'), $summary['open_applications'])
+            Stat::make(__('dashboard.stats.active_applications'), $summary['active_applications'])
                 ->icon(Heroicon::OutlinedUsers)
                 ->description(trans_choice('dashboard.stats.interviewing', $summary['interviewing'], ['count' => $summary['interviewing']]))
                 ->color('info')

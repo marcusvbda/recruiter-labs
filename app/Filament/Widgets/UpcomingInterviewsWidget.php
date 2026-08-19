@@ -6,6 +6,7 @@ use App\Filament\Pages\Calendar;
 use App\Filament\Resources\Applications\ApplicationResource;
 use App\Models\Company;
 use App\Models\Interview;
+use App\Models\User;
 use App\Services\RecruitmentProgressService;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
@@ -17,7 +18,9 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * The commitments the recruiter has to keep, soonest first.
+ * The commitments the signed-in recruiter has to keep, soonest first. Another
+ * recruiter's agenda is never shown here as "yours" — the calendar page is
+ * where company-wide visibility lives.
  */
 class UpcomingInterviewsWidget extends TableWidget
 {
@@ -87,13 +90,14 @@ class UpcomingInterviewsWidget extends TableWidget
     private function interviewsQuery(): Builder
     {
         $company = Filament::getTenant();
+        $recruiter = Filament::auth()->user();
 
-        if (! $company instanceof Company) {
+        if (! $company instanceof Company || ! $recruiter instanceof User) {
             return Interview::query()->whereRaw('1 = 0');
         }
 
         return app(RecruitmentProgressService::class)
-            ->upcomingInterviewsQuery($company)
+            ->upcomingInterviewsQuery($company, $recruiter)
             ->with(['application.candidate', 'application.job', 'application.status'])
             ->limit(5);
     }

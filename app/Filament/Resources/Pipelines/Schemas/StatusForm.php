@@ -38,6 +38,10 @@ class StatusForm
                             ->label(__('statuses.fields.is_hired'))
                             ->helperText(__('statuses.fields.is_hired_helper'))
                             ->inline(false),
+                        Toggle::make('is_terminal')
+                            ->label(__('statuses.fields.is_terminal'))
+                            ->helperText(__('statuses.fields.is_terminal_helper'))
+                            ->inline(false),
                     ]),
                 Section::make(__('statuses.sections.communication'))
                     ->description(__('statuses.sections.communication_description'))

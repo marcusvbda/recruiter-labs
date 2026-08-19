@@ -49,6 +49,8 @@
                         <span class="truncate text-gray-700 dark:text-gray-300">{{ $stage['name'] }}</span>
                         @if ($stage['is_hired'])
                             <x-filament::badge color="success" size="sm">{{ __('statuses.badges.hired') }}</x-filament::badge>
+                        @elseif ($stage['is_terminal'])
+                            <x-filament::badge color="danger" size="sm">{{ __('statuses.badges.closed') }}</x-filament::badge>
                         @elseif ($stage['is_final_stage'])
                             <x-filament::badge color="warning" size="sm">{{ __('statuses.badges.final_stage') }}</x-filament::badge>
                         @endif

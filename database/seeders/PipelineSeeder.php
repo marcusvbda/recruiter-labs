@@ -12,6 +12,10 @@ class PipelineSeeder extends Seeder
      * Two contrasting recruitment processes for the demo company, with different
      * communication configured per stage so the on-enter emails can be exercised.
      *
+     * Stage semantics are declared here, never inferred from names: `Offer` and
+     * `Approved` are the last stages before a decision, `Hired`/`Transferred`
+     * end the process positively and `Rejected` ends it without a hire.
+     *
      * @var array<string, array{description: string, is_default: bool, statuses: list<array<string, mixed>>}>
      */
     private const PIPELINES = [
@@ -41,6 +45,7 @@ class PipelineSeeder extends Seeder
                 [
                     'name' => 'Offer',
                     'color' => '#06b6d4',
+                    'is_final_stage' => true,
                     'sends_email' => false,
                 ],
                 [
@@ -54,6 +59,7 @@ class PipelineSeeder extends Seeder
                 [
                     'name' => 'Rejected',
                     'color' => '#ef4444',
+                    'is_terminal' => true,
                     'sends_email' => true,
                     'email_subject' => 'Update regarding {{ job.title }}',
                     'email_body' => '<p>Hi {{ candidate.name }},</p><p>Thank you for the time you invested in your application for <strong>{{ job.title }}</strong> at {{ company.name }}.</p><p>After careful consideration we have decided not to move forward on this occasion. We would be glad to see you apply again for a future opening.</p><p>All the best,<br>{{ company.name }}</p>',
@@ -73,7 +79,7 @@ class PipelineSeeder extends Seeder
                     'email_body' => '<p>Hi {{ candidate.name }},</p><p>Your interest in <strong>{{ job.title }}</strong> has been shared with the hiring manager for review.</p><p>Thanks,<br>{{ company.name }}</p>',
                 ],
                 ['name' => 'Internal Interview', 'color' => '#8b5cf6', 'sends_email' => false],
-                ['name' => 'Approved', 'color' => '#06b6d4', 'sends_email' => false],
+                ['name' => 'Approved', 'color' => '#06b6d4', 'is_final_stage' => true, 'sends_email' => false],
                 [
                     'name' => 'Transferred',
                     'color' => '#22c55e',
@@ -113,7 +119,9 @@ class PipelineSeeder extends Seeder
                         'company_id' => $company->getKey(),
                         'color' => $status['color'],
                         'order' => $order + 1,
+                        'is_final_stage' => $status['is_final_stage'] ?? false,
                         'is_hired' => $status['is_hired'] ?? false,
+                        'is_terminal' => $status['is_terminal'] ?? false,
                         'sends_email' => $status['sends_email'],
                         'email_subject' => $status['email_subject'] ?? null,
                         'email_body' => $status['email_body'] ?? null,

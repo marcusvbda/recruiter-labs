@@ -101,6 +101,10 @@ return [
                     'title' => 'Contratado',
                     'description' => 'El proceso está completo para este candidato.',
                 ],
+                'closed' => [
+                    'title' => 'Proceso cerrado',
+                    'description' => 'Este candidato llegó a una etapa de cierre. No se espera ninguna acción de reclutamiento adicional.',
+                ],
             ],
             'fit_heading' => 'Evaluación del candidato',
             'fit_score' => 'Ajuste :score',

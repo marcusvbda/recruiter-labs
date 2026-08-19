@@ -10,6 +10,7 @@ use App\Events\ApplicationEnteredStatus;
 use Carbon\CarbonImmutable;
 use Database\Factories\ApplicationFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -68,6 +69,54 @@ class Application extends Model
             'analyzed_at' => 'immutable_datetime',
             'cover_letter_type' => ApplicationCoverLetterType::class,
         ];
+    }
+
+    /**
+     * Still being recruited: the stage it sits in has not closed the process,
+     * whether that ending was a hire or any other final outcome.
+     *
+     * @param  Builder<Application>  $query
+     * @return Builder<Application>
+     */
+    public function scopeInProcess(Builder $query): Builder
+    {
+        return $query->whereHas('status', fn (Builder $status): Builder => $status->where('is_terminal', false));
+    }
+
+    /**
+     * Interviewing means a commitment is still pending — an interview booked for
+     * later today or already running. An interview that ended last week does not
+     * keep a candidate here, and a finished application never counts.
+     *
+     * @param  Builder<Application>  $query
+     * @return Builder<Application>
+     */
+    public function scopeInterviewing(Builder $query): Builder
+    {
+        return $query->inProcess()->has('upcomingInterviews');
+    }
+
+    /**
+     * Sitting in a stage the workflow explicitly marks as close to a decision.
+     * The hired stage is the decision itself, so it is not a finalist stage.
+     *
+     * @param  Builder<Application>  $query
+     * @return Builder<Application>
+     */
+    public function scopeInFinalStage(Builder $query): Builder
+    {
+        return $query->whereHas('status', fn (Builder $status): Builder => $status
+            ->where('is_final_stage', true)
+            ->where('is_hired', false));
+    }
+
+    /**
+     * @param  Builder<Application>  $query
+     * @return Builder<Application>
+     */
+    public function scopeHired(Builder $query): Builder
+    {
+        return $query->whereHas('status', fn (Builder $status): Builder => $status->where('is_hired', true));
     }
 
     /** @return BelongsTo<Company, $this> */
@@ -140,5 +189,16 @@ class Application extends Model
     public function interviews(): HasMany
     {
         return $this->hasMany(Interview::class);
+    }
+
+    /**
+     * Interviews that have not happened yet, which is what makes a candidate
+     * "interviewing" — see {@see scopeInterviewing()}.
+     *
+     * @return HasMany<Interview, $this>
+     */
+    public function upcomingInterviews(): HasMany
+    {
+        return $this->interviews()->upcoming();
     }
 }

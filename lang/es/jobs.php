@@ -159,7 +159,7 @@ return [
         'filters' => [
             'hired' => 'Con contratación',
             'finalists' => 'Con finalistas',
-            'interviewing' => 'Con entrevistas',
+            'interviewing' => 'Con entrevistas agendadas',
             'stalled' => 'Con postulaciones, sin avance',
             'no_applications' => 'Sin postulaciones',
         ],

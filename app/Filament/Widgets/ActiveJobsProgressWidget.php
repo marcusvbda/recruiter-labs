@@ -17,8 +17,9 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * Open processes and how far each one has actually moved, so a recruiter can
- * spot the stalled ones without opening every job.
+ * Active hiring processes and how far each one has actually moved, so a
+ * recruiter can spot the stalled ones without opening every job. A paused job
+ * is still an active process: its candidates are still being interviewed.
  */
 class ActiveJobsProgressWidget extends TableWidget
 {

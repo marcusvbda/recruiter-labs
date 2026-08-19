@@ -8,6 +8,7 @@ use App\Enums\InterviewRsvpStatus;
 use App\Enums\InterviewStatus;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -16,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $application_id
  * @property int $calendar_user_id
  * @property int|null $calendar_integration_id
+ * @property string|null $schedule_request_key
  * @property InterviewStatus $status
  * @property CarbonImmutable $scheduled_at
  * @property CarbonImmutable $ends_at
@@ -34,7 +36,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property CarbonImmutable|null $cancelled_at
  * @property string|null $cancellation_reason
  */
-#[Fillable(['company_id', 'application_id', 'calendar_user_id', 'calendar_integration_id', 'status', 'scheduled_at', 'ends_at', 'timezone', 'calendar_event_id', 'calendar_conference_id', 'meeting_url', 'rsvp_status', 'rsvp_responded_at', 'notification_sequence', 'pending_notification_type', 'calendar_sync_status', 'calendar_sync_terminal', 'calendar_sync_error', 'last_calendar_synced_at', 'cancelled_at', 'cancellation_reason'])]
+#[Fillable(['company_id', 'application_id', 'calendar_user_id', 'calendar_integration_id', 'schedule_request_key', 'status', 'scheduled_at', 'ends_at', 'timezone', 'calendar_event_id', 'calendar_conference_id', 'meeting_url', 'rsvp_status', 'rsvp_responded_at', 'notification_sequence', 'pending_notification_type', 'calendar_sync_status', 'calendar_sync_terminal', 'calendar_sync_error', 'last_calendar_synced_at', 'cancelled_at', 'cancellation_reason'])]
 class Interview extends Model
 {
     protected $attributes = [
@@ -60,6 +62,29 @@ class Interview extends Model
             'last_calendar_synced_at' => 'immutable_datetime',
             'cancelled_at' => 'immutable_datetime',
         ];
+    }
+
+    /**
+     * Interviews that still stand: a cancelled one is no longer a commitment.
+     *
+     * @param  Builder<Interview>  $query
+     * @return Builder<Interview>
+     */
+    public function scopeNotCancelled(Builder $query): Builder
+    {
+        return $query->where('status', '!=', InterviewStatus::Cancelled->value);
+    }
+
+    /**
+     * A commitment that has not been kept yet: upcoming, or running right now.
+     * An interview that already ended is history, not a pending commitment.
+     *
+     * @param  Builder<Interview>  $query
+     * @return Builder<Interview>
+     */
+    public function scopeUpcoming(Builder $query): Builder
+    {
+        return $query->notCancelled()->where('ends_at', '>=', CarbonImmutable::now());
     }
 
     /** @return BelongsTo<Company, $this> */

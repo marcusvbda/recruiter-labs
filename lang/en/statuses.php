@@ -17,6 +17,8 @@ return [
         'is_hired_helper' => 'Applications in this stage count as successful hires.',
         'is_final_stage' => 'Final stage',
         'is_final_stage_helper' => 'Candidates here are close to a hiring decision. Used to count finalists.',
+        'is_terminal' => 'Closing stage',
+        'is_terminal_helper' => 'Reaching this stage ends the process: rejected, withdrawn, disqualified. A hired stage always closes the process too.',
         'stage_role' => 'Role in the process',
         'sends_email' => 'Send an email when a candidate enters this stage',
         'sends_email_helper' => 'Sent automatically through your configured email provider.',
@@ -29,6 +31,7 @@ return [
     'badges' => [
         'hired' => 'Hired',
         'final_stage' => 'Final stage',
+        'closed' => 'Closed',
         'intermediate' => 'In progress',
         'email_on' => 'Email on',
         'email_off' => 'No email',
