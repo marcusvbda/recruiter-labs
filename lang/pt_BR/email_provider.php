@@ -4,9 +4,6 @@ return [
     'navigation_label' => 'Provedor de E-mail',
     'title' => 'Provedor de E-mail',
     'subtitle' => 'Configure os provedores de e-mail usados para o envio de recrutamento.',
-    'eyebrow' => 'Configuração do provedor de e-mail',
-    'heading' => 'Configure seus provedores de e-mail de recrutamento',
-    'description' => 'Isso configura os provedores usados para enviar e-mails de recrutamento aos candidatos. Não afeta os e-mails da própria conta do sistema.',
     'default_badge' => 'Padrão',
     'fields' => [
         'provider' => 'Provedor',

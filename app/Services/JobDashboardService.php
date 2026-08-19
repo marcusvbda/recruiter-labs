@@ -19,7 +19,7 @@ class JobDashboardService
      *     running_days: int,
      *     remaining_days: int|null,
      *     has_ended: bool,
-     *     status_distribution: list<array{name: string, color: string, count: int}>,
+     *     status_distribution: list<array{name: string, color: string, count: int, is_hired: bool, is_final_stage: bool}>,
      *     utm_ranking: LengthAwarePaginator<int, array{name: string, value: string, clicks: int}>
      * }
      */
@@ -53,6 +53,8 @@ class JobDashboardService
                 'name' => $status->name,
                 'color' => preg_match('/^#[0-9a-f]{6}$/i', $status->color) ? $status->color : '#94a3b8',
                 'count' => (int) $status->applications_count,
+                'is_hired' => $status->is_hired,
+                'is_final_stage' => $status->is_final_stage,
             ])
             ->values()
             ->all());

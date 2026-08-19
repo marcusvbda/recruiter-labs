@@ -5,24 +5,6 @@
     @endphp
 
     <div class="grid gap-6" data-testid="email-provider-settings">
-        <section class="rl-settings-hero" aria-labelledby="email-provider-settings-heading">
-            <div class="absolute -top-20 -right-12 -z-10 size-64 rounded-full bg-cyan-300/20 blur-3xl"></div>
-            <div class="absolute -bottom-32 left-1/4 -z-10 size-80 rounded-full bg-white/15 blur-3xl"></div>
-            <div class="relative max-w-3xl">
-                <span
-                    class="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold tracking-wide uppercase backdrop-blur-sm">
-                    <x-filament::icon icon="heroicon-o-envelope" class="size-4" />
-                    {{ __('email_provider.eyebrow') }}
-                </span>
-                <h2 id="email-provider-settings-heading" class="mt-4 text-2xl font-bold tracking-tight sm:text-3xl">
-                    {{ __('email_provider.heading') }}
-                </h2>
-                <p class="mt-2 max-w-2xl text-sm leading-6 text-blue-50 sm:text-base">
-                    {{ __('email_provider.description') }}
-                </p>
-            </div>
-        </section>
-
         <div class="grid gap-4" data-testid="email-provider-cards">
             @foreach ($providers as $provider)
                 <details class="group rl-settings-panel p-0"

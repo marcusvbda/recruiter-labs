@@ -47,6 +47,71 @@ When a task involves generating an implementation plan `.md` file (e.g. via a pl
 - Keep Inertia page files focused on page-level rendering and component composition. Move reusable or substantial UI into `resources/js/components`.
 - When a file needs small local React components, declare them as arrow functions. The main Inertia page component must be declared as a default exported function.
 
+## Information architecture
+
+The product is organised around the recruiter's real questions, not around the
+order features were built in. Every new screen must land in the place that
+answers the question it belongs to. Do not reintroduce a "Recruitment"
+navigation group: the whole product is recruitment.
+
+| Question | Where it is answered |
+| --- | --- |
+| What needs my attention? | Overview (`App\Filament\Pages\Dashboard`) |
+| How are my processes progressing? | Jobs list |
+| Where are candidates in *this* hiring process? | Job workspace (`ViewJob`) |
+| What do I know about this person, and what happens next? | Application workspace (`ViewApplication`) |
+| Who is this person, across processes? | Candidate view (`ViewCandidate`) |
+| What are my commitments? | Calendar |
+| How is my workspace configured? | Settings cluster |
+
+### Invariants
+
+- **Operational pages belong in primary navigation; configuration belongs in
+  Settings.** Primary navigation is `Overview, Jobs, Candidates, Calendar,
+  Referrals, Settings` and should stay roughly that short. Anything a recruiter
+  configures once and then forgets goes into
+  `App\Filament\Clusters\Settings` (account, workspace, hiring workflows,
+  integrations, AI, plan) — never into the sidebar as a top-level item.
+- **Reusable pipeline definitions are configuration; a job's Kanban is
+  operational.** `PipelineResource` is clustered under Settings and is called
+  *hiring workflow* in UI copy. The word *pipeline* is reserved for the live
+  board of candidates inside a job. Never render the Kanban in Settings, and
+  never manage stages from the job workspace.
+- **Job progress must be visible without opening every job.** The jobs list
+  shows applications / interviewing / finalists / hired per row via
+  `JobProgressColumn`. Any new progress signal is added there and to
+  `RecruitmentProgressService`, which is the single source of truth for those
+  counts — do not recompute them ad hoc in a page or widget.
+- **Late-stage is explicit, never inferred from a stage name.** `Status` carries
+  `is_final_stage` (close to a decision) alongside `is_hired` (the definitive
+  hired state). Do not pattern-match on names such as "Offer" or "Final
+  interview", and do not grow this into a stage taxonomy.
+- **An application's current stage must always be immediately visible.** It is
+  the first thing in the application header, above fit, evidence and any
+  interview. The evaluation's *processing* state is background-job status and
+  must never be more prominent than the stage.
+- **Candidate Evaluation is contextual evidence, not the primary workflow
+  state.** It informs the recruiter; the pipeline stage is what the product
+  tracks. Keep the evaluation inside its own tab and summarise it, at most, as
+  a score plus what still needs validation.
+- **The Overview is operational, not a welcome page.** No greeting, clock,
+  workspace identity or decorative hero. Every element answers "what is
+  happening in recruiting right now?" and links into the page where the work
+  happens.
+- **Calendar is operational; calendar integration is configuration.** The
+  agenda page stays in primary navigation; connecting Google Calendar stays in
+  Settings → integrations. Do not merge them.
+- **One canonical location per piece of information.** Contextual summaries
+  that link to the canonical page are fine; the same block of facts repeated in
+  a header, a tab and a card is not. When adding information, first check
+  whether it already exists somewhere and link instead.
+- **Application tab order follows recruiter decision-making**: Summary,
+  Evaluation, Interviews, Application, Documents. Tabs use explicit `id()`/
+  `key()` values so `?section=` deep links keep working; keep them stable.
+- **Reuse the existing Filament vocabulary.** New surfaces use existing
+  resources, widgets, sections and badges. Do not introduce a new design
+  system, and do not turn every metric into a card. Dark mode stays disabled.
+
 ## AI agents
 
 Every agent (`App\Ai\Agents\*`, using the Laravel AI SDK) must follow these conventions, established while building `ExtractJobCriteria`, to keep token consumption down without sacrificing output reliability.

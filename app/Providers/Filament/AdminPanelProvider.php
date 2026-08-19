@@ -6,9 +6,10 @@ use App\Data\CompanyTopbarSummaryData;
 use App\Enums\AiProvider;
 use App\Enums\Limit;
 use App\Enums\UsageWarningState;
+use App\Filament\Clusters\Settings\Pages\AccountSettings;
+use App\Filament\Clusters\Settings\Pages\AiSettings;
+use App\Filament\Clusters\Settings\Pages\PlanSettings;
 use App\Filament\Pages\Dashboard;
-use App\Filament\Pages\Settings;
-use App\Filament\Pages\Tenancy\EditCompanyProfile;
 use App\Filament\Pages\Tenancy\RegisterCompany;
 use App\Http\Middleware\ApplyTenantScopes;
 use App\Http\Middleware\SetLocale;
@@ -48,14 +49,13 @@ class AdminPanelProvider extends PanelProvider
             ->darkMode(false)
             ->viteTheme('resources/css/filament/admin/theme.css')
             ->maxContentWidth(Width::Full)
-            ->globalSearch(false)
+            ->globalSearchResourceOptIn()
             ->login()
             ->registration()
             ->passwordReset()
             ->emailVerification()
             ->tenant(Company::class, slugAttribute: 'slug')
             ->tenantRegistration(RegisterCompany::class)
-            ->tenantProfile(EditCompanyProfile::class)
             ->tenantMiddleware([
                 ApplyTenantScopes::class,
             ], isPersistent: true)
@@ -73,10 +73,10 @@ class AdminPanelProvider extends PanelProvider
             ->userMenuItems([
                 [
                     Action::make('settings')
-                        ->label(fn (): string => __('settings.navigation_label'))
+                        ->label(fn (): string => __('settings.account.navigation_label'))
                         ->icon('heroicon-o-cog-6-tooth')
                         ->visible(fn (): bool => Filament::getTenant() !== null)
-                        ->url(fn (): string => Filament::getTenant() ? Settings::getUrl() : '#'),
+                        ->url(fn (): string => Filament::getTenant() ? AccountSettings::getUrl() : '#'),
                 ],
             ])
             ->renderHook(
@@ -183,9 +183,9 @@ class AdminPanelProvider extends PanelProvider
         return [
             'plan_name' => $summary->planName,
             'plan_initial' => Str::substr($summary->planName, 0, 1),
-            'plan_url' => Settings::getUrl(['section' => 'plan']),
+            'plan_url' => PlanSettings::getUrl(),
             'plan_tooltip' => implode("\n", $planLines),
-            'ai_url' => Settings::getUrl(['section' => 'ai']),
+            'ai_url' => AiSettings::getUrl(),
             'ai_tooltip' => implode("\n", $aiLines),
             'used' => Number::format($usage->used),
             'limit' => $limit,

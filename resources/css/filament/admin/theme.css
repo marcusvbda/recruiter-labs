@@ -11,10 +11,6 @@
         @apply invert;
     }
 
-    .rl-settings-hero {
-        @apply from-primary-700 via-primary-600 shadow-primary-900/10 relative isolate overflow-hidden rounded-3xl bg-linear-to-br to-cyan-500 px-6 py-7 text-white shadow-xl sm:px-8;
-    }
-
     .rl-settings-panel {
         @apply rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6 dark:border-white/10 dark:bg-gray-900;
     }
@@ -131,8 +127,24 @@
         @apply bg-white/10 text-white ring-1 ring-white/15 hover:bg-white/20;
     }
 
+    .rl-job-summary {
+        @apply flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between dark:border-white/10 dark:bg-gray-900;
+    }
+
+    .rl-job-summary__metrics {
+        @apply flex flex-wrap items-center gap-x-6 gap-y-3;
+    }
+
+    .rl-job-summary__metrics dt {
+        @apply text-xs font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400;
+    }
+
+    .rl-job-summary__metrics dd {
+        @apply mt-0.5 text-xl font-semibold text-gray-950 dark:text-white;
+    }
+
     .rl-application-header {
-        @apply border-primary-200/70 dark:border-primary-400/20 relative overflow-hidden rounded-2xl border bg-white p-5 shadow-sm sm:p-6 dark:bg-gray-900;
+        @apply border-primary-200/70 dark:border-primary-400/20 relative flex flex-col gap-4 overflow-hidden rounded-2xl border bg-white p-5 shadow-sm lg:flex-row lg:items-center lg:justify-between sm:p-6 dark:bg-gray-900;
     }
 
     .rl-application-header::before {
@@ -147,17 +159,34 @@
         @apply from-primary-600 shadow-primary-950/10 flex size-14 shrink-0 items-center justify-center rounded-2xl bg-linear-to-br to-cyan-500 text-lg font-bold text-white shadow-lg sm:size-16 sm:text-xl;
     }
 
-    .rl-application-header__facts {
-        @apply mt-5 grid gap-4 border-t border-gray-200 pt-5 sm:grid-cols-3 dark:border-white/10;
+    .rl-application-header__state {
+        @apply flex flex-wrap items-center gap-2;
     }
 
-    .rl-application-header__facts dt,
+    .rl-application-header__stage {
+        @apply inline-flex items-center gap-2 rounded-xl border px-3 py-1.5;
+        border-color: color-mix(in srgb, var(--rl-status-color) 35%, transparent);
+        background-color: color-mix(in srgb, var(--rl-status-color) 10%, white);
+    }
+
+    .rl-application-header__stage-dot {
+        @apply size-2.5 shrink-0 rounded-full;
+        background-color: var(--rl-status-color);
+    }
+
+    .rl-application-header__stage-caption {
+        @apply block text-[0.65rem] font-semibold tracking-wide text-gray-500 uppercase;
+    }
+
+    .rl-application-header__stage-name {
+        @apply block text-sm font-bold text-gray-950;
+    }
+
     .rl-application-detail-grid dt,
     .rl-application-detail-list dt {
         @apply text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400;
     }
 
-    .rl-application-header__facts dd,
     .rl-application-detail-grid dd,
     .rl-application-detail-list dd {
         @apply mt-1 text-sm font-medium break-words text-gray-950 dark:text-white;

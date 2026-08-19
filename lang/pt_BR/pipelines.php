@@ -1,22 +1,22 @@
 <?php
 
 return [
-    'label' => 'Pipeline',
-    'plural_label' => 'Pipelines',
-    'navigation_label' => 'Pipelines',
-    'list_subheading' => 'Um pipeline é um processo seletivo: as etapas pelas quais o candidato passa e o que cada etapa comunica a ele.',
+    'label' => 'Fluxo de contratação',
+    'plural_label' => 'Fluxos de contratação',
+    'navigation_label' => 'Fluxos de contratação',
+    'list_subheading' => 'Um fluxo de contratação é um processo seletivo reutilizável: as etapas pelas quais o candidato passa e o que cada etapa comunica a ele. As vagas escolhem um; o quadro ao vivo de candidatos fica dentro de cada vaga.',
     'create_subheading' => 'Dê um nome ao processo. Você pode renomear, reordenar e remover etapas depois.',
     'edit_subheading' => 'Renomeie o processo, defina se ele é o padrão e gerencie suas etapas abaixo.',
     'empty_flow' => 'Nenhuma etapa ainda',
     'sections' => [
-        'details' => 'Detalhes do pipeline',
+        'details' => 'Detalhes do fluxo',
         'details_description' => 'Como este processo seletivo é identificado nas vagas.',
     ],
     'fields' => [
         'name' => 'Nome',
         'description' => 'Descrição',
         'description_helper' => 'Opcional. Uma nota curta sobre quando usar este processo.',
-        'is_default' => 'Pipeline padrão',
+        'is_default' => 'Fluxo padrão',
         'is_default_helper' => 'Pré-selecionado ao criar uma vaga. Apenas um pipeline pode ser o padrão.',
         'flow' => 'Etapas',
         'jobs_count' => 'Vagas',

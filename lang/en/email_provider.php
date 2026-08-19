@@ -4,9 +4,6 @@ return [
     'navigation_label' => 'Email Provider',
     'title' => 'Email Provider',
     'subtitle' => 'Configure the email providers used for recruitment sending.',
-    'eyebrow' => 'Email provider configuration',
-    'heading' => 'Configure your recruitment email providers',
-    'description' => 'This configures the providers used to send recruitment emails to candidates. It does not affect the system\'s own account emails.',
     'default_badge' => 'Default',
     'fields' => [
         'provider' => 'Provider',

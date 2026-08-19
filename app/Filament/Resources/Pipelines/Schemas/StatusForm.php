@@ -30,11 +30,14 @@ class StatusForm
                             ->label(__('statuses.fields.color'))
                             ->default('#3b82f6')
                             ->required(),
+                        Toggle::make('is_final_stage')
+                            ->label(__('statuses.fields.is_final_stage'))
+                            ->helperText(__('statuses.fields.is_final_stage_helper'))
+                            ->inline(false),
                         Toggle::make('is_hired')
                             ->label(__('statuses.fields.is_hired'))
                             ->helperText(__('statuses.fields.is_hired_helper'))
-                            ->inline(false)
-                            ->columnSpanFull(),
+                            ->inline(false),
                     ]),
                 Section::make(__('statuses.sections.communication'))
                     ->description(__('statuses.sections.communication_description'))

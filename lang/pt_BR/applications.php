@@ -51,14 +51,16 @@ return [
         'not_applicable' => 'Não se aplica',
         'not_answered' => 'Nenhuma resposta informada',
         'tabs' => [
-            'overview' => 'Visão geral',
+            'summary' => 'Resumo',
             'application' => 'Candidatura',
             'documents' => 'Documentos',
             'interviews' => 'Entrevistas',
-            'ai_analysis' => 'Avaliação de aderência',
+            'evaluation' => 'Avaliação',
         ],
         'actions' => [
             'view_application' => 'Ver candidatura',
+            'schedule_another_interview' => 'Agendar outra entrevista',
+            'open_job_workspace' => 'Abrir a vaga',
             'move_status' => 'Mover status',
             'choose_status' => 'Status no pipeline',
             'status_updated' => 'Status da candidatura atualizado.',
@@ -74,6 +76,42 @@ return [
             'connect_calendar' => 'Conectar calendário',
             'reconnect_calendar' => 'Reconectar calendário',
         ],
+        'summary' => [
+            'where_heading' => 'Onde está no processo',
+            'stage_position' => 'etapa :position de :total',
+            'next_action_heading' => 'Provável próximo passo',
+            'next_actions' => [
+                'schedule_interview' => [
+                    'title' => 'Agendar uma entrevista',
+                    'description' => 'A avaliação apontou o que investigar. A entrevista é o que resolve isso.',
+                ],
+                'prepare_interview' => [
+                    'title' => 'Preparar a entrevista',
+                    'description' => 'Há uma entrevista marcada. Revise o roteiro antes de começar.',
+                ],
+                'await_evaluation' => [
+                    'title' => 'Aguardar a avaliação',
+                    'description' => 'A avaliação do candidato ainda não terminou. Ela é contexto, não decisão.',
+                ],
+                'decide' => [
+                    'title' => 'Tomar uma decisão',
+                    'description' => 'Este candidato está em uma etapa final. Avance ou encerre o processo.',
+                ],
+                'hired' => [
+                    'title' => 'Contratado',
+                    'description' => 'O processo está concluído para este candidato.',
+                ],
+            ],
+            'fit_heading' => 'Avaliação do candidato',
+            'fit_score' => 'Aderência :score',
+            'needs_validation' => '{1} 1 ponto a validar|[2,*] :count pontos a validar',
+            'needs_validation_label' => 'A validar',
+            'established_evidence_label' => 'Evidências estabelecidas',
+            'fit_disclaimer' => 'A aderência resume evidências. A confiança é medida à parte: o desconhecido reduz a confiança, não a aderência.',
+            'interview_heading' => 'Próxima entrevista',
+            'interview_on' => 'Entrevista :date',
+            'no_interview' => 'Nenhuma entrevista agendada.',
+        ],
         'fields' => [
             'name' => 'Nome',
             'email' => 'E-mail',
@@ -87,8 +125,6 @@ return [
             'utm_parameters' => 'Parâmetros UTM',
         ],
         'sections' => [
-            'candidate' => 'Dados do candidato',
-            'recruitment' => 'Dados do recrutamento',
             'origin' => 'Origem e atribuição',
             'social_profiles' => 'Perfis sociais',
             'answers' => 'Respostas da candidatura',

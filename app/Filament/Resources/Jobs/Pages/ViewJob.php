@@ -3,12 +3,13 @@
 namespace App\Filament\Resources\Jobs\Pages;
 
 use App\Exceptions\PlanLimitExceededException;
-use App\Filament\Pages\Settings;
+use App\Filament\Clusters\Settings\Pages\PlanSettings;
 use App\Filament\Resources\Jobs\Actions\JobStateActions;
 use App\Filament\Resources\Jobs\JobResource;
 use App\Filament\Resources\Jobs\Widgets\JobApplicationStatusChart;
-use App\Filament\Resources\Jobs\Widgets\JobOverviewStats;
 use App\Filament\Resources\Jobs\Widgets\JobPipelineKanban;
+use App\Filament\Resources\Jobs\Widgets\JobTrafficStats;
+use App\Filament\Resources\Pipelines\PipelineResource;
 use App\Models\Application;
 use App\Models\Candidate;
 use App\Models\Company;
@@ -16,7 +17,9 @@ use App\Models\Job;
 use App\Services\ApplicationAvailabilityService;
 use App\Services\JobDashboardService;
 use App\Services\LimitManager;
+use App\Services\RecruitmentProgressService;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
@@ -47,14 +50,18 @@ class ViewJob extends ViewRecord
 
     protected LimitManager $limitManager;
 
+    protected RecruitmentProgressService $recruitmentProgressService;
+
     public function boot(
         JobDashboardService $jobDashboardService,
         ApplicationAvailabilityService $applicationAvailabilityService,
         LimitManager $limitManager,
+        RecruitmentProgressService $recruitmentProgressService,
     ): void {
         $this->jobDashboardService = $jobDashboardService;
         $this->applicationAvailabilityService = $applicationAvailabilityService;
         $this->limitManager = $limitManager;
+        $this->recruitmentProgressService = $recruitmentProgressService;
     }
 
     public function getTitle(): string|Htmlable
@@ -64,11 +71,25 @@ class ViewJob extends ViewRecord
 
     protected function getHeaderActions(): array
     {
+        $job = $this->getJob();
+
         return [
             EditAction::make(),
             JobStateActions::publish(),
             JobStateActions::unpublish(),
-            JobStateActions::duplicate(),
+            Action::make('openPublicPage')
+                ->label(__('jobs.workspace.open_public_page'))
+                ->icon(Heroicon::OutlinedArrowTopRightOnSquare)
+                ->color('gray')
+                ->url(route('job.show', ['key' => $job->key]))
+                ->openUrlInNewTab(),
+            ActionGroup::make([
+                Action::make('openPipeline')
+                    ->label(__('jobs.view_tabs.pipeline'))
+                    ->icon(Heroicon::OutlinedViewColumns)
+                    ->url(static::getResource()::getUrl('view', ['record' => $job, 'section' => 'pipeline'])),
+                JobStateActions::duplicate(),
+            ]),
         ];
     }
 
@@ -79,29 +100,16 @@ class ViewJob extends ViewRecord
 
         return $schema
             ->components([
+                View::make('filament.resources.jobs.components.workspace-summary')
+                    ->viewData(['summary' => $this->summaryData($job)])
+                    ->columnSpanFull(),
                 Tabs::make('job-view-tabs')
                     ->tabs([
-                        Tab::make(__('jobs.view_tabs.dashboard'))
-                            ->id('dashboard')
-                            ->key('dashboard')
+                        Tab::make(__('jobs.view_tabs.overview'))
+                            ->id('overview')
+                            ->key('overview')
                             ->icon(Heroicon::OutlinedPresentationChartBar)
                             ->schema([
-                                View::make('filament.resources.jobs.components.dashboard-introduction')
-                                    ->viewData([
-                                        'job' => $job,
-                                        'dashboard' => $dashboard,
-                                        'publicUrl' => route('job.show', ['key' => $job->key]),
-                                    ]),
-                                Livewire::make(JobOverviewStats::class, [
-                                    'record' => $job,
-                                    'metrics' => [
-                                        'clicks_count' => $dashboard['clicks_count'],
-                                        'applications_count' => $dashboard['applications_count'],
-                                        'running_days' => $dashboard['running_days'],
-                                        'remaining_days' => $dashboard['remaining_days'],
-                                        'has_ended' => $dashboard['has_ended'],
-                                    ],
-                                ])->key("job-overview-stats-{$job->getKey()}"),
                                 Grid::make([
                                     'default' => 1,
                                     'xl' => 2,
@@ -110,16 +118,16 @@ class ViewJob extends ViewRecord
                                         'record' => $job,
                                         'statusDistribution' => $dashboard['status_distribution'],
                                     ])->key("job-status-chart-{$job->getKey()}"),
-                                    View::make('filament.resources.jobs.components.dashboard-details')
+                                    View::make('filament.resources.jobs.components.overview-details')
                                         ->viewData([
-                                            'job' => $job,
-                                            'dashboard' => $dashboard,
+                                            'details' => [
+                                                'hired_count' => $dashboard['hired_count'],
+                                                'pipeline_name' => $job->pipeline->name,
+                                                'pipeline_url' => PipelineResource::getUrl('edit', ['record' => $job->pipeline]),
+                                                'stages' => $dashboard['status_distribution'],
+                                            ],
                                         ]),
                                 ]),
-                                View::make('filament.resources.jobs.components.dashboard-rankings')
-                                    ->viewData([
-                                        'utmRanking' => $dashboard['utm_ranking'],
-                                    ]),
                             ]),
                         Tab::make(__('jobs.view_tabs.pipeline'))
                             ->id('pipeline')
@@ -134,10 +142,78 @@ class ViewJob extends ViewRecord
                                 Livewire::make(JobPipelineKanban::class, ['record' => $job])
                                     ->key("job-pipeline-{$job->getKey()}"),
                             ]),
+                        Tab::make(__('jobs.view_tabs.analytics'))
+                            ->id('analytics')
+                            ->key('analytics')
+                            ->icon(Heroicon::OutlinedMegaphone)
+                            ->schema([
+                                Livewire::make(JobTrafficStats::class, [
+                                    'record' => $job,
+                                    'metrics' => [
+                                        'clicks_count' => $dashboard['clicks_count'],
+                                        'running_days' => $dashboard['running_days'],
+                                        'remaining_days' => $dashboard['remaining_days'],
+                                        'has_ended' => $dashboard['has_ended'],
+                                    ],
+                                ])->key("job-traffic-stats-{$job->getKey()}"),
+                                View::make('filament.resources.jobs.components.analytics-rankings')
+                                    ->viewData([
+                                        'utmRanking' => $dashboard['utm_ranking'],
+                                    ]),
+                            ]),
                     ])
                     ->persistTabInQueryString('section')
                     ->columnSpanFull(),
             ]);
+    }
+
+    /**
+     * The persistent header of the job workspace: state, workflow and how far
+     * the process has actually moved. Visible before any tab is opened.
+     *
+     * @return array<string, mixed>
+     */
+    private function summaryData(Job $job): array
+    {
+        $progress = $this->recruitmentProgressService->forJob($job);
+
+        return [
+            'state_label' => match (true) {
+                ! $job->published => __('jobs.state.draft'),
+                $job->applications_paused => __('jobs.state.paused'),
+                default => __('jobs.state.published'),
+            },
+            'state_color' => match (true) {
+                ! $job->published => 'gray',
+                $job->applications_paused => 'warning',
+                default => 'success',
+            },
+            'key' => $job->key,
+            'pipeline_name' => $job->pipeline->name,
+            'pipeline_url' => PipelineResource::getUrl('edit', ['record' => $job->pipeline]),
+            'metrics' => [
+                [
+                    'label' => __('jobs.progress.metrics.applications'),
+                    'value' => $progress['applications'],
+                    'color' => 'text-gray-950 dark:text-white',
+                ],
+                [
+                    'label' => __('jobs.progress.metrics.interviewing'),
+                    'value' => $progress['interviewing'],
+                    'color' => 'text-info-600 dark:text-info-400',
+                ],
+                [
+                    'label' => __('jobs.progress.metrics.finalists'),
+                    'value' => $progress['finalists'],
+                    'color' => 'text-warning-600 dark:text-warning-400',
+                ],
+                [
+                    'label' => __('jobs.progress.metrics.hired'),
+                    'value' => $progress['hired'],
+                    'color' => 'text-success-600 dark:text-success-400',
+                ],
+            ],
+        ];
     }
 
     private function makeAddCandidateAction(): Action
@@ -233,7 +309,7 @@ class ViewJob extends ViewRecord
                 ->actions([
                     Action::make('managePlan')
                         ->label(__('settings.topbar.manage_plan'))
-                        ->url(Settings::getUrl(['section' => 'plan'], tenant: $company))
+                        ->url(PlanSettings::getUrl(tenant: $company))
                         ->button(),
                 ])
                 ->send();

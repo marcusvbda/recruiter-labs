@@ -51,14 +51,16 @@ return [
         'not_applicable' => 'Not applicable',
         'not_answered' => 'No answer provided',
         'tabs' => [
-            'overview' => 'Overview',
+            'summary' => 'Summary',
             'application' => 'Application',
             'documents' => 'Documents',
             'interviews' => 'Interviews',
-            'ai_analysis' => 'Fit Evaluation',
+            'evaluation' => 'Evaluation',
         ],
         'actions' => [
             'view_application' => 'View application',
+            'schedule_another_interview' => 'Schedule another interview',
+            'open_job_workspace' => 'Open job workspace',
             'move_status' => 'Move status',
             'choose_status' => 'Pipeline status',
             'status_updated' => 'Application status updated.',
@@ -74,6 +76,42 @@ return [
             'connect_calendar' => 'Connect calendar',
             'reconnect_calendar' => 'Reconnect calendar',
         ],
+        'summary' => [
+            'where_heading' => 'Where in the process',
+            'stage_position' => 'stage :position of :total',
+            'next_action_heading' => 'Likely next step',
+            'next_actions' => [
+                'schedule_interview' => [
+                    'title' => 'Schedule an interview',
+                    'description' => 'The evaluation raised what to probe. An interview is what resolves it.',
+                ],
+                'prepare_interview' => [
+                    'title' => 'Prepare for the interview',
+                    'description' => 'An interview is booked. Review the brief before it starts.',
+                ],
+                'await_evaluation' => [
+                    'title' => 'Wait for the evaluation',
+                    'description' => 'The candidate evaluation has not finished yet. It is context, not a decision.',
+                ],
+                'decide' => [
+                    'title' => 'Make a decision',
+                    'description' => 'This candidate is in a final stage. Move them forward or close the process.',
+                ],
+                'hired' => [
+                    'title' => 'Hired',
+                    'description' => 'This process is complete for this candidate.',
+                ],
+            ],
+            'fit_heading' => 'Candidate evaluation',
+            'fit_score' => 'Fit :score',
+            'needs_validation' => '{1} 1 area needs validation|[2,*] :count areas need validation',
+            'needs_validation_label' => 'Needs validation',
+            'established_evidence_label' => 'Established evidence',
+            'fit_disclaimer' => 'Fit summarises evidence. Confidence is tracked separately: unknowns lower confidence, not fit.',
+            'interview_heading' => 'Next interview',
+            'interview_on' => 'Interview :date',
+            'no_interview' => 'No interview scheduled.',
+        ],
         'fields' => [
             'name' => 'Name',
             'email' => 'Email',
@@ -87,8 +125,6 @@ return [
             'utm_parameters' => 'UTM parameters',
         ],
         'sections' => [
-            'candidate' => 'Candidate details',
-            'recruitment' => 'Recruitment details',
             'origin' => 'Origin and attribution',
             'social_profiles' => 'Social profiles',
             'answers' => 'Application answers',

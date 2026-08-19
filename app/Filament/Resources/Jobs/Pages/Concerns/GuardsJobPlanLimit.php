@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\Jobs\Pages\Concerns;
 
 use App\Exceptions\PlanLimitExceededException;
-use App\Filament\Pages\Settings;
+use App\Filament\Clusters\Settings\Pages\PlanSettings;
 use App\Models\Company;
 use App\Services\LimitManager;
 use Filament\Actions\Action;
@@ -48,7 +48,7 @@ trait GuardsJobPlanLimit
             ->actions([
                 Action::make('managePlan')
                     ->label(__('settings.topbar.manage_plan'))
-                    ->url(Settings::getUrl(['section' => 'plan']))
+                    ->url(PlanSettings::getUrl())
                     ->button(),
             ])
             ->send();

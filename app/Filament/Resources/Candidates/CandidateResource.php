@@ -6,6 +6,7 @@ use App\Enums\Feature;
 use App\Filament\Resources\Candidates\Pages\CreateCandidate;
 use App\Filament\Resources\Candidates\Pages\EditCandidate;
 use App\Filament\Resources\Candidates\Pages\ListCandidates;
+use App\Filament\Resources\Candidates\Pages\ViewCandidate;
 use App\Filament\Resources\Candidates\Schemas\CandidateForm;
 use App\Filament\Resources\Candidates\Tables\CandidatesTable;
 use App\Models\Candidate;
@@ -15,6 +16,8 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 
 class CandidateResource extends Resource
 {
@@ -22,7 +25,13 @@ class CandidateResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUsers;
 
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 3;
+
+    protected static ?string $recordTitleAttribute = 'name';
+
+    protected static bool $isGloballySearchable = true;
+
+    protected static ?int $globalSearchSort = 1;
 
     public static function getModelLabel(): string
     {
@@ -32,11 +41,6 @@ class CandidateResource extends Resource
     public static function getPluralModelLabel(): string
     {
         return __('candidates.plural_label');
-    }
-
-    public static function getNavigationGroup(): ?string
-    {
-        return __('clusters.recruitment');
     }
 
     public static function getNavigationLabel(): string
@@ -54,6 +58,35 @@ class CandidateResource extends Resource
         return (bool) Filament::getTenant()?->hasFeature(Feature::Candidates);
     }
 
+    /** @return array<int, string> */
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['name', 'email'];
+    }
+
+    public static function getGlobalSearchResultUrl(Model $record): string
+    {
+        return static::getUrl('view', ['record' => $record]);
+    }
+
+    public static function getGlobalSearchEloquentQuery(): Builder
+    {
+        return parent::getGlobalSearchEloquentQuery()->withCount('applications');
+    }
+
+    /** @return array<string, string> */
+    public static function getGlobalSearchResultDetails(Model $record): array
+    {
+        if (! $record instanceof Candidate) {
+            return [];
+        }
+
+        return array_filter([
+            __('candidates.fields.email') => $record->email,
+            __('candidates.view.applications_count') => (string) $record->getAttribute('applications_count'),
+        ]);
+    }
+
     public static function form(Schema $schema): Schema
     {
         return CandidateForm::configure($schema);
@@ -69,6 +102,7 @@ class CandidateResource extends Resource
         return [
             'index' => ListCandidates::route('/'),
             'create' => CreateCandidate::route('/create'),
+            'view' => ViewCandidate::route('/{record}'),
             'edit' => EditCandidate::route('/{record}/edit'),
         ];
     }

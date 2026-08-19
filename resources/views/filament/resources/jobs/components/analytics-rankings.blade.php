@@ -5,23 +5,23 @@
                 <x-filament::icon icon="heroicon-o-megaphone" class="size-5" />
             </span>
             <div>
-                <h3 class="font-semibold text-gray-950 dark:text-white">{{ __('jobs.dashboard.utm_ranking.title') }}</h3>
-                <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('jobs.dashboard.utm_ranking.description') }}</p>
+                <h3 class="font-semibold text-gray-950 dark:text-white">{{ __('jobs.analytics.utm_ranking.title') }}</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('jobs.analytics.utm_ranking.description') }}</p>
             </div>
         </div>
 
         @if ($utmRanking->isEmpty())
             <p class="px-5 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
-                {{ __('jobs.dashboard.utm_ranking.empty') }}
+                {{ __('jobs.analytics.utm_ranking.empty') }}
             </p>
         @else
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm">
                     <thead class="bg-gray-50 text-xs font-semibold tracking-wide text-gray-500 uppercase dark:bg-white/5 dark:text-gray-400">
                         <tr>
-                            <th class="px-5 py-3">{{ __('jobs.dashboard.utm_ranking.parameter') }}</th>
-                            <th class="px-5 py-3">{{ __('jobs.dashboard.utm_ranking.value') }}</th>
-                            <th class="px-5 py-3 text-right">{{ __('jobs.dashboard.clicks') }}</th>
+                            <th class="px-5 py-3">{{ __('jobs.analytics.utm_ranking.parameter') }}</th>
+                            <th class="px-5 py-3">{{ __('jobs.analytics.utm_ranking.value') }}</th>
+                            <th class="px-5 py-3 text-right">{{ __('jobs.analytics.clicks') }}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-white/5">

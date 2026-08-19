@@ -13,7 +13,6 @@ use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Support\Enums\Width;
 use Filament\Tables\Columns\ColorColumn;
-use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
@@ -60,9 +59,19 @@ class StatusesRelationManager extends RelationManager
                     ->description(fn (Status $record): ?string => $record->sendsOnEnterEmail()
                         ? $record->email_subject
                         : null),
-                IconColumn::make('is_hired')
-                    ->label(__('statuses.fields.is_hired'))
-                    ->boolean(),
+                TextColumn::make('stage_role')
+                    ->label(__('statuses.fields.stage_role'))
+                    ->badge()
+                    ->state(fn (Status $record): string => match (true) {
+                        $record->is_hired => __('statuses.badges.hired'),
+                        $record->is_final_stage => __('statuses.badges.final_stage'),
+                        default => __('statuses.badges.intermediate'),
+                    })
+                    ->color(fn (Status $record): string => match (true) {
+                        $record->is_hired => 'success',
+                        $record->is_final_stage => 'warning',
+                        default => 'gray',
+                    }),
                 TextColumn::make('applications_count')
                     ->label(__('statuses.fields.applications_count'))
                     ->counts('applications')

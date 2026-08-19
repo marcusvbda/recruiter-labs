@@ -2,16 +2,23 @@
 
 return [
     'navigation_label' => 'Settings',
-    'title' => 'Settings',
-    'subtitle' => 'Manage your profile, workspace plan and AI configuration.',
-    'sidebar' => [
-        'workspace' => 'Workspace',
-        'new_job' => 'Create new job',
-        'manage_workspace' => 'Manage workspace',
+    'account' => [
+        'navigation_label' => 'Account',
+        'title' => 'Account',
+        'subtitle' => 'Your profile, language and sign-in security.',
+        'profile_heading' => 'Profile',
+        'profile_description' => 'How you are identified in this workspace.',
+        'security_heading' => 'Security',
+        'security_description' => 'Change your password. Leave blank to keep the current one.',
+    ],
+    'workspace' => [
+        'navigation_label' => 'Workspace',
+        'title' => 'Workspace',
+        'subtitle' => 'Company information and the hiring workflows your jobs reuse.',
+        'identity_heading' => 'Company',
+        'identity_description' => 'The name and URL of this workspace.',
     ],
     'tabs' => [
-        'general' => 'General',
-        'auth' => 'Authentication',
         'plan' => 'Plan',
         'ai' => 'AI',
     ],
@@ -26,6 +33,8 @@ return [
         'model' => 'Model',
     ],
     'plan' => [
+        'title' => 'Plan and billing',
+        'subtitle' => 'Your current plan, allowances and how much of them this workspace uses.',
         'eyebrow' => 'Workspace plan',
         'heading' => 'Choose the right plan for your team',
         'description' => 'Compare every plan and see exactly how your current workspace usage fits.',
@@ -81,6 +90,8 @@ return [
         'own_ai_key' => 'Own OpenAI API key',
     ],
     'ai' => [
+        'title' => 'AI and usage',
+        'subtitle' => 'Which provider powers candidate evaluation, and how much you have used.',
         'eyebrow' => 'AI configuration',
         'heading' => 'Control how your workspace uses AI',
         'description' => 'Choose a provider, manage credentials and monitor analysis consumption from one place.',

@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Filament\Clusters\Integrations\Pages;
+namespace App\Filament\Clusters\Settings\Pages;
 
 use App\Actions\DisconnectConnectedIntegration;
 use App\Enums\ConnectedIntegrationStatus;
-use App\Filament\Clusters\Integrations\IntegrationsCluster;
+use App\Filament\Clusters\Settings\SettingsCluster;
 use App\Models\Company;
 use App\Models\ConnectedIntegration;
 use App\Models\User;
@@ -22,13 +22,13 @@ class CalendarSettings extends Page
 {
     private const string GoogleCalendarPluginKey = 'google-calendar';
 
-    protected static ?string $cluster = IntegrationsCluster::class;
+    protected static ?string $cluster = SettingsCluster::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCalendarDays;
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 5;
 
-    protected string $view = 'filament.clusters.integrations.pages.calendar-settings';
+    protected string $view = 'filament.clusters.settings.pages.calendar-settings';
 
     /** @var array<string, bool|string|null> */
     public array $calendarConnection = [];

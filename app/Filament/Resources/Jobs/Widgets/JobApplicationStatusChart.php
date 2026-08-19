@@ -21,12 +21,12 @@ class JobApplicationStatusChart extends ChartWidget
 
     public function getHeading(): string|Htmlable|null
     {
-        return __('jobs.dashboard.status_chart.title');
+        return __('jobs.overview.status_chart.title');
     }
 
     public function getEmptyStateHeading(): string|Htmlable
     {
-        return __('jobs.dashboard.status_chart.empty');
+        return __('jobs.overview.status_chart.empty');
     }
 
     protected function getData(): array
@@ -38,7 +38,7 @@ class JobApplicationStatusChart extends ChartWidget
         return [
             'datasets' => [
                 [
-                    'label' => __('jobs.dashboard.status_chart.dataset'),
+                    'label' => __('jobs.overview.status_chart.dataset'),
                     'data' => array_column($this->statusDistribution, 'count'),
                     'backgroundColor' => array_column($this->statusDistribution, 'color'),
                     'borderWidth' => 0,

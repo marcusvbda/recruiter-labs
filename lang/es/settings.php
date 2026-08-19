@@ -2,16 +2,23 @@
 
 return [
     'navigation_label' => 'Configuración',
-    'title' => 'Configuración',
-    'subtitle' => 'Gestiona tu perfil, el plan de la empresa y la configuración de IA.',
-    'sidebar' => [
-        'workspace' => 'Espacio',
-        'new_job' => 'Crear nueva vacante',
-        'manage_workspace' => 'Gestionar espacio',
+    'account' => [
+        'navigation_label' => 'Cuenta',
+        'title' => 'Cuenta',
+        'subtitle' => 'Tu perfil, idioma y seguridad de acceso.',
+        'profile_heading' => 'Perfil',
+        'profile_description' => 'Cómo se te identifica en este espacio de trabajo.',
+        'security_heading' => 'Seguridad',
+        'security_description' => 'Cambia tu contraseña. Déjala vacía para conservar la actual.',
+    ],
+    'workspace' => [
+        'navigation_label' => 'Espacio de trabajo',
+        'title' => 'Espacio de trabajo',
+        'subtitle' => 'Datos de la empresa y los flujos de contratación que reutilizan las vacantes.',
+        'identity_heading' => 'Empresa',
+        'identity_description' => 'El nombre y la URL de este espacio de trabajo.',
     ],
     'tabs' => [
-        'general' => 'General',
-        'auth' => 'Autenticación',
         'plan' => 'Plan',
         'ai' => 'IA',
     ],
@@ -26,6 +33,8 @@ return [
         'model' => 'Modelo',
     ],
     'plan' => [
+        'title' => 'Plan y facturación',
+        'subtitle' => 'Tu plan actual, los límites y cuánto usa este espacio de trabajo.',
         'eyebrow' => 'Plan de la empresa',
         'heading' => 'Elige el plan adecuado para tu equipo',
         'description' => 'Compara todos los planes y descubre cómo encaja el uso actual de la empresa.',
@@ -81,6 +90,8 @@ return [
         'own_ai_key' => 'Clave propia de OpenAI',
     ],
     'ai' => [
+        'title' => 'IA y consumo',
+        'subtitle' => 'Qué proveedor ejecuta la evaluación de candidatos y cuánto has usado.',
         'eyebrow' => 'Configuración de IA',
         'heading' => 'Controla cómo usa IA tu empresa',
         'description' => 'Elige el proveedor, gestiona credenciales y supervisa el consumo de análisis desde un solo lugar.',

@@ -51,14 +51,16 @@ return [
         'not_applicable' => 'No aplica',
         'not_answered' => 'No se proporcionó respuesta',
         'tabs' => [
-            'overview' => 'Resumen',
+            'summary' => 'Resumen',
             'application' => 'Postulación',
             'documents' => 'Documentos',
             'interviews' => 'Entrevistas',
-            'ai_analysis' => 'Evaluación de ajuste',
+            'evaluation' => 'Evaluación',
         ],
         'actions' => [
             'view_application' => 'Ver postulación',
+            'schedule_another_interview' => 'Agendar otra entrevista',
+            'open_job_workspace' => 'Abrir la vacante',
             'move_status' => 'Cambiar estado',
             'choose_status' => 'Estado en el pipeline',
             'status_updated' => 'Estado de la postulación actualizado.',
@@ -74,6 +76,42 @@ return [
             'connect_calendar' => 'Conectar calendario',
             'reconnect_calendar' => 'Reconectar calendario',
         ],
+        'summary' => [
+            'where_heading' => 'Dónde está en el proceso',
+            'stage_position' => 'etapa :position de :total',
+            'next_action_heading' => 'Próximo paso probable',
+            'next_actions' => [
+                'schedule_interview' => [
+                    'title' => 'Agendar una entrevista',
+                    'description' => 'La evaluación señaló qué indagar. La entrevista es lo que lo resuelve.',
+                ],
+                'prepare_interview' => [
+                    'title' => 'Preparar la entrevista',
+                    'description' => 'Hay una entrevista agendada. Revisa el guion antes de comenzar.',
+                ],
+                'await_evaluation' => [
+                    'title' => 'Esperar la evaluación',
+                    'description' => 'La evaluación del candidato aún no ha terminado. Es contexto, no una decisión.',
+                ],
+                'decide' => [
+                    'title' => 'Tomar una decisión',
+                    'description' => 'Este candidato está en una etapa final. Avanza o cierra el proceso.',
+                ],
+                'hired' => [
+                    'title' => 'Contratado',
+                    'description' => 'El proceso está completo para este candidato.',
+                ],
+            ],
+            'fit_heading' => 'Evaluación del candidato',
+            'fit_score' => 'Ajuste :score',
+            'needs_validation' => '{1} 1 punto por validar|[2,*] :count puntos por validar',
+            'needs_validation_label' => 'Por validar',
+            'established_evidence_label' => 'Evidencia establecida',
+            'fit_disclaimer' => 'El ajuste resume evidencia. La confianza se mide aparte: lo desconocido reduce la confianza, no el ajuste.',
+            'interview_heading' => 'Próxima entrevista',
+            'interview_on' => 'Entrevista :date',
+            'no_interview' => 'No hay entrevista agendada.',
+        ],
         'fields' => [
             'name' => 'Nombre',
             'email' => 'Correo electrónico',
@@ -87,8 +125,6 @@ return [
             'utm_parameters' => 'Parámetros UTM',
         ],
         'sections' => [
-            'candidate' => 'Datos del candidato',
-            'recruitment' => 'Datos de reclutamiento',
             'origin' => 'Origen y atribución',
             'social_profiles' => 'Perfiles sociales',
             'answers' => 'Respuestas de la postulación',

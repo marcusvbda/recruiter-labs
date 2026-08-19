@@ -18,11 +18,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $color
  * @property int $order
  * @property bool $is_hired
+ * @property bool $is_final_stage
  * @property bool $sends_email
  * @property string|null $email_subject
  * @property string|null $email_body
  */
-#[Fillable(['company_id', 'pipeline_id', 'name', 'color', 'order', 'is_hired', 'sends_email', 'email_subject', 'email_body'])]
+#[Fillable(['company_id', 'pipeline_id', 'name', 'color', 'order', 'is_hired', 'is_final_stage', 'sends_email', 'email_subject', 'email_body'])]
 class Status extends Model
 {
     /** @use HasFactory<StatusFactory> */
@@ -30,6 +31,7 @@ class Status extends Model
 
     protected $attributes = [
         'is_hired' => false,
+        'is_final_stage' => false,
         'sends_email' => false,
     ];
 
@@ -51,6 +53,7 @@ class Status extends Model
     {
         return [
             'is_hired' => 'boolean',
+            'is_final_stage' => 'boolean',
             'sends_email' => 'boolean',
         ];
     }
@@ -71,6 +74,15 @@ class Status extends Model
     public function applications(): HasMany
     {
         return $this->hasMany(Application::class);
+    }
+
+    /**
+     * Whether this stage means the candidate is close to a hiring decision.
+     * The hired stage itself is the outcome, not a late stage leading to it.
+     */
+    public function isLateStage(): bool
+    {
+        return $this->is_final_stage && ! $this->is_hired;
     }
 
     /**

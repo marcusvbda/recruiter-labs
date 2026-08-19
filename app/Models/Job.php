@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\ApplicationLocale;
 use App\Enums\CoverLetterType;
+use App\Enums\InterviewStatus;
 use App\Enums\JobCriteriaProcessingStatus;
 use App\Exceptions\RecruitmentWorkflowException;
 use App\Models\Concerns\HasUniqueKey;
@@ -159,6 +160,45 @@ class Job extends Model
     public function applications(): HasMany
     {
         return $this->hasMany(Application::class);
+    }
+
+    /**
+     * Applications with at least one interview that has not been cancelled.
+     * This is what "interviewing" means operationally: a commitment exists.
+     *
+     * @return HasMany<Application, $this>
+     */
+    public function interviewingApplications(): HasMany
+    {
+        return $this->applications()->whereHas(
+            'interviews',
+            fn (Builder $query): Builder => $query->where('status', '!=', InterviewStatus::Cancelled->value),
+        );
+    }
+
+    /**
+     * Applications sitting in a stage explicitly marked as late/final by the
+     * workflow. The hired stage is the outcome, so it is excluded here.
+     *
+     * @return HasMany<Application, $this>
+     */
+    public function finalStageApplications(): HasMany
+    {
+        return $this->applications()->whereHas(
+            'status',
+            fn (Builder $query): Builder => $query
+                ->where('is_final_stage', true)
+                ->where('is_hired', false),
+        );
+    }
+
+    /** @return HasMany<Application, $this> */
+    public function hiredApplications(): HasMany
+    {
+        return $this->applications()->whereHas(
+            'status',
+            fn (Builder $query): Builder => $query->where('is_hired', true),
+        );
     }
 
     /** @return HasMany<JobClick, $this> */

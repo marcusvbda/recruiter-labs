@@ -5,7 +5,7 @@ namespace App\Filament\Pages;
 use App\Data\CalendarAgendaEvent;
 use App\Enums\ConnectedIntegrationStatus;
 use App\Enums\InterviewStatus;
-use App\Filament\Clusters\Integrations\Pages\CalendarSettings;
+use App\Filament\Clusters\Settings\Pages\CalendarSettings;
 use App\Filament\Resources\Applications\ApplicationResource;
 use App\Models\Company;
 use App\Models\ConnectedIntegration;
@@ -34,7 +34,7 @@ class Calendar extends Page
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCalendarDays;
 
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 4;
 
     protected string $view = 'filament.pages.calendar';
 

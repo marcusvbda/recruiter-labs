@@ -3,31 +3,6 @@
 @endphp
 
 <div class="grid gap-6" data-testid="plan-settings">
-    <section class="rl-settings-hero" aria-labelledby="plan-settings-heading">
-        <div class="absolute -top-24 -right-20 -z-10 size-72 rounded-full bg-white/15 blur-3xl"></div>
-        <div class="absolute -bottom-32 left-1/3 -z-10 size-80 rounded-full bg-cyan-300/20 blur-3xl"></div>
-
-        <div class="relative max-w-3xl">
-            <div class="flex flex-wrap items-center gap-2">
-                <span
-                    class="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold tracking-wide uppercase backdrop-blur-sm">
-                    <x-filament::icon icon="heroicon-o-building-office-2" class="size-4" />
-                    {{ __('settings.plan.eyebrow') }}
-                </span>
-                <span
-                    class="inline-flex items-center rounded-full bg-white px-3 py-1 text-xs font-bold text-primary-700 shadow-sm">
-                    {{ $settings['current_plan']['name'] }}
-                </span>
-            </div>
-            <h2 id="plan-settings-heading" class="mt-4 text-2xl font-bold tracking-tight sm:text-3xl">
-                {{ __('settings.plan.heading') }}
-            </h2>
-            <p class="mt-2 max-w-2xl text-sm leading-6 text-blue-50 sm:text-base">
-                {{ __('settings.plan.description') }}
-            </p>
-        </div>
-    </section>
-
     <div class="rl-plan-grid">
         @foreach ($settings['plans'] as $plan)
             <article class="rl-plan-card" data-current="{{ $plan['is_current'] ? 'true' : 'false' }}"

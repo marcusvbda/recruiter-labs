@@ -1,22 +1,22 @@
 <?php
 
 return [
-    'label' => 'Pipeline',
-    'plural_label' => 'Pipelines',
-    'navigation_label' => 'Pipelines',
-    'list_subheading' => 'Un pipeline es un proceso de selección: las etapas por las que pasa un candidato y lo que cada etapa le comunica.',
+    'label' => 'Flujo de contratación',
+    'plural_label' => 'Flujos de contratación',
+    'navigation_label' => 'Flujos de contratación',
+    'list_subheading' => 'Un flujo de contratación es un proceso de selección reutilizable: las etapas por las que pasa un candidato y lo que cada etapa le comunica. Las vacantes eligen uno; el tablero en vivo de candidatos vive dentro de cada vacante.',
     'create_subheading' => 'Dale un nombre al proceso. Después podrás renombrar, reordenar y eliminar etapas.',
     'edit_subheading' => 'Renombra el proceso, elige si es el predeterminado y gestiona sus etapas abajo.',
     'empty_flow' => 'Aún no hay etapas',
     'sections' => [
-        'details' => 'Detalles del pipeline',
+        'details' => 'Detalles del flujo',
         'details_description' => 'Cómo se identifica este proceso de selección en los puestos.',
     ],
     'fields' => [
         'name' => 'Nombre',
         'description' => 'Descripción',
         'description_helper' => 'Opcional. Una nota breve sobre cuándo usar este proceso.',
-        'is_default' => 'Pipeline predeterminado',
+        'is_default' => 'Flujo predeterminado',
         'is_default_helper' => 'Se preselecciona al crear un puesto. Solo un pipeline puede ser el predeterminado.',
         'flow' => 'Etapas',
         'jobs_count' => 'Puestos',

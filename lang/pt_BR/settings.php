@@ -2,16 +2,23 @@
 
 return [
     'navigation_label' => 'Configurações',
-    'title' => 'Configurações',
-    'subtitle' => 'Gerencie seu perfil, o plano da empresa e a configuração de IA.',
-    'sidebar' => [
-        'workspace' => 'Ambiente',
-        'new_job' => 'Criar nova vaga',
-        'manage_workspace' => 'Gerenciar ambiente',
+    'account' => [
+        'navigation_label' => 'Conta',
+        'title' => 'Conta',
+        'subtitle' => 'Seu perfil, idioma e segurança de acesso.',
+        'profile_heading' => 'Perfil',
+        'profile_description' => 'Como você é identificado neste workspace.',
+        'security_heading' => 'Segurança',
+        'security_description' => 'Altere sua senha. Deixe em branco para manter a atual.',
+    ],
+    'workspace' => [
+        'navigation_label' => 'Workspace',
+        'title' => 'Workspace',
+        'subtitle' => 'Dados da empresa e os fluxos de contratação reutilizados pelas vagas.',
+        'identity_heading' => 'Empresa',
+        'identity_description' => 'O nome e a URL deste workspace.',
     ],
     'tabs' => [
-        'general' => 'Geral',
-        'auth' => 'Autenticação',
         'plan' => 'Plano',
         'ai' => 'IA',
     ],
@@ -26,6 +33,8 @@ return [
         'model' => 'Modelo',
     ],
     'plan' => [
+        'title' => 'Plano e cobrança',
+        'subtitle' => 'Seu plano atual, os limites e quanto deles este workspace usa.',
         'eyebrow' => 'Plano da empresa',
         'heading' => 'Escolha o plano ideal para sua equipe',
         'description' => 'Compare todos os planos e veja como o uso atual da empresa se encaixa em cada um.',
@@ -81,6 +90,8 @@ return [
         'own_ai_key' => 'Chave própria da OpenAI',
     ],
     'ai' => [
+        'title' => 'IA e consumo',
+        'subtitle' => 'Qual provedor executa a avaliação de candidatos e quanto você já usou.',
         'eyebrow' => 'Configuração de IA',
         'heading' => 'Controle como sua empresa usa IA',
         'description' => 'Escolha o provedor, gerencie credenciais e acompanhe o consumo de análises em um só lugar.',

@@ -4,9 +4,6 @@ return [
     'navigation_label' => 'Proveedor de Correo',
     'title' => 'Proveedor de Correo',
     'subtitle' => 'Configura los proveedores de correo utilizados para el envío de reclutamiento.',
-    'eyebrow' => 'Configuración del proveedor de correo',
-    'heading' => 'Configura tus proveedores de correo de reclutamiento',
-    'description' => 'Esto configura los proveedores utilizados para enviar correos de reclutamiento a candidatos. No afecta los correos de la propia cuenta del sistema.',
     'default_badge' => 'Predeterminado',
     'fields' => [
         'provider' => 'Proveedor',

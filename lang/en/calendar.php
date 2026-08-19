@@ -5,9 +5,6 @@ return [
     'integration_navigation_label' => 'Calendar integration',
     'title' => 'Calendar',
     'subtitle' => 'Connect your calendar account to schedule interviews and sync candidate responses.',
-    'eyebrow' => 'Calendar integration',
-    'heading' => 'Connect your recruitment calendar',
-    'description' => 'Authorize RecruiterLabs to create and manage interview events in your recruitment calendar.',
     'status' => [
         'connected' => 'Connected',
         'reauthorization_required' => 'Reconnect required',

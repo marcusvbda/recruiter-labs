@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Clusters\Integrations\Pages;
+namespace App\Filament\Clusters\Settings\Pages;
 
 use App\Actions\DisconnectConnectedIntegration;
 use App\Actions\RemoveCompanyEmailProviderCredentials;
@@ -10,7 +10,7 @@ use App\Actions\UpdateCompanyEmailProviderSettings;
 use App\Enums\ConnectedIntegrationStatus;
 use App\Enums\EmailCredentialStatus;
 use App\Enums\EmailProvider;
-use App\Filament\Clusters\Integrations\IntegrationsCluster;
+use App\Filament\Clusters\Settings\SettingsCluster;
 use App\Models\Company;
 use App\Models\CompanyEmailProviderSetting;
 use App\Models\ConnectedIntegration;
@@ -33,13 +33,13 @@ class EmailProviderSettings extends Page
 {
     private const string GmailPluginKey = 'gmail';
 
-    protected static ?string $cluster = IntegrationsCluster::class;
+    protected static ?string $cluster = SettingsCluster::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedEnvelope;
 
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 4;
 
-    protected string $view = 'filament.clusters.integrations.pages.email-provider-settings';
+    protected string $view = 'filament.clusters.settings.pages.email-provider-settings';
 
     /** @var array<int, array<string, mixed>> */
     public array $emailProviderSettings = [];
@@ -74,7 +74,7 @@ class EmailProviderSettings extends Page
     {
         return Action::make('configureProvider')
             ->modal()
-            ->modalHeading(fn(array $arguments): string => __('email_provider.configure.heading', [
+            ->modalHeading(fn (array $arguments): string => __('email_provider.configure.heading', [
                 'provider' => $this->providerLabel($arguments),
             ]))
             ->modalDescription(__('email_provider.configure.description'))
@@ -96,7 +96,7 @@ class EmailProviderSettings extends Page
                     ->helperText('Leave blank to keep the existing API key.')
                     ->password()
                     ->revealable()
-                    ->required(fn(Get $get): bool => ! (bool) $get('has_existing_api_key'))
+                    ->required(fn (Get $get): bool => ! (bool) $get('has_existing_api_key'))
                     ->maxLength(512)
                     ->autocomplete('new-password'),
                 TextInput::make('from_address')
@@ -201,7 +201,7 @@ class EmailProviderSettings extends Page
     {
         return Action::make('removeProvider')
             ->requiresConfirmation()
-            ->modalHeading(fn(array $arguments): string => __('email_provider.remove.heading', [
+            ->modalHeading(fn (array $arguments): string => __('email_provider.remove.heading', [
                 'provider' => $this->providerLabel($arguments),
             ]))
             ->modalDescription(__('email_provider.remove.description'))
@@ -231,7 +231,7 @@ class EmailProviderSettings extends Page
     {
         return Action::make('disconnectGmail')
             ->requiresConfirmation()
-            ->modalHeading(fn(): string => __('email_provider.gmail.disconnect.heading', [
+            ->modalHeading(fn (): string => __('email_provider.gmail.disconnect.heading', [
                 'plugin' => $this->gmailConnection['plugin_label'],
             ]))
             ->modalDescription(__('email_provider.gmail.disconnect.description'))
@@ -281,7 +281,7 @@ class EmailProviderSettings extends Page
     /** @param array<string, mixed> $arguments */
     private function providerLabel(array $arguments): string
     {
-        return __('email_provider.providers.' . $this->resendProviderFromArguments($arguments)->value);
+        return __('email_provider.providers.'.$this->resendProviderFromArguments($arguments)->value);
     }
 
     private function refreshEmailProviderState(ConnectedIntegrationRegistry $integrationRegistry): void
@@ -290,7 +290,7 @@ class EmailProviderSettings extends Page
         $company->refresh()->load('emailProviderSettings');
 
         $settingsByProvider = $company->emailProviderSettings
-            ->mapWithKeys(fn(CompanyEmailProviderSetting $setting): array => [
+            ->mapWithKeys(fn (CompanyEmailProviderSetting $setting): array => [
                 $setting->provider->value => $setting,
             ])
             ->all();
@@ -303,7 +303,7 @@ class EmailProviderSettings extends Page
 
                 return [
                     'provider' => $provider->value,
-                    'provider_label' => __('email_provider.providers.' . $provider->value),
+                    'provider_label' => __('email_provider.providers.'.$provider->value),
                     'icon' => asset('assets/image/icons/resend.png'),
                     'is_default' => $setting !== null && $setting->is_default,
                     'has_key' => $hasKey,
@@ -384,8 +384,7 @@ class EmailProviderSettings extends Page
     private function getPluginMetadata(ConnectedIntegrationRegistry $integrationRegistry, string $pluginKey): array
     {
         $metadata = collect($integrationRegistry->metadata())
-            ->first(fn(array $plugin): bool => $plugin['key'] === $pluginKey);
-
+            ->first(fn (array $plugin): bool => $plugin['key'] === $pluginKey);
 
         if ($metadata === null) {
             throw new LogicException("The [{$pluginKey}] integration plugin is not registered.");

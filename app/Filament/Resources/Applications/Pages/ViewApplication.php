@@ -5,10 +5,12 @@ namespace App\Filament\Resources\Applications\Pages;
 use App\Actions\MoveApplicationToStatus;
 use App\Actions\ScheduleApplicationFitAnalysis;
 use App\Enums\ApplicationAnalysisStatus;
+use App\Enums\InterviewStatus;
 use App\Enums\PhoneCountry;
 use App\Enums\SocialNetwork;
 use App\Filament\Resources\Applications\ApplicationResource;
 use App\Filament\Resources\Applications\Pages\Concerns\ManagesApplicationInterviews;
+use App\Filament\Resources\Candidates\CandidateResource;
 use App\Filament\Resources\Jobs\JobResource;
 use App\Models\Application;
 use App\Models\ApplicationAnswer;
@@ -17,9 +19,11 @@ use App\Models\ApplicationDocument;
 use App\Models\ApplicationInterviewBriefItem;
 use App\Models\ApplicationUtmParameter;
 use App\Models\Candidate;
+use App\Models\Interview;
 use App\Models\Status;
 use BackedEnum;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
@@ -27,7 +31,6 @@ use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
-use Filament\Support\Colors\Color;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Carbon;
@@ -69,12 +72,26 @@ class ViewApplication extends ViewRecord
     protected function getHeaderActions(): array
     {
         $application = $this->getApplication();
+        $nextInterview = $this->nextInterview($application);
+        $meetingUrl = $nextInterview?->meeting_url;
 
         return [
-            $this->scheduleInterviewAction($application),
+            Action::make('joinInterview')
+                ->label(__('applications.admin.actions.join_meet'))
+                ->icon(Heroicon::OutlinedVideoCamera)
+                ->color('success')
+                ->visible($meetingUrl !== null)
+                ->url($meetingUrl ?? '#')
+                ->openUrlInNewTab(),
+            $this->scheduleInterviewAction($application)
+                ->color($nextInterview === null ? 'primary' : 'gray')
+                ->label($nextInterview === null
+                    ? __('applications.admin.actions.schedule_interview')
+                    : __('applications.admin.actions.schedule_another_interview')),
             Action::make('moveStatus')
                 ->label(__('applications.admin.actions.move_status'))
                 ->icon(Heroicon::OutlinedArrowsRightLeft)
+                ->color($nextInterview === null ? 'gray' : 'primary')
                 ->schema([
                     Select::make('status_id')
                         ->label(__('applications.admin.actions.choose_status'))
@@ -102,23 +119,31 @@ class ViewApplication extends ViewRecord
                         ->success()
                         ->send();
                 }),
+            ActionGroup::make([
+                $this->reprocessApplicationAnalysisAction($application),
+                Action::make('backToPipeline')
+                    ->label(__('applications.admin.actions.back_to_pipeline'))
+                    ->icon(Heroicon::OutlinedViewColumns)
+                    ->url(JobResource::getUrl('view', [
+                        'record' => $application->job,
+                        'section' => 'pipeline',
+                    ], tenant: $application->company)),
+                Action::make('openJobWorkspace')
+                    ->label(__('applications.admin.actions.open_job_workspace'))
+                    ->icon(Heroicon::OutlinedBriefcase)
+                    ->url(JobResource::getUrl('view', [
+                        'record' => $application->job,
+                    ], tenant: $application->company)),
+                Action::make('openJobPage')
+                    ->label(__('applications.admin.actions.open_job_page'))
+                    ->icon(Heroicon::OutlinedArrowTopRightOnSquare)
+                    ->url(route('job.show', ['key' => $application->job->key]))
+                    ->openUrlInNewTab(),
+            ]),
+            // Mounted from the interview cards, never shown in the header itself.
             $this->rescheduleInterviewAction(),
             $this->cancelInterviewAction(),
             $this->refreshInterviewAction(),
-            $this->reprocessApplicationAnalysisAction($application),
-            Action::make('backToPipeline')
-                ->label(__('applications.admin.actions.back_to_pipeline'))
-                ->icon(Heroicon::OutlinedViewColumns)
-                ->color('gray')
-                ->url(JobResource::getUrl('view', [
-                    'record' => $application->job,
-                    'section' => 'pipeline',
-                ], tenant: $application->company)),
-            Action::make('openJobPage')
-                ->label(__('applications.admin.actions.open_job_page'))
-                ->icon(Heroicon::OutlinedArrowTopRightOnSquare)
-                ->url(route('job.show', ['key' => $application->job->key]))
-                ->openUrlInNewTab(),
         ];
     }
 
@@ -143,7 +168,7 @@ class ViewApplication extends ViewRecord
 
                 $this->redirect(ApplicationResource::getUrl('view', [
                     'record' => $application,
-                    'section' => 'ai-analysis::tab',
+                    'section' => 'evaluation',
                 ], tenant: $application->company), navigate: false);
             });
     }
@@ -174,37 +199,47 @@ class ViewApplication extends ViewRecord
                 ->viewData(['header' => $this->headerData($application)]),
             Tabs::make('application-details-tabs')
                 ->tabs([
-                    Tab::make(__('applications.admin.tabs.overview'))
+                    Tab::make(__('applications.admin.tabs.summary'))
+                        ->id('summary')
+                        ->key('summary')
                         ->icon(Heroicon::OutlinedUserCircle)
                         ->schema([
-                            View::make('filament.resources.applications.components.overview')
-                                ->viewData(['overview' => $this->overviewData($application)]),
+                            View::make('filament.resources.applications.components.summary')
+                                ->viewData(['summary' => $this->summaryData($application)]),
                         ]),
-                    Tab::make(__('applications.admin.tabs.application'))
-                        ->icon(Heroicon::OutlinedClipboardDocumentList)
+                    Tab::make(__('applications.admin.tabs.evaluation'))
+                        ->id('evaluation')
+                        ->key('evaluation')
+                        ->icon(Heroicon::OutlinedClipboardDocumentCheck)
                         ->schema([
-                            View::make('filament.resources.applications.components.application')
-                                ->viewData(['applicationDetails' => $this->applicationData($application)]),
-                        ]),
-                    Tab::make(__('applications.admin.tabs.documents'))
-                        ->icon(Heroicon::OutlinedFolderOpen)
-                        ->badge($application->documents->count())
-                        ->schema([
-                            View::make('filament.resources.applications.components.documents')
-                                ->viewData(['documents' => $this->documentsData($application)]),
+                            View::make(@$this->analysisViewName($application))
+                                ->viewData(['analysis' => $this->analysisData($application)]),
                         ]),
                     Tab::make(__('applications.admin.tabs.interviews'))
+                        ->id('interviews')
+                        ->key('interviews')
                         ->icon(Heroicon::OutlinedCalendarDays)
                         ->badge($this->activeInterviewCount($application))
                         ->schema([
                             View::make('filament.resources.applications.components.interviews')
                                 ->viewData(['interviews' => $this->interviewsData($application)]),
                         ]),
-                    Tab::make(__('applications.admin.tabs.ai_analysis'))
-                        ->icon(Heroicon::OutlinedClipboardDocumentCheck)
+                    Tab::make(__('applications.admin.tabs.application'))
+                        ->id('application')
+                        ->key('application')
+                        ->icon(Heroicon::OutlinedClipboardDocumentList)
                         ->schema([
-                            View::make(@$this->analysisViewName($application))
-                                ->viewData(['analysis' => $this->analysisData($application)]),
+                            View::make('filament.resources.applications.components.application')
+                                ->viewData(['applicationDetails' => $this->applicationData($application)]),
+                        ]),
+                    Tab::make(__('applications.admin.tabs.documents'))
+                        ->id('documents')
+                        ->key('documents')
+                        ->icon(Heroicon::OutlinedFolderOpen)
+                        ->badge($application->documents->count())
+                        ->schema([
+                            View::make('filament.resources.applications.components.documents')
+                                ->viewData(['documents' => $this->documentsData($application)]),
                         ]),
                 ])
                 ->persistTabInQueryString('section')
@@ -212,54 +247,197 @@ class ViewApplication extends ViewRecord
         ]);
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * The header answers, in order: who, for which job, where in the process,
+     * how they scored, and what is already booked. The pipeline stage outranks
+     * the evaluation's processing state, which is only a background job.
+     *
+     * @return array<string, mixed>
+     */
     private function headerData(Application $application): array
     {
         $analysisStatus = $this->enumValue($application->analysis_status);
-        $source = $this->enumValue($application->source);
+        $fit = $this->fitSummary($application);
+        $nextInterview = $this->nextInterview($application);
 
         return [
             'candidate_name' => $application->candidate->name,
+            'candidate_url' => CandidateResource::getUrl('view', [
+                'record' => $application->candidate,
+            ], tenant: $application->company),
             'candidate_initials' => Str::of($application->candidate->name)
                 ->explode(' ')
                 ->filter()
                 ->take(2)
                 ->map(fn (string $part): string => Str::upper(Str::substr($part, 0, 1)))
                 ->join(''),
-            'email' => $application->candidate->email ?? __('applications.admin.not_provided'),
-            'phone' => PhoneCountry::formatInternational($application->candidate->phone)
-                ?? __('applications.admin.not_provided'),
             'job' => $application->job->name,
+            'job_url' => JobResource::getUrl('view', [
+                'record' => $application->job,
+            ], tenant: $application->company),
             'status' => $application->status->name,
-            'status_color' => Color::hex($application->status->color),
-            'applied_at' => $application->created_at->translatedFormat('M j, Y · H:i'),
-            'source' => (string) __("applications.admin.sources.{$source}"),
-            'referral' => $application->referral?->user->name ?? (string) __('applications.admin.not_applicable'),
+            'status_color' => $application->status->color,
+            'stage_role' => match (true) {
+                $application->status->is_hired => 'hired',
+                $application->status->is_final_stage => 'final_stage',
+                default => null,
+            },
+            'score' => $fit['score'],
+            'needs_validation_count' => $fit['needs_validation_count'],
+            'analysis_status' => $analysisStatus,
             'analysis_label' => __("applications.admin.ai.states.{$analysisStatus}.label"),
             'analysis_color' => $this->analysisColor($analysisStatus),
+            'next_interview' => $nextInterview === null ? null : [
+                'scheduled_at' => $nextInterview->scheduled_at
+                    ->setTimezone($nextInterview->timezone)
+                    ->translatedFormat('M j, Y · H:i'),
+                'meeting_url' => $nextInterview->meeting_url,
+            ],
         ];
+    }
+
+    /**
+     * The process-first view of this application: stage, fit, commitment and
+     * the recruiter's most plausible next move.
+     *
+     * @return array<string, mixed>
+     */
+    private function summaryData(Application $application): array
+    {
+        $fit = $this->fitSummary($application);
+        $nextInterview = $this->nextInterview($application);
+        $stages = Status::query()
+            ->where('company_id', $application->company_id)
+            ->where('pipeline_id', $application->job->pipeline_id)
+            ->orderBy('order')
+            ->orderBy('id')
+            ->get();
+        $currentIndex = $stages->search(
+            fn (Status $status): bool => (int) $status->getKey() === (int) $application->status_id,
+        );
+        $analysisStatus = $this->enumValue($application->analysis_status);
+
+        return [
+            'stage' => [
+                'name' => $application->status->name,
+                'color' => $application->status->color,
+                'position' => $currentIndex === false ? null : $currentIndex + 1,
+                'total' => $stages->count(),
+                'role' => match (true) {
+                    $application->status->is_hired => 'hired',
+                    $application->status->is_final_stage => 'final_stage',
+                    default => null,
+                },
+                'flow' => $stages
+                    ->map(fn (Status $status): array => [
+                        'name' => $status->name,
+                        'color' => $status->color,
+                        'is_current' => (int) $status->getKey() === (int) $application->status_id,
+                    ])
+                    ->all(),
+            ],
+            'fit' => [
+                'status' => $analysisStatus,
+                'label' => __("applications.admin.ai.states.{$analysisStatus}.label"),
+                'score' => $fit['score'],
+                'needs_validation_count' => $fit['needs_validation_count'],
+                'established_evidence_count' => $fit['established_evidence_count'],
+                'url' => ApplicationResource::getUrl('view', [
+                    'record' => $application,
+                    'section' => 'evaluation',
+                ], tenant: $application->company),
+            ],
+            'interview' => $nextInterview === null ? null : [
+                'scheduled_at' => $nextInterview->scheduled_at
+                    ->setTimezone($nextInterview->timezone)
+                    ->translatedFormat('M j, Y · H:i'),
+                'timezone' => $nextInterview->timezone,
+                'meeting_url' => $nextInterview->meeting_url,
+                'rsvp' => __("applications.admin.interviews.rsvp.{$nextInterview->rsvp_status->value}"),
+                'url' => ApplicationResource::getUrl('view', [
+                    'record' => $application,
+                    'section' => 'interviews',
+                ], tenant: $application->company),
+            ],
+            'next_action' => $this->nextActionKey($application, $nextInterview),
+            'applied_at' => $application->created_at->translatedFormat('M j, Y · H:i'),
+        ];
+    }
+
+    /**
+     * Fit and confidence, read from the stored evaluation. Confidence is not
+     * folded into the score: unknowns reduce certainty, never the fit itself.
+     *
+     * @return array{score: int|null, needs_validation_count: int, established_evidence_count: int}
+     */
+    private function fitSummary(Application $application): array
+    {
+        if ($this->enumValue($application->analysis_status) !== 'completed') {
+            return ['score' => null, 'needs_validation_count' => 0, 'established_evidence_count' => 0];
+        }
+
+        $application->loadMissing('criterionScores');
+
+        $needsValidation = $application->criterionScores
+            ->filter(fn (ApplicationCriterionScore $score): bool => $score->confidence->value !== 'high'
+                && $this->importanceForWeight($score->weight) === 'high')
+            ->count();
+
+        return [
+            'score' => $application->analysis_score === null
+                ? null
+                : (int) round((float) $application->analysis_score),
+            'needs_validation_count' => $needsValidation,
+            'established_evidence_count' => $application->criterionScores
+                ->filter(fn (ApplicationCriterionScore $score): bool => $score->confidence->value === 'high')
+                ->count(),
+        ];
+    }
+
+    /**
+     * The most plausible next recruiting step, given where the application
+     * currently stands. It is a suggestion in the UI, never an automation.
+     */
+    private function nextActionKey(Application $application, ?Interview $nextInterview): string
+    {
+        $analysisStatus = $this->enumValue($application->analysis_status);
+
+        return match (true) {
+            $application->status->is_hired => 'hired',
+            $nextInterview !== null => 'prepare_interview',
+            in_array($analysisStatus, ['pending', 'processing', 'awaiting_criteria'], strict: true) => 'await_evaluation',
+            $application->status->is_final_stage => 'decide',
+            default => 'schedule_interview',
+        };
+    }
+
+    /** The soonest interview that has neither been cancelled nor already ended. */
+    private function nextInterview(Application $application): ?Interview
+    {
+        $application->loadMissing('interviews');
+
+        return $application->interviews
+            ->filter(fn (Interview $interview): bool => $interview->status !== InterviewStatus::Cancelled
+                && $interview->ends_at->isFuture())
+            ->sortBy('scheduled_at')
+            ->first();
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function overviewData(Application $application): array
+    private function applicationData(Application $application): array
     {
+        $coverLetterType = $this->enumValue($application->cover_letter_type);
+
         $source = $this->enumValue($application->source);
 
         return [
-            'candidate' => [
-                'name' => $application->candidate->name,
-                'email' => $application->candidate->email ?? __('applications.admin.not_provided'),
-                'phone' => PhoneCountry::formatInternational($application->candidate->phone)
-                    ?? __('applications.admin.not_provided'),
-                'socials' => $this->socialProfiles($application->candidate),
-            ],
-            'recruitment' => [
-                'job' => $application->job->name,
-                'status' => $application->status->name,
-                'applied_at' => $application->created_at->translatedFormat('M j, Y · H:i'),
-            ],
+            'candidate_name' => $application->candidate->name,
+            'candidate_email' => $application->candidate->email ?? __('applications.admin.not_provided'),
+            'candidate_phone' => PhoneCountry::formatInternational($application->candidate->phone)
+                ?? __('applications.admin.not_provided'),
+            'socials' => $this->socialProfiles($application->candidate),
             'origin' => [
                 'source' => __("applications.admin.sources.{$source}"),
                 'referral' => $application->referral?->user->name ?? __('applications.admin.not_applicable'),
@@ -271,21 +449,6 @@ class ViewApplication extends ViewRecord
                     ])
                     ->all(),
             ],
-        ];
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function applicationData(Application $application): array
-    {
-        $coverLetterType = $this->enumValue($application->cover_letter_type);
-
-        return [
-            'candidate_name' => $application->candidate->name,
-            'candidate_email' => $application->candidate->email ?? __('applications.admin.not_provided'),
-            'candidate_phone' => PhoneCountry::formatInternational($application->candidate->phone)
-                ?? __('applications.admin.not_provided'),
             'cover_letter_type' => __("applications.admin.cover_letter.types.{$coverLetterType}"),
             'cover_letter_text' => $application->cover_letter_text,
             'answers' => $application->answers->map(function (ApplicationAnswer $answer): array {

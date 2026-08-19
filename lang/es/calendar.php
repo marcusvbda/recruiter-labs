@@ -5,9 +5,6 @@ return [
     'integration_navigation_label' => 'Integración de agenda',
     'title' => 'Calendario',
     'subtitle' => 'Conecta tu cuenta de calendario para programar entrevistas y sincronizar respuestas de candidatos.',
-    'eyebrow' => 'Integración de calendario',
-    'heading' => 'Conecta tu calendario de reclutamiento',
-    'description' => 'Autoriza a RecruiterLabs a crear y gestionar eventos de entrevista en tu calendario de reclutamiento.',
     'status' => [
         'connected' => 'Conectado',
         'reauthorization_required' => 'Es necesario reconectar',

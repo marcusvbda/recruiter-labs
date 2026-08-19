@@ -7,7 +7,11 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
-class JobOverviewStats extends StatsOverviewWidget
+/**
+ * Reach and timing for the public job page. Deliberately separate from
+ * recruitment progress: traffic is a campaign question, not a hiring one.
+ */
+class JobTrafficStats extends StatsOverviewWidget
 {
     public ?Job $record = null;
 
@@ -22,31 +26,27 @@ class JobOverviewStats extends StatsOverviewWidget
         $hasEnded = (bool) ($this->metrics['has_ended'] ?? false);
 
         return [
-            Stat::make(__('jobs.dashboard.metrics.clicks'), (int) ($this->metrics['clicks_count'] ?? 0))
+            Stat::make(__('jobs.analytics.metrics.clicks'), (int) ($this->metrics['clicks_count'] ?? 0))
                 ->icon(Heroicon::OutlinedCursorArrowRays)
-                ->description(__('jobs.dashboard.metrics.clicks_description'))
+                ->description(__('jobs.analytics.metrics.clicks_description'))
                 ->color('primary'),
-            Stat::make(__('jobs.dashboard.metrics.applications'), (int) ($this->metrics['applications_count'] ?? 0))
-                ->icon(Heroicon::OutlinedUsers)
-                ->description(__('jobs.dashboard.metrics.applications_description'))
-                ->color('info'),
             Stat::make(
-                __('jobs.dashboard.metrics.running_time'),
+                __('jobs.analytics.metrics.running_time'),
                 trans_choice(
-                    'jobs.dashboard.metrics.days',
+                    'jobs.analytics.metrics.days',
                     (int) ($this->metrics['running_days'] ?? 0),
                     ['count' => (int) ($this->metrics['running_days'] ?? 0)],
                 ),
             )
                 ->icon(Heroicon::OutlinedClock)
-                ->description(__('jobs.dashboard.metrics.running_time_description'))
-                ->color('warning'),
+                ->description(__('jobs.analytics.metrics.running_time_description'))
+                ->color('gray'),
             Stat::make(
-                __('jobs.dashboard.metrics.time_remaining'),
+                __('jobs.analytics.metrics.time_remaining'),
                 $this->remainingTimeLabel($remainingDays, $hasEnded),
             )
                 ->icon(Heroicon::OutlinedCalendarDateRange)
-                ->description(__('jobs.dashboard.metrics.time_remaining_description'))
+                ->description(__('jobs.analytics.metrics.time_remaining_description'))
                 ->color($hasEnded ? 'danger' : 'success'),
         ];
     }
@@ -54,15 +54,15 @@ class JobOverviewStats extends StatsOverviewWidget
     private function remainingTimeLabel(mixed $remainingDays, bool $hasEnded): string
     {
         if ($remainingDays === null) {
-            return __('jobs.dashboard.metrics.no_end_date');
+            return __('jobs.analytics.metrics.no_end_date');
         }
 
         if ($hasEnded) {
-            return __('jobs.dashboard.metrics.ended');
+            return __('jobs.analytics.metrics.ended');
         }
 
         return trans_choice(
-            'jobs.dashboard.metrics.days',
+            'jobs.analytics.metrics.days',
             (int) $remainingDays,
             ['count' => (int) $remainingDays],
         );

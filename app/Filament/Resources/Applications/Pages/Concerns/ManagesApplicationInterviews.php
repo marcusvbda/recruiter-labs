@@ -12,7 +12,7 @@ use App\Enums\InterviewStatus;
 use App\Exceptions\ConnectedIntegrationReauthorizationRequired;
 use App\Exceptions\InterviewCalendarOperationUnavailable;
 use App\Exceptions\InterviewCalendarTerminalFailure;
-use App\Filament\Clusters\Integrations\Pages\CalendarSettings;
+use App\Filament\Clusters\Settings\Pages\CalendarSettings;
 use App\Filament\Resources\Applications\ApplicationResource;
 use App\Models\Application;
 use App\Models\ApplicationInterviewBriefItem;

@@ -20,7 +20,7 @@ class ReferralResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserPlus;
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 5;
 
     public static function getModelLabel(): string
     {
@@ -35,11 +35,6 @@ class ReferralResource extends Resource
     public static function getNavigationBadge(): ?string
     {
         return static::getModel()::count();
-    }
-
-    public static function getNavigationGroup(): ?string
-    {
-        return __('clusters.recruitment');
     }
 
     public static function getNavigationLabel(): string
