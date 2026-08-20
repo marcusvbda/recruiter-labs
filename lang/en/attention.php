@@ -2,9 +2,8 @@
 
 return [
     'heading' => 'Needs your attention',
-    'description' => 'Derived from where your hiring processes stand right now.',
-    'empty_heading' => 'No recruitment items currently need your attention.',
-    'empty_description' => 'Interviews, evaluations and hiring targets are all in a healthy state.',
+    'empty_heading' => 'Everything is on track.',
+    'empty_description' => 'No recruitment items currently need your attention.',
     'hidden' => '{1} 1 more item is not listed here.|[2,*] :count more items are not listed here.',
     'job_heading' => 'Needs attention in this process',
     'severities' => [

@@ -26,13 +26,9 @@ class JobsTable
                 ->with('pipeline')
                 ->withCount(RecruitmentProgressService::ProgressCounts))
             // The primary click means "work on this hiring process", not "open a
-            // menu": a job with candidates opens straight onto its board, and a
-            // job without any opens the workspace, where the useful next step is
-            // publishing or configuring it.
-            ->recordUrl(fn (Job $record): string => JobResource::getUrl('view', array_filter([
-                'record' => $record,
-                'section' => (int) $record->getAttribute('applications_count') > 0 ? 'pipeline' : null,
-            ])))
+            // menu". The rule itself lives on the resource, so the overview
+            // enters a job exactly the same way.
+            ->recordUrl(fn (Job $record): string => JobResource::getWorkspaceUrl($record))
             ->defaultSort('created_at', 'desc')
             ->columns([
                 TextColumn::make('name')

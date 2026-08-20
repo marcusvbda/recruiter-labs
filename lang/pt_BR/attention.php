@@ -2,9 +2,8 @@
 
 return [
     'heading' => 'Precisa da sua atenção',
-    'description' => 'Derivado da situação atual dos seus processos seletivos.',
-    'empty_heading' => 'Nenhum item de recrutamento precisa da sua atenção agora.',
-    'empty_description' => 'Entrevistas, avaliações e metas de contratação estão em situação saudável.',
+    'empty_heading' => 'Tudo sob controle.',
+    'empty_description' => 'Nenhum item de recrutamento precisa da sua atenção agora.',
     'hidden' => '{1} Mais 1 item não está listado aqui.|[2,*] Mais :count itens não estão listados aqui.',
     'job_heading' => 'Precisa de atenção neste processo',
     'severities' => [

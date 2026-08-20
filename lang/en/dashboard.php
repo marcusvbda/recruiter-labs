@@ -4,26 +4,25 @@ return [
     'navigation_label' => 'Overview',
     'title' => 'Overview',
     'subtitle' => 'What is happening in recruiting right now.',
-    'stats' => [
-        'active_jobs' => 'Active processes',
-        'draft_jobs' => '{0} No drafts|{1} 1 draft|[2,*] :count drafts',
-        'active_applications' => 'Active applications',
-        'interviewing' => '{0} Nobody interviewing|{1} 1 interviewing|[2,*] :count interviewing',
-        'finalists' => 'Finalists',
-        'hired' => '{0} No hires yet|{1} 1 hired|[2,*] :count hired',
-        'upcoming_interviews' => 'Your upcoming interviews',
-        'upcoming_interviews_description' => 'Yours, scheduled and not yet finished',
+    'summary' => [
+        'active_jobs' => '{0} active processes|{1} active process|[2,*] active processes',
+        'active_applications' => '{0} active applications|{1} active application|[2,*] active applications',
+        'finalists' => '{0} finalists|{1} finalist|[2,*] finalists',
+        'hired' => '{0} hires|{1} hire|[2,*] hires',
     ],
-    'upcoming_interviews' => [
+    'agenda' => [
         'heading' => 'Your next interviews',
-        'description' => 'Your soonest commitments with candidates.',
-        'empty' => 'You have no interviews scheduled.',
-        'when' => 'When',
-        'rsvp' => 'Candidate RSVP',
+        'today' => 'Today',
+        'tomorrow' => 'Tomorrow',
+        'empty_heading' => 'Nothing scheduled.',
+        'empty_description' => 'Interviews you own will appear here.',
+        'hidden' => '{1} 1 more ahead|[2,*] :count more ahead',
     ],
-    'active_jobs' => [
-        'heading' => 'Active processes',
-        'description' => 'How far each active hiring process has actually moved.',
-        'empty' => 'No active hiring processes.',
+    'processes' => [
+        'heading' => 'Hiring processes',
+        'view_all' => 'View all',
+        'empty_heading' => 'No active hiring processes.',
+        'empty_description' => 'Publish a job to start receiving candidates.',
+        'hidden' => '{1} 1 more active process is not listed here.|[2,*] :count more active processes are not listed here.',
     ],
 ];

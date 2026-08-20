@@ -61,6 +61,26 @@ class JobResource extends Resource
         return static::getUrl('view', ['record' => $record]);
     }
 
+    /**
+     * Where "work on this hiring process" leads: a job with candidates opens
+     * straight onto its board, and a job without any opens the workspace, where
+     * the useful next step is publishing or configuring it.
+     *
+     * Every surface that offers a job as work — the jobs list, the overview —
+     * uses this, so the primary click always means the same thing.
+     */
+    public static function getWorkspaceUrl(Job $record): string
+    {
+        if ($record->getAttribute('applications_count') === null) {
+            $record->loadCount('applications');
+        }
+
+        return static::getUrl('view', array_filter([
+            'record' => $record,
+            'section' => (int) $record->getAttribute('applications_count') > 0 ? 'pipeline' : null,
+        ]));
+    }
+
     public static function getGlobalSearchEloquentQuery(): Builder
     {
         return parent::getGlobalSearchEloquentQuery()->withCount('applications');

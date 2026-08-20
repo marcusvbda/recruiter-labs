@@ -4,26 +4,25 @@ return [
     'navigation_label' => 'Resumen',
     'title' => 'Resumen',
     'subtitle' => 'Lo que está pasando en el reclutamiento ahora mismo.',
-    'stats' => [
-        'active_jobs' => 'Procesos activos',
-        'draft_jobs' => '{0} Sin borradores|{1} 1 borrador|[2,*] :count borradores',
-        'active_applications' => 'Candidaturas activas',
-        'interviewing' => '{0} Nadie en entrevista|{1} 1 en entrevista|[2,*] :count en entrevista',
-        'finalists' => 'Finalistas',
-        'hired' => '{0} Sin contrataciones|{1} 1 contratado|[2,*] :count contratados',
-        'upcoming_interviews' => 'Tus próximas entrevistas',
-        'upcoming_interviews_description' => 'Tuyas, programadas y aún no realizadas',
+    'summary' => [
+        'active_jobs' => '{0} procesos activos|{1} proceso activo|[2,*] procesos activos',
+        'active_applications' => '{0} candidaturas activas|{1} candidatura activa|[2,*] candidaturas activas',
+        'finalists' => '{0} finalistas|{1} finalista|[2,*] finalistas',
+        'hired' => '{0} contrataciones|{1} contratación|[2,*] contrataciones',
     ],
-    'upcoming_interviews' => [
+    'agenda' => [
         'heading' => 'Tus próximas entrevistas',
-        'description' => 'Tus compromisos más cercanos con candidatos.',
-        'empty' => 'No tienes entrevistas programadas.',
-        'when' => 'Cuándo',
-        'rsvp' => 'Respuesta del candidato',
+        'today' => 'Hoy',
+        'tomorrow' => 'Mañana',
+        'empty_heading' => 'Nada programado.',
+        'empty_description' => 'Las entrevistas que son tuyas aparecen aquí.',
+        'hidden' => '{1} 1 más por delante|[2,*] :count más por delante',
     ],
-    'active_jobs' => [
-        'heading' => 'Procesos activos',
-        'description' => 'Cuánto ha avanzado realmente cada proceso de contratación activo.',
-        'empty' => 'No hay procesos de contratación activos.',
+    'processes' => [
+        'heading' => 'Procesos de contratación',
+        'view_all' => 'Ver todos',
+        'empty_heading' => 'No hay procesos de contratación activos.',
+        'empty_description' => 'Publica una vacante para empezar a recibir candidatos.',
+        'hidden' => '{1} 1 proceso activo más no está listado aquí.|[2,*] :count procesos activos más no están listados aquí.',
     ],
 ];

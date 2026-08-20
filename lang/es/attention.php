@@ -2,9 +2,8 @@
 
 return [
     'heading' => 'Requiere tu atención',
-    'description' => 'Derivado de la situación actual de tus procesos de selección.',
-    'empty_heading' => 'Ningún elemento de reclutamiento requiere tu atención ahora.',
-    'empty_description' => 'Entrevistas, evaluaciones y objetivos de contratación están en buen estado.',
+    'empty_heading' => 'Todo bajo control.',
+    'empty_description' => 'Ningún elemento de reclutamiento requiere tu atención ahora.',
     'hidden' => '{1} 1 elemento más no aparece aquí.|[2,*] :count elementos más no aparecen aquí.',
     'job_heading' => 'Requiere atención en este proceso',
     'severities' => [

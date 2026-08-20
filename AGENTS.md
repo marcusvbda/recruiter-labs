@@ -134,10 +134,13 @@ navigation group: the whole product is recruitment.
   agenda page stays in primary navigation; connecting Google Calendar stays in
   Settings → integrations. Do not merge them.
 - **Overview interviews are personal; the calendar is operational.** The
-  Overview's interview count and table show only interviews owned by the
-  authenticated recruiter's calendar account — never another recruiter's
-  commitments presented as theirs. Company-wide visibility and recruiter filters
-  stay on the Calendar page, under its existing authorization rules.
+  Overview's agenda shows only interviews owned by the authenticated recruiter's
+  calendar account — never another recruiter's commitments presented as theirs.
+  Company-wide visibility and recruiter filters stay on the Calendar page, under
+  its existing authorization rules. The Overview agenda is a compact preview of
+  the recruiter's next commitments (grouped by day, one timezone stated once);
+  the Calendar page remains the full operational view. Do not grow the agenda
+  into a second calendar, and do not present it as an admin table.
 - **Interview scheduling is idempotent per scheduling request.** Each opened
   scheduling form carries a UUID `schedule_request_key`, persisted on the
   interview and unique in the database. Replaying that request (double click,
@@ -171,7 +174,7 @@ I do it* — a page that only exposes an entity has not finished its job.
 
 ### Invariants
 
-- **The Overview is a work queue, not a metrics dashboard.** Widget order is the
+- **The Overview is a work queue, not a metrics dashboard.** Region order is the
   hierarchy: attention, then the recruiter's own commitments, then active-process
   health, then totals last. Metrics never outrank the queue.
 - **Attention items are derived, never persisted.** They come from
@@ -241,6 +244,38 @@ I do it* — a page that only exposes an entity has not finished its job.
 - **Normal plan and AI usage belong in Settings.** The persistent topbar is
   reserved for the exception — an AI allowance close to blocking candidate
   evaluations. Access to Plan and AI usage is never removed, only relocated.
+
+### Overview presentation
+
+The Overview is where the product is judged, so how it reads is part of the
+feature. It is **one composed surface** (`App\Filament\Pages\Dashboard` with its
+own view), never a stack of independent Filament widgets each bringing its own
+section chrome, heading block and empty state.
+
+- **Attention leads the layout, not just the reading order.** On desktop it takes
+  the wide column with the personal agenda beside it; on narrow screens they
+  stack with attention first.
+- **Hierarchy comes from typography, spacing and composition** — not from cards,
+  gradients, shadows or bigger icons. Fewer containers, restrained hairline
+  borders, one quiet surface per region. Never a card inside a card.
+- **Badges are for categorical states only** (`Paused`, `Target reached`,
+  `Declined`). Severity is a coloured marker plus a screen-reader label, never a
+  `Critical`/`Warning`/`Info` pill, and never a row of alarm badges. A state that
+  colour alone conveys is also stated in words.
+- **No redundant KPI cards.** Global totals appear once, as a restrained inline
+  line of figures near the heading, because attention, the agenda and the process
+  list already carry the same numbers with operational context.
+- **Rows stay dense and every row leads somewhere.** Attention rows read
+  "reason · context · action"; a light link is enough, a heavy button per row is
+  not. Empty states are one compact line — an absence should save vertical space,
+  not spend it.
+- **Regions cap what they list and say what they left out.** Presentation caps
+  live in the page (`AttentionLimit`, `AgendaLimit`, `ProcessLimit`) and the
+  remainder is always counted in the region's note — never silently dropped.
+- **Composition lives in the view; meaning stays in the services.** The page
+  reads `RecruitmentAttentionService` and `RecruitmentProgressService` and shapes
+  the agenda with `RecruiterAgendaPreview`; no recruitment query or rule is
+  reimplemented in Blade.
 
 ## AI agents
 

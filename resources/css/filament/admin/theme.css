@@ -276,36 +276,211 @@
         @apply flex shrink-0 items-center gap-1 rounded-md bg-violet-50 px-2 py-1 text-[0.625rem] font-semibold text-violet-700 ring-1 ring-violet-200 dark:bg-violet-400/10 dark:text-violet-300 dark:ring-violet-400/20;
     }
 
-    .rl-attention-empty {
-        @apply flex items-start gap-3;
+    /*
+     * Overview composition. The page is one surface: three quiet panels, rows
+     * separated by hairlines, and hierarchy carried by type and spacing rather
+     * than by cards, shadows or badges.
+     */
+
+    .rl-overview {
+        @apply flex flex-col gap-5;
+    }
+
+    .rl-overview-summary {
+        @apply flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm text-gray-500;
+    }
+
+    .rl-overview-summary__figure {
+        @apply focus-visible:ring-primary-500 rounded-sm outline-none transition hover:text-gray-950 focus-visible:ring-2;
+    }
+
+    .rl-overview-summary__value {
+        @apply font-semibold text-gray-950 tabular-nums;
+    }
+
+    .rl-overview-summary__separator {
+        @apply text-gray-300;
+    }
+
+    .rl-overview-panel {
+        @apply overflow-hidden rounded-xl border border-gray-200 bg-white;
+    }
+
+    .rl-overview-panel__head {
+        @apply flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-2.5;
+    }
+
+    .rl-overview-panel__title {
+        @apply flex items-center gap-2 text-xs font-semibold tracking-wide text-gray-500 uppercase;
+    }
+
+    .rl-overview-panel__count {
+        @apply text-xs font-semibold text-gray-400 tabular-nums;
+    }
+
+    .rl-overview-panel__note {
+        @apply border-t border-gray-100 px-4 py-2 text-xs text-gray-500;
+    }
+
+    .rl-overview-action {
+        @apply text-primary-600 hover:text-primary-500 focus-visible:ring-primary-500 flex shrink-0 items-center gap-1 rounded-sm text-xs font-semibold outline-none focus-visible:ring-2;
+    }
+
+    .rl-overview-empty {
+        @apply flex items-start gap-2.5 px-4 py-3.5 text-sm;
+    }
+
+    .rl-overview-empty__icon {
+        @apply mt-0.5 size-4 shrink-0 text-gray-400;
+    }
+
+    .rl-overview-empty__icon[data-tone='success'] {
+        @apply text-success-500;
+    }
+
+    .rl-overview-empty__title {
+        @apply mr-1 font-medium text-gray-950;
+    }
+
+    .rl-overview-empty__text {
+        @apply text-gray-500;
     }
 
     .rl-attention-list {
-        @apply divide-y divide-gray-100 dark:divide-white/5;
+        @apply divide-y divide-gray-100;
     }
 
     .rl-attention-item {
-        @apply flex flex-col gap-3 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-start;
+        @apply flex flex-wrap items-start gap-x-3 gap-y-1.5 px-4 py-3;
     }
 
+    /* Narrow screens give the action its own line rather than squeezing the
+       reason into three words per row. */
+    .rl-attention-item__action {
+        @apply w-full pl-7 sm:w-auto sm:pl-0;
+    }
+
+    /* Severity is a marker, not a badge: colour plus the type's own icon. */
     .rl-attention-item__icon {
-        @apply flex size-7 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-400;
+        @apply mt-px size-4 shrink-0 text-gray-400;
     }
 
     .rl-attention-item[data-severity='critical'] .rl-attention-item__icon {
-        @apply bg-danger-50 text-danger-600 dark:bg-danger-400/10 dark:text-danger-400;
+        @apply text-danger-500;
     }
 
     .rl-attention-item[data-severity='warning'] .rl-attention-item__icon {
-        @apply bg-warning-50 text-warning-600 dark:bg-warning-400/10 dark:text-warning-400;
+        @apply text-warning-500;
     }
 
-    .rl-attention-item[data-severity='info'] .rl-attention-item__icon {
-        @apply bg-info-50 text-info-600 dark:bg-info-400/10 dark:text-info-400;
+    .rl-attention-item__title {
+        @apply block text-sm font-medium text-gray-950;
     }
 
-    .rl-attention-item__action {
-        @apply shrink-0 sm:ml-auto;
+    .rl-attention-item__meta {
+        @apply mt-0.5 block text-xs leading-5 text-gray-500;
+    }
+
+    .rl-attention-item__context {
+        @apply font-medium text-gray-600;
+    }
+
+    .rl-attention-item__context::after {
+        content: '·';
+        @apply mx-1.5 text-gray-300;
+    }
+
+    .rl-agenda {
+        @apply px-4 pb-2;
+    }
+
+    .rl-agenda-day {
+        @apply flex items-baseline gap-2 pt-3 pb-1 text-[0.6875rem] font-semibold tracking-wide text-gray-500 uppercase;
+    }
+
+    .rl-agenda-day__date {
+        @apply font-medium tracking-normal text-gray-400 normal-case;
+    }
+
+    .rl-agenda-list {
+        @apply divide-y divide-gray-100;
+    }
+
+    .rl-agenda-item {
+        @apply focus-visible:ring-primary-500 flex items-baseline gap-3 rounded-md py-2 outline-none focus-visible:ring-2;
+    }
+
+    .rl-agenda-item__time {
+        @apply w-11 shrink-0 text-sm font-semibold text-gray-950 tabular-nums;
+    }
+
+    .rl-agenda-item__name {
+        @apply block truncate text-sm font-medium text-gray-950;
+    }
+
+    .rl-agenda-item:hover .rl-agenda-item__name {
+        @apply text-primary-600;
+    }
+
+    .rl-agenda-item__meta {
+        @apply mt-0.5 block truncate text-xs text-gray-500;
+    }
+
+    .rl-agenda-item__rsvp {
+        @apply mt-1 flex items-center gap-1 text-[0.6875rem] font-medium text-gray-500;
+    }
+
+    .rl-agenda-item__rsvp[data-tone='danger'] {
+        @apply text-danger-600;
+    }
+
+    .rl-agenda-item__rsvp[data-tone='success'] {
+        @apply text-success-600;
+    }
+
+    .rl-process-list {
+        @apply divide-y divide-gray-100;
+    }
+
+    .rl-process-item {
+        @apply focus-visible:ring-primary-500 flex flex-col gap-1.5 px-4 py-3 outline-none focus-visible:ring-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4;
+    }
+
+    .rl-process-item__name {
+        @apply block truncate text-sm font-medium text-gray-950;
+    }
+
+    .rl-process-item:hover .rl-process-item__name {
+        @apply text-primary-600;
+    }
+
+    .rl-process-item__metrics {
+        @apply mt-0.5 block text-xs text-gray-500;
+    }
+
+    .rl-process-item__metrics>span+span::before {
+        content: '·';
+        @apply mx-1.5 text-gray-300;
+    }
+
+    .rl-process-item__value {
+        @apply font-semibold text-gray-700 tabular-nums;
+    }
+
+    .rl-process-item__state {
+        @apply flex shrink-0 flex-wrap items-center gap-2;
+    }
+
+    .rl-process-item__hires {
+        @apply text-success-600 text-sm font-semibold tabular-nums;
+    }
+
+    .rl-process-item__hires--none {
+        @apply text-gray-400;
+    }
+
+    .rl-process-item__hires-label {
+        @apply text-xs font-medium text-gray-500;
     }
 
     .rl-analysis-state {
