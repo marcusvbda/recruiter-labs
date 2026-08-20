@@ -13,14 +13,21 @@ use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
 /**
- * The first thing a recruiter sees: the volume currently in play, and where it
- * is concentrated. Every stat links to the page where the work happens.
+ * The volume currently in play, and where it is concentrated. Every stat links
+ * to the page where the work happens.
+ *
+ * These are metrics, not attention: "12 finalists" describes the workspace,
+ * while "3 finalists have been waiting past their stage's expectation" is work,
+ * and that lives in {@see RecruitmentAttentionWidget} above. Which is also why
+ * these sit at the bottom of the overview.
  *
  * Everything counted here belongs to an active hiring process; interviews are
  * the signed-in recruiter's own.
  */
 class RecruitmentOverviewStats extends StatsOverviewWidget
 {
+    protected static ?int $sort = 4;
+
     protected ?string $pollingInterval = null;
 
     protected int|string|array $columnSpan = 'full';

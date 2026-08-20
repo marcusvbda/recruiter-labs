@@ -128,7 +128,15 @@
     }
 
     .rl-job-summary {
-        @apply flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between dark:border-white/10 dark:bg-gray-900;
+        @apply flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-sm dark:border-white/10 dark:bg-gray-900;
+    }
+
+    .rl-job-summary__head {
+        @apply flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between;
+    }
+
+    .rl-job-summary__attention {
+        @apply border-t border-gray-200 pt-3 dark:border-white/10;
     }
 
     .rl-job-summary__metrics {
@@ -232,6 +240,10 @@
         @apply flex items-center gap-1;
     }
 
+    .rl-pipeline-card-summary__signals {
+        @apply mt-2 flex flex-wrap gap-1;
+    }
+
     .rl-pipeline-card-summary__link {
         @apply text-primary-600 hover:text-primary-500 focus-visible:ring-primary-500 dark:text-primary-400 dark:hover:text-primary-300 mt-2 flex w-fit items-center gap-1 rounded-sm text-xs font-semibold outline-none focus-visible:ring-2;
     }
@@ -262,6 +274,38 @@
 
     .rl-pipeline-referral-badge {
         @apply flex shrink-0 items-center gap-1 rounded-md bg-violet-50 px-2 py-1 text-[0.625rem] font-semibold text-violet-700 ring-1 ring-violet-200 dark:bg-violet-400/10 dark:text-violet-300 dark:ring-violet-400/20;
+    }
+
+    .rl-attention-empty {
+        @apply flex items-start gap-3;
+    }
+
+    .rl-attention-list {
+        @apply divide-y divide-gray-100 dark:divide-white/5;
+    }
+
+    .rl-attention-item {
+        @apply flex flex-col gap-3 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-start;
+    }
+
+    .rl-attention-item__icon {
+        @apply flex size-7 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-400;
+    }
+
+    .rl-attention-item[data-severity='critical'] .rl-attention-item__icon {
+        @apply bg-danger-50 text-danger-600 dark:bg-danger-400/10 dark:text-danger-400;
+    }
+
+    .rl-attention-item[data-severity='warning'] .rl-attention-item__icon {
+        @apply bg-warning-50 text-warning-600 dark:bg-warning-400/10 dark:text-warning-400;
+    }
+
+    .rl-attention-item[data-severity='info'] .rl-attention-item__icon {
+        @apply bg-info-50 text-info-600 dark:bg-info-400/10 dark:text-info-400;
+    }
+
+    .rl-attention-item__action {
+        @apply shrink-0 sm:ml-auto;
     }
 
     .rl-analysis-state {

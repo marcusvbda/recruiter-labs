@@ -17,6 +17,8 @@ return [
         'pipeline_helper' => 'El proceso de selección por el que pasarán los candidatos de este puesto.',
         'pipeline_locked_helper' => 'Este puesto ya tiene postulaciones, por lo que su pipeline ya no puede cambiarse.',
         'state' => 'Estado',
+        'hiring_target' => 'Posiciones a cubrir',
+        'hiring_target_helper' => 'Cuántas personas pretende contratar este proceso. No es un límite de candidaturas.',
         'applications_count' => 'Postulaciones',
     ],
     'sections' => [
@@ -141,6 +143,9 @@ return [
     'workspace' => [
         'summary_label' => 'Resumen del proceso de contratación',
         'open_public_page' => 'Abrir página del empleo',
+        'hiring_target_reached' => 'Objetivo de contratación alcanzado',
+        'positions_remaining' => '{1} 1 posición restante|[2,*] :count posiciones restantes',
+        'no_attention' => 'Nada en este proceso requiere atención ahora.',
     ],
     'progress' => [
         'label' => 'Progreso',
@@ -150,6 +155,8 @@ return [
         'finalists' => '{0} finalistas|{1} finalista|[2,*] finalistas',
         'hired' => 'contratados',
         'needs_attention' => 'Requiere atención',
+        'target_reached' => 'Objetivo alcanzado',
+        'waiting_too_long' => '{1} 1 esperando demasiado|[2,*] :count esperando demasiado',
         'metrics' => [
             'applications' => 'Postulaciones',
             'interviewing' => 'En entrevista',
@@ -157,6 +164,8 @@ return [
             'hired' => 'Contratados',
         ],
         'filters' => [
+            'target_reached' => 'Objetivo de contratación alcanzado',
+            'waiting' => 'Con candidatos esperando demasiado',
             'hired' => 'Con contratación',
             'finalists' => 'Con finalistas',
             'interviewing' => 'Con entrevistas agendadas',

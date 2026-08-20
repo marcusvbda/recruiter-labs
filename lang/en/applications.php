@@ -25,9 +25,12 @@ return [
             'allowed_transitions_from' => 'Allowed transitions from :status',
             'can_move_to' => 'Can move to',
             'terminal_status' => 'Terminal status',
-            'applied_on' => 'Applied :date',
-            'answers' => '{0} No answers|{1} :count answer|[2,*] :count answers',
-            'documents' => '{0} No files|{1} :count file|[2,*] :count files',
+            'in_stage' => '{0} Arrived today|{1} 1 day in this stage|[2,*] :count days in this stage',
+            'waiting_too_long' => 'Waiting too long',
+            'decision_needed' => 'Decision needed',
+            'interview_declined' => 'Interview declined',
+            'interview_not_synced' => 'Not in calendar',
+            'interview_on' => 'Interview :date',
             'referral' => 'Referral',
             'view_details' => 'View details',
             'no_matching_applications' => 'No matching applications',
@@ -78,7 +81,9 @@ return [
         ],
         'summary' => [
             'where_heading' => 'Where in the process',
-            'stage_position' => 'stage :position of :total',
+            'stage_age' => ':age in :stage',
+            'stage_threshold' => 'this stage expects a move within :threshold',
+            'stage_entered_at' => 'Entered this stage',
             'next_action_heading' => 'Likely next step',
             'next_actions' => [
                 'schedule_interview' => [
@@ -96,6 +101,14 @@ return [
                 'decide' => [
                     'title' => 'Make a decision',
                     'description' => 'This candidate is in a final stage. Move them forward or close the process.',
+                ],
+                'evaluation_failed' => [
+                    'title' => 'Review the failed evaluation',
+                    'description' => 'The candidate evaluation errored, so there is no fit or evidence yet. Run it again, or carry on without it.',
+                ],
+                'evaluation_blocked' => [
+                    'title' => 'AI allowance ran out',
+                    'description' => 'This evaluation is queued and will run once the workspace has allowance again. Recruiting can continue without it.',
                 ],
                 'hired' => [
                     'title' => 'Hired',

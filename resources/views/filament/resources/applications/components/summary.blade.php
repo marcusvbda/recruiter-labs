@@ -4,20 +4,14 @@
             :heading="__('applications.admin.summary.where_heading')"
             icon="heroicon-o-map-pin"
         >
+            {{-- The current stage, not a position in a sequence: "Hired" and
+                 "Rejected" are alternative outcomes, so numbering the stages
+                 would describe a path candidates do not actually walk. --}}
             <div class="flex flex-wrap items-center gap-3">
                 <span class="inline-flex items-center gap-2 text-lg font-semibold text-gray-950 dark:text-white">
                     <span class="size-2.5 rounded-full" style="background-color: {{ $summary['stage']['color'] }}"></span>
                     {{ $summary['stage']['name'] }}
                 </span>
-
-                @if ($summary['stage']['position'])
-                    <span class="text-sm text-gray-500 dark:text-gray-400">
-                        {{ __('applications.admin.summary.stage_position', [
-                            'position' => $summary['stage']['position'],
-                            'total' => $summary['stage']['total'],
-                        ]) }}
-                    </span>
-                @endif
 
                 @if ($summary['stage']['role'] === 'hired')
                     <x-filament::badge color="success" size="sm">{{ __('statuses.badges.hired') }}</x-filament::badge>
@@ -26,39 +20,36 @@
                 @elseif ($summary['stage']['role'] === 'final_stage')
                     <x-filament::badge color="warning" size="sm">{{ __('statuses.badges.final_stage') }}</x-filament::badge>
                 @endif
+
+                @if ($summary['stage']['is_overdue'])
+                    <x-filament::badge color="warning" size="sm" icon="heroicon-m-clock">
+                        {{ __('applications.pipeline.kanban.waiting_too_long') }}
+                    </x-filament::badge>
+                @endif
             </div>
 
-            <div class="mt-4 flex flex-wrap items-center gap-x-1 gap-y-1 text-sm">
-                @foreach ($summary['stage']['flow'] as $stage)
-                    @if (! $loop->first)
-                        <span class="text-gray-300 dark:text-gray-600">&rarr;</span>
-                    @endif
-                    <span @class([
-                        'inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 whitespace-nowrap',
-                        'bg-gray-100 font-semibold text-gray-950 dark:bg-white/10 dark:text-white' => $stage['is_current'],
-                        'text-gray-500 dark:text-gray-400' => ! $stage['is_current'],
-                    ])>
-                        <span class="inline-block size-2 rounded-full" style="background-color: {{ $stage['color'] }}"></span>
-                        {{ $stage['name'] }}
+            <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">
+                {{ __('applications.admin.summary.stage_age', [
+                    'age' => $summary['stage']['age'],
+                    'stage' => $summary['stage']['name'],
+                ]) }}
+                @if ($summary['stage']['threshold'])
+                    <span class="text-gray-400 dark:text-gray-500">
+                        · {{ __('applications.admin.summary.stage_threshold', ['threshold' => $summary['stage']['threshold']]) }}
                     </span>
-                @endforeach
-            </div>
+                @endif
+            </p>
 
-            <p class="mt-5 border-t border-gray-200 pt-4 text-sm text-gray-500 dark:border-white/10 dark:text-gray-400">
-                {{ __('applications.admin.fields.applied_at') }}: {{ $summary['applied_at'] }}
-            </p>
-        </x-filament::section>
-
-        <x-filament::section
-            :heading="__('applications.admin.summary.next_action_heading')"
-            icon="heroicon-o-flag"
-        >
-            <p class="text-base font-medium text-gray-950 dark:text-white">
-                {{ __('applications.admin.summary.next_actions.' . $summary['next_action'] . '.title') }}
-            </p>
-            <p class="mt-1 text-sm leading-6 text-gray-500 dark:text-gray-400">
-                {{ __('applications.admin.summary.next_actions.' . $summary['next_action'] . '.description') }}
-            </p>
+            <dl class="mt-5 grid gap-x-6 gap-y-2 border-t border-gray-200 pt-4 text-sm sm:grid-cols-2 dark:border-white/10">
+                <div class="flex justify-between gap-3 sm:block">
+                    <dt class="text-gray-500 dark:text-gray-400">{{ __('applications.admin.fields.applied_at') }}</dt>
+                    <dd class="font-medium text-gray-950 dark:text-white">{{ $summary['applied_at'] }}</dd>
+                </div>
+                <div class="flex justify-between gap-3 sm:block">
+                    <dt class="text-gray-500 dark:text-gray-400">{{ __('applications.admin.summary.stage_entered_at') }}</dt>
+                    <dd class="font-medium text-gray-950 dark:text-white">{{ $summary['stage']['entered_at'] }}</dd>
+                </div>
+            </dl>
         </x-filament::section>
     </div>
 

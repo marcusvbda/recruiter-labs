@@ -25,9 +25,12 @@ return [
             'allowed_transitions_from' => 'Transiciones permitidas desde :status',
             'can_move_to' => 'Se puede mover a',
             'terminal_status' => 'Estado final',
-            'applied_on' => 'Enviada el :date',
-            'answers' => '{0} Sin respuestas|{1} :count respuesta|[2,*] :count respuestas',
-            'documents' => '{0} Sin archivos|{1} :count archivo|[2,*] :count archivos',
+            'in_stage' => '{0} Llegó hoy|{1} 1 día en esta etapa|[2,*] :count días en esta etapa',
+            'waiting_too_long' => 'Esperando demasiado',
+            'decision_needed' => 'Decisión necesaria',
+            'interview_declined' => 'Entrevista rechazada',
+            'interview_not_synced' => 'Fuera del calendario',
+            'interview_on' => 'Entrevista :date',
             'referral' => 'Referencia',
             'view_details' => 'Ver detalles',
             'no_matching_applications' => 'No se encontraron postulaciones',
@@ -78,7 +81,9 @@ return [
         ],
         'summary' => [
             'where_heading' => 'Dónde está en el proceso',
-            'stage_position' => 'etapa :position de :total',
+            'stage_age' => ':age en :stage',
+            'stage_threshold' => 'esta etapa espera movimiento en :threshold',
+            'stage_entered_at' => 'Entró en esta etapa',
             'next_action_heading' => 'Próximo paso probable',
             'next_actions' => [
                 'schedule_interview' => [
@@ -96,6 +101,14 @@ return [
                 'decide' => [
                     'title' => 'Tomar una decisión',
                     'description' => 'Este candidato está en una etapa final. Avanza o cierra el proceso.',
+                ],
+                'evaluation_failed' => [
+                    'title' => 'Revisar la evaluación que falló',
+                    'description' => 'La evaluación del candidato dio error, así que todavía no hay ajuste ni evidencia. Vuelve a ejecutarla o continúa sin ella.',
+                ],
+                'evaluation_blocked' => [
+                    'title' => 'Se agotó el cupo de IA',
+                    'description' => 'Esta evaluación está en cola y se ejecutará cuando el espacio de trabajo tenga cupo otra vez. El reclutamiento puede continuar sin ella.',
                 ],
                 'hired' => [
                     'title' => 'Contratado',

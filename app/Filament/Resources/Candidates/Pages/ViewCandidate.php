@@ -83,6 +83,8 @@ class ViewCandidate extends ViewRecord
                     ->sortBy('scheduled_at')
                     ->first();
 
+                $daysInStage = $application->daysInCurrentStage();
+
                 return [
                     'job' => $application->job->name,
                     'job_url' => JobResource::getUrl('view', ['record' => $application->job]),
@@ -98,6 +100,13 @@ class ViewCandidate extends ViewRecord
                         ? null
                         : (int) round((float) $application->analysis_score),
                     'applied_at' => $application->created_at->translatedFormat('M j, Y'),
+                    // Where they are is only half the answer; how long they have
+                    // been there is what tells the recruiter whether this process
+                    // is moving. Terminal outcomes are not "waiting".
+                    'stage_age' => $application->status->is_terminal
+                        ? null
+                        : trans_choice('attention.days', $daysInStage, ['count' => $daysInStage]),
+                    'is_overdue' => $application->isOverdueInCurrentStage(),
                     'next_interview' => $nextInterview?->scheduled_at
                         ->setTimezone($nextInterview->timezone)
                         ->translatedFormat('M j, Y · H:i'),

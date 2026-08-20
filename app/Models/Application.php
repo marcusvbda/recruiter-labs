@@ -22,6 +22,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $job_id
  * @property int $candidate_id
  * @property int $status_id
+ * @property CarbonImmutable $status_entered_at
  * @property int|null $referral_id
  * @property ApplicationSource $source
  * @property ApplicationAnalysisStatus $analysis_status
@@ -32,7 +33,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $cover_letter_text
  * @property string|null $submitted_ip
  */
-#[Fillable(['company_id', 'job_id', 'candidate_id', 'status_id', 'referral_id', 'source', 'analysis_status', 'analysis_generation', 'analysis_score', 'analyzed_at', 'cover_letter_type', 'cover_letter_text', 'submitted_ip'])]
+#[Fillable(['company_id', 'job_id', 'candidate_id', 'status_id', 'status_entered_at', 'referral_id', 'source', 'analysis_status', 'analysis_generation', 'analysis_score', 'analyzed_at', 'cover_letter_type', 'cover_letter_text', 'submitted_ip'])]
 class Application extends Model
 {
     /** @use HasFactory<ApplicationFactory> */
@@ -46,10 +47,16 @@ class Application extends Model
 
     protected static function booted(): void
     {
-        // Creating an application *is* entering its first status. Every later
-        // movement goes through {@see MoveApplicationToStatus}, which emits the
-        // same event itself; this hook only covers the entry point, so no
-        // creation path can silently skip the status's communication.
+        // Creating an application *is* entering its first status, so the stage
+        // clock starts here rather than being inferred from `created_at` later.
+        static::creating(function (Application $application): void {
+            $application->status_entered_at ??= CarbonImmutable::now();
+        });
+
+        // Every later movement goes through {@see MoveApplicationToStatus},
+        // which emits the same event itself; this hook only covers the entry
+        // point, so no creation path can silently skip the status's
+        // communication.
         static::created(function (Application $application): void {
             ApplicationEnteredStatus::dispatch(
                 (int) $application->getKey(),
@@ -67,6 +74,7 @@ class Application extends Model
             'analysis_generation' => 'integer',
             'analysis_score' => 'decimal:2',
             'analyzed_at' => 'immutable_datetime',
+            'status_entered_at' => 'immutable_datetime',
             'cover_letter_type' => ApplicationCoverLetterType::class,
         ];
     }
@@ -117,6 +125,75 @@ class Application extends Model
     public function scopeHired(Builder $query): Builder
     {
         return $query->whereHas('status', fn (Builder $status): Builder => $status->where('is_hired', true));
+    }
+
+    /**
+     * Candidates who have been sitting in their current stage longer than that
+     * stage's configured expectation. A stage without
+     * {@see Status::$attention_after_days} never qualifies, and a stage that
+     * ended the process never does either — nobody is waiting on a closed
+     * application.
+     *
+     * The comparison is resolved per threshold in PHP rather than as SQL date
+     * arithmetic: the number of distinct thresholds in a workspace is tiny, and
+     * this keeps the query portable across the supported databases.
+     *
+     * @param  Builder<Application>  $query
+     * @return Builder<Application>
+     */
+    public function scopeOverdueInStage(Builder $query, ?Company $company = null): Builder
+    {
+        $now = CarbonImmutable::now();
+        $thresholds = Status::query()
+            ->when($company !== null, fn (Builder $statuses): Builder => $statuses->whereBelongsTo($company))
+            ->whereNotNull('attention_after_days')
+            ->where('is_terminal', false)
+            ->get(['id', 'attention_after_days'])
+            ->groupBy('attention_after_days');
+
+        if ($thresholds->isEmpty()) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->where(function (Builder $query) use ($thresholds, $now): void {
+            foreach ($thresholds as $days => $statuses) {
+                $query->orWhere(fn (Builder $query): Builder => $query
+                    ->whereIn('status_id', $statuses->pluck('id')->all())
+                    ->where('status_entered_at', '<=', $now->subDays((int) $days)));
+            }
+        });
+    }
+
+    /**
+     * When the candidate entered the stage they are in now. Applications created
+     * before the column existed fall back to their creation time.
+     */
+    public function statusEnteredAt(): CarbonImmutable
+    {
+        return $this->status_entered_at ?? CarbonImmutable::instance($this->created_at);
+    }
+
+    /** Full days the candidate has been waiting in the current stage. */
+    public function daysInCurrentStage(): int
+    {
+        return (int) $this->statusEnteredAt()->diffInDays(CarbonImmutable::now(), absolute: true);
+    }
+
+    /**
+     * Whether the current stage's own expectation has been exceeded. Explaining
+     * *why* needs the threshold too, which is why the status is read here rather
+     * than the answer being reduced to a boolean elsewhere.
+     */
+    public function isOverdueInCurrentStage(): bool
+    {
+        $status = $this->status;
+        $threshold = $status?->attention_after_days;
+
+        if ($status === null || $threshold === null || $status->is_terminal) {
+            return false;
+        }
+
+        return $this->daysInCurrentStage() >= $threshold;
     }
 
     /** @return BelongsTo<Company, $this> */
@@ -193,12 +270,13 @@ class Application extends Model
 
     /**
      * Interviews that have not happened yet, which is what makes a candidate
-     * "interviewing" — see {@see scopeInterviewing()}.
+     * "interviewing" — see {@see scopeInterviewing()}. Soonest first, so every
+     * caller that wants "the next one" gets the same answer.
      *
      * @return HasMany<Interview, $this>
      */
     public function upcomingInterviews(): HasMany
     {
-        return $this->interviews()->upcoming();
+        return $this->interviews()->upcoming()->orderBy('scheduled_at');
     }
 }

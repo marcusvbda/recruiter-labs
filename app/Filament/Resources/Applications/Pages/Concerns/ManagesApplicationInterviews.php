@@ -45,9 +45,15 @@ use LogicException;
 
 trait ManagesApplicationInterviews
 {
-    private function scheduleInterviewAction(Application $application): Action
+    /**
+     * The name is a parameter because the same action is offered twice on the
+     * application page — in the header and, when it is the recommended next
+     * step, inside the summary. Filament mounts actions by name, so the second
+     * button needs its own while sharing this one handler.
+     */
+    private function scheduleInterviewAction(Application $application, string $name = 'scheduleInterview'): Action
     {
-        return Action::make('scheduleInterview')
+        return Action::make($name)
             ->label(__('applications.admin.actions.schedule_interview'))
             ->icon(Heroicon::OutlinedCalendarDays)
             ->button()

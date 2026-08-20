@@ -25,9 +25,12 @@ return [
             'allowed_transitions_from' => 'Transições permitidas a partir de :status',
             'can_move_to' => 'Pode mover para',
             'terminal_status' => 'Status final',
-            'applied_on' => 'Enviada em :date',
-            'answers' => '{0} Sem respostas|{1} :count resposta|[2,*] :count respostas',
-            'documents' => '{0} Sem arquivos|{1} :count arquivo|[2,*] :count arquivos',
+            'in_stage' => '{0} Chegou hoje|{1} 1 dia nesta etapa|[2,*] :count dias nesta etapa',
+            'waiting_too_long' => 'Esperando demais',
+            'decision_needed' => 'Decisão necessária',
+            'interview_declined' => 'Entrevista recusada',
+            'interview_not_synced' => 'Fora da agenda',
+            'interview_on' => 'Entrevista :date',
             'referral' => 'Indicação',
             'view_details' => 'Ver detalhes',
             'no_matching_applications' => 'Nenhuma candidatura encontrada',
@@ -78,7 +81,9 @@ return [
         ],
         'summary' => [
             'where_heading' => 'Onde está no processo',
-            'stage_position' => 'etapa :position de :total',
+            'stage_age' => ':age em :stage',
+            'stage_threshold' => 'esta etapa espera movimento em até :threshold',
+            'stage_entered_at' => 'Entrou nesta etapa',
             'next_action_heading' => 'Provável próximo passo',
             'next_actions' => [
                 'schedule_interview' => [
@@ -96,6 +101,14 @@ return [
                 'decide' => [
                     'title' => 'Tomar uma decisão',
                     'description' => 'Este candidato está em uma etapa final. Avance ou encerre o processo.',
+                ],
+                'evaluation_failed' => [
+                    'title' => 'Revisar a avaliação que falhou',
+                    'description' => 'A avaliação do candidato deu erro, então ainda não há aderência nem evidências. Rode novamente ou siga sem ela.',
+                ],
+                'evaluation_blocked' => [
+                    'title' => 'O limite de IA acabou',
+                    'description' => 'Esta avaliação está na fila e vai rodar quando o workspace tiver limite novamente. O recrutamento pode continuar sem ela.',
                 ],
                 'hired' => [
                     'title' => 'Contratado',

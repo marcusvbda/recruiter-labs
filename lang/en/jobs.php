@@ -17,6 +17,8 @@ return [
         'pipeline_helper' => 'The recruitment process candidates for this job will move through.',
         'pipeline_locked_helper' => 'This job already has applications, so its pipeline can no longer be changed.',
         'state' => 'State',
+        'hiring_target' => 'Positions to fill',
+        'hiring_target_helper' => 'How many people this process aims to hire. Not a cap on applications.',
         'applications_count' => 'Applications',
     ],
     'sections' => [
@@ -141,6 +143,9 @@ return [
     'workspace' => [
         'summary_label' => 'Hiring process summary',
         'open_public_page' => 'Open job page',
+        'hiring_target_reached' => 'Hiring target reached',
+        'positions_remaining' => '{1} 1 position remaining|[2,*] :count positions remaining',
+        'no_attention' => 'Nothing in this process needs attention right now.',
     ],
     'progress' => [
         'label' => 'Progress',
@@ -150,6 +155,8 @@ return [
         'finalists' => '{0} finalists|{1} finalist|[2,*] finalists',
         'hired' => 'hired',
         'needs_attention' => 'Needs attention',
+        'target_reached' => 'Target reached',
+        'waiting_too_long' => '{1} 1 waiting too long|[2,*] :count waiting too long',
         'metrics' => [
             'applications' => 'Applications',
             'interviewing' => 'Interviewing',
@@ -157,6 +164,8 @@ return [
             'hired' => 'Hired',
         ],
         'filters' => [
+            'target_reached' => 'Hiring target reached',
+            'waiting' => 'With candidates waiting too long',
             'hired' => 'With a hire',
             'finalists' => 'With finalists',
             'interviewing' => 'With interviews scheduled',

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Jobs\Pages;
 
+use App\Data\RecruitmentAttentionQueue;
 use App\Exceptions\PlanLimitExceededException;
 use App\Filament\Clusters\Settings\Pages\PlanSettings;
 use App\Filament\Resources\Jobs\Actions\JobStateActions;
@@ -14,13 +15,16 @@ use App\Models\Application;
 use App\Models\Candidate;
 use App\Models\Company;
 use App\Models\Job;
+use App\Models\User;
 use App\Services\ApplicationAvailabilityService;
 use App\Services\JobDashboardService;
 use App\Services\LimitManager;
+use App\Services\RecruitmentAttentionService;
 use App\Services\RecruitmentProgressService;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\EditAction;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
@@ -52,16 +56,20 @@ class ViewJob extends ViewRecord
 
     protected RecruitmentProgressService $recruitmentProgressService;
 
+    protected RecruitmentAttentionService $recruitmentAttentionService;
+
     public function boot(
         JobDashboardService $jobDashboardService,
         ApplicationAvailabilityService $applicationAvailabilityService,
         LimitManager $limitManager,
         RecruitmentProgressService $recruitmentProgressService,
+        RecruitmentAttentionService $recruitmentAttentionService,
     ): void {
         $this->jobDashboardService = $jobDashboardService;
         $this->applicationAvailabilityService = $applicationAvailabilityService;
         $this->limitManager = $limitManager;
         $this->recruitmentProgressService = $recruitmentProgressService;
+        $this->recruitmentAttentionService = $recruitmentAttentionService;
     }
 
     public function getTitle(): string|Htmlable
@@ -168,14 +176,23 @@ class ViewJob extends ViewRecord
     }
 
     /**
-     * The persistent header of the job workspace: state, workflow and how far
-     * the process has actually moved. Visible before any tab is opened.
+     * The persistent header of the job workspace: is this process healthy, and
+     * if not, what exactly is wrong. Visible before any tab is opened.
+     *
+     * Progress figures are metrics; the attention list is work. Both are here,
+     * but they stay distinguishable, and every attention row links either to the
+     * board or to the affected application rather than describing a problem the
+     * recruiter then has to go hunting for.
      *
      * @return array<string, mixed>
      */
     private function summaryData(Job $job): array
     {
         $progress = $this->recruitmentProgressService->forJob($job);
+        $recruiter = Filament::auth()->user();
+        $attention = $recruiter instanceof User
+            ? $this->recruitmentAttentionService->forJob($job, $recruiter)
+            : RecruitmentAttentionQueue::empty();
 
         return [
             'state_label' => match (true) {
@@ -191,6 +208,7 @@ class ViewJob extends ViewRecord
             'key' => $job->key,
             'pipeline_name' => $job->pipeline->name,
             'pipeline_url' => PipelineResource::getUrl('edit', ['record' => $job->pipeline]),
+            'pipeline_board_url' => static::getResource()::getUrl('view', ['record' => $job, 'section' => 'pipeline']),
             'metrics' => [
                 [
                     'label' => __('jobs.progress.metrics.applications'),
@@ -208,11 +226,23 @@ class ViewJob extends ViewRecord
                     'color' => 'text-warning-600 dark:text-warning-400',
                 ],
                 [
+                    // The only metric shown against a goal: "1 hired" means
+                    // something different on a job hiring one and a job hiring four.
                     'label' => __('jobs.progress.metrics.hired'),
                     'value' => $progress['hired'],
+                    'target' => $progress['hiring_target'],
                     'color' => 'text-success-600 dark:text-success-400',
                 ],
             ],
+            'hiring' => [
+                'hired' => $progress['hired'],
+                'target' => $progress['hiring_target'],
+                'remaining' => $progress['remaining'],
+                'target_reached' => $progress['target_reached'],
+            ],
+            'waiting' => $progress['waiting'],
+            'attention' => $attention->toArray(),
+            'attention_hidden_count' => $attention->hiddenCount(),
         ];
     }
 

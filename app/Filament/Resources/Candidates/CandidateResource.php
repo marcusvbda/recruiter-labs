@@ -48,11 +48,6 @@ class CandidateResource extends Resource
         return __('candidates.navigation_label');
     }
 
-    public static function getNavigationBadge(): ?string
-    {
-        return static::getModel()::count();
-    }
-
     public static function canAccess(): bool
     {
         return (bool) Filament::getTenant()?->hasFeature(Feature::Candidates);

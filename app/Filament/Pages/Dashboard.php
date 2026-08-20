@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Widgets\ActiveJobsProgressWidget;
+use App\Filament\Widgets\RecruitmentAttentionWidget;
 use App\Filament\Widgets\RecruitmentOverviewStats;
 use App\Filament\Widgets\UpcomingInterviewsWidget;
 use BackedEnum;
@@ -13,6 +14,11 @@ use Illuminate\Contracts\Support\Htmlable;
 /**
  * The operational answer to "what needs my attention?". It is deliberately not
  * a welcome page: no greeting, no workspace identity, no decorative hero.
+ *
+ * The order of the widgets *is* the hierarchy the product promises, and it runs
+ * from action to information: what needs attention, what I have committed to,
+ * how my live processes are doing, and only then the totals. Metrics never
+ * outrank the queue.
  */
 class Dashboard extends BaseDashboard
 {
@@ -38,9 +44,10 @@ class Dashboard extends BaseDashboard
     public function getWidgets(): array
     {
         return [
-            RecruitmentOverviewStats::class,
+            RecruitmentAttentionWidget::class,
             UpcomingInterviewsWidget::class,
             ActiveJobsProgressWidget::class,
+            RecruitmentOverviewStats::class,
         ];
     }
 

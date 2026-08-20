@@ -3,12 +3,9 @@
 namespace App\Providers\Filament;
 
 use App\Data\CompanyTopbarSummaryData;
-use App\Enums\AiProvider;
-use App\Enums\Limit;
 use App\Enums\UsageWarningState;
 use App\Filament\Clusters\Settings\Pages\AccountSettings;
 use App\Filament\Clusters\Settings\Pages\AiSettings;
-use App\Filament\Clusters\Settings\Pages\PlanSettings;
 use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\Tenancy\RegisterCompany;
 use App\Http\Middleware\ApplyTenantScopes;
@@ -32,7 +29,6 @@ use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Number;
-use Illuminate\Support\Str;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class AdminPanelProvider extends PanelProvider
@@ -111,6 +107,14 @@ class AdminPanelProvider extends PanelProvider
             ]);
     }
 
+    /**
+     * Plan and AI allowance are workspace administration, and they live in
+     * Settings. The global topbar is reserved for the exception: an allowance
+     * close enough to running out that it is about to stop candidate evaluations
+     * from running, which *is* a recruitment problem.
+     *
+     * In the normal state this renders nothing at all.
+     */
     private function renderCompanyTopbarSummary(): string
     {
         $company = Filament::getTenant();
@@ -121,77 +125,60 @@ class AdminPanelProvider extends PanelProvider
 
         $summary = app(CompanyTopbarSummary::class)->for($company);
 
+        if ($summary->aiUsage->warningState === UsageWarningState::Normal) {
+            return '';
+        }
+
         return view('filament.topbar-company-usage', [
             'summary' => $this->topbarViewData($summary),
         ])->render();
     }
 
-    /** @return array<string, int|string> */
+    /**
+     * Only what the warning chip shows. Plan limits and cycle details are not
+     * here any more: reading them is a Settings visit, not something to carry on
+     * every page.
+     *
+     * @return array<string, int|string>
+     */
     private function topbarViewData(CompanyTopbarSummaryData $summary): array
     {
         $usage = $summary->aiUsage;
+        $used = (string) Number::format($usage->used);
         $limit = $usage->isUnlimited
-            ? __('settings.topbar.unlimited')
-            : Number::format($usage->limitValue ?? 0);
+            ? (string) __('settings.topbar.unlimited')
+            : (string) Number::format($usage->limitValue ?? 0);
         $remaining = $usage->isUnlimited
-            ? __('settings.topbar.unlimited')
-            : Number::format($usage->remaining ?? 0);
+            ? (string) __('settings.topbar.unlimited')
+            : (string) Number::format($usage->remaining ?? 0);
         $percentage = $usage->isUnlimited
-            ? __('settings.topbar.unlimited')
-            : Number::percentage($usage->percentage);
-        $provider = $summary->provider === AiProvider::Own
-            ? __('settings.ai.own_key.name')
-            : __('settings.ai.platform.name');
-        $warningState = $usage->warningState->value;
-        $statusLabel = match ($usage->warningState) {
+            ? (string) __('settings.topbar.unlimited')
+            : (string) Number::percentage($usage->percentage);
+        $statusLabel = (string) match ($usage->warningState) {
             UsageWarningState::Attention => __('settings.topbar.warning'),
             UsageWarningState::Critical => __('settings.topbar.critical'),
             UsageWarningState::Reached => __('settings.topbar.reached'),
             default => __('settings.topbar.normal'),
         };
 
-        $planLines = [
-            __('settings.topbar.current_plan', ['plan' => $summary->planName]),
-            '',
-            ...collect(Limit::cases())
-                ->map(fn (Limit $planLimit): string => __("settings.limits.{$planLimit->value}").': '.(
-                    $summary->planLimits[$planLimit->value] === null
-                    ? __('settings.topbar.unlimited')
-                    : Number::format($summary->planLimits[$planLimit->value])
-                ))
-                ->all(),
-            '',
-            __('settings.topbar.manage_plan'),
-        ];
-        $aiLines = [
-            __('settings.topbar.ai_analyses'),
-            '',
-            __('settings.topbar.used', ['count' => Number::format($usage->used)]),
-            __('settings.topbar.remaining', ['count' => $remaining]),
-            __('settings.topbar.consumed', ['percentage' => $percentage]),
-            '',
-            __('settings.topbar.cycle', [
-                'start' => $usage->cycleStart?->translatedFormat('d M Y') ?? '—',
-                'end' => $usage->cycleEnd?->translatedFormat('d M Y') ?? '—',
-            ]),
-            __('settings.topbar.provider', ['provider' => $provider]),
-            $statusLabel,
-            '',
-            __('settings.topbar.manage_ai'),
-        ];
-
         return [
-            'plan_name' => $summary->planName,
-            'plan_initial' => Str::substr($summary->planName, 0, 1),
-            'plan_url' => PlanSettings::getUrl(),
-            'plan_tooltip' => implode("\n", $planLines),
             'ai_url' => AiSettings::getUrl(),
-            'ai_tooltip' => implode("\n", $aiLines),
-            'used' => Number::format($usage->used),
+            'ai_tooltip' => implode("\n", [
+                (string) __('settings.topbar.ai_analyses'),
+                '',
+                (string) __('settings.topbar.used', ['count' => $used]),
+                (string) __('settings.topbar.remaining', ['count' => $remaining]),
+                (string) __('settings.topbar.consumed', ['percentage' => $percentage]),
+                '',
+                $statusLabel,
+                '',
+                (string) __('settings.topbar.manage_ai'),
+            ]),
+            'used' => $used,
             'limit' => $limit,
             'percentage_label' => $percentage,
-            'bar_percentage' => min(100, max(0, $usage->percentage)),
-            'warning_state' => $warningState,
+            'bar_percentage' => (int) min(100, max(0, $usage->percentage)),
+            'warning_state' => $usage->warningState->value,
             'status_label' => $statusLabel,
             'status_icon' => match ($usage->warningState) {
                 UsageWarningState::Reached => 'heroicon-m-no-symbol',

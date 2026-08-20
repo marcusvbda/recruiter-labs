@@ -23,6 +23,16 @@
                     {{ $application['status'] }}
                 </span>
 
+                @if ($application['stage_age'])
+                    <span @class([
+                        'text-xs',
+                        'font-medium text-warning-600 dark:text-warning-400' => $application['is_overdue'],
+                        'text-gray-500 dark:text-gray-400' => ! $application['is_overdue'],
+                    ])>
+                        {{ $application['stage_age'] }}
+                    </span>
+                @endif
+
                 @if ($application['stage_role'] === 'hired')
                     <x-filament::badge color="success" size="sm">{{ __('statuses.badges.hired') }}</x-filament::badge>
                 @elseif ($application['stage_role'] === 'closed')

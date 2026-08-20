@@ -3,12 +3,16 @@
 namespace App\Filament\Resources\Jobs\Widgets;
 
 use App\Actions\MoveApplicationToStatus;
+use App\Enums\AnalysisConfidence;
 use App\Enums\ApplicationAnalysisStatus;
 use App\Enums\ApplicationSource;
+use App\Enums\InterviewCalendarSyncStatus;
+use App\Enums\InterviewRsvpStatus;
 use App\Filament\Resources\Applications\ApplicationResource;
 use App\Filament\Resources\Jobs\JobResource;
 use App\Models\Application;
 use App\Models\Candidate;
+use App\Models\Interview;
 use App\Models\Job;
 use App\Models\Status;
 use Filament\Facades\Filament;
@@ -25,6 +29,12 @@ class JobPipelineKanban extends StateKanbanBoard
     protected string $view = 'filament.resources.jobs.widgets.job-pipeline-kanban';
 
     public Job $record;
+
+    /**
+     * Weight above which a criterion counts as important, mirroring the
+     * evaluation tab's own threshold.
+     */
+    private const HighImportanceWeight = 7;
 
     /** @var Collection<int, Status>|null */
     protected ?Collection $pipelineStatuses = null;
@@ -167,14 +177,143 @@ class JobPipelineKanban extends StateKanbanBoard
         return $value instanceof \BackedEnum ? (string) $value->value : (string) $value;
     }
 
-    /** @return Builder<Application> */
+    /**
+     * The board loads exactly what a card has to say, and nothing a recruiter
+     * would have to open the application to care about: answer and document
+     * counts were dropped because they never change what to do next.
+     *
+     * @return Builder<Application>
+     */
     protected function getQuery(): Builder
     {
         return Application::query()
             ->whereBelongsTo($this->record, 'job')
             ->where('company_id', $this->record->company_id)
-            ->with('candidate')
-            ->withCount(['answers', 'documents']);
+            ->with(['candidate', 'status', 'upcomingInterviews'])
+            // Only evidence that is both weakly established and important enough
+            // to matter is worth a badge — the same rule the evaluation tab uses.
+            ->withCount(['criterionScores as needs_validation_count' => fn (Builder $scores): Builder => $scores
+                ->where('confidence', '!=', AnalysisConfidence::High->value)
+                ->where('weight', '>=', self::HighImportanceWeight)]);
+    }
+
+    /**
+     * What a recruiter needs to know about this person while looking at the
+     * board, ordered by how much it should change their next move: the outcome
+     * of the stage, whether the candidate is being kept waiting, whether the
+     * booked commitment is in trouble, and only then the evaluation.
+     *
+     * @return list<array{label: string, color: string, icon: string}>
+     */
+    public function getCardSignals(Application $application): array
+    {
+        $signals = [];
+        $status = $application->status;
+
+        if ($status instanceof Status) {
+            $role = match (true) {
+                $status->is_hired => ['statuses.badges.hired', 'success', 'heroicon-m-check-badge'],
+                $status->is_terminal => ['statuses.badges.closed', 'gray', 'heroicon-m-x-circle'],
+                $status->is_final_stage => ['applications.pipeline.kanban.decision_needed', 'warning', 'heroicon-m-hand-raised'],
+                default => null,
+            };
+
+            if ($role !== null) {
+                $signals[] = ['label' => (string) __($role[0]), 'color' => $role[1], 'icon' => $role[2]];
+            }
+        }
+
+        if ($application->isOverdueInCurrentStage()) {
+            $signals[] = [
+                'label' => (string) __('applications.pipeline.kanban.waiting_too_long'),
+                'color' => 'warning',
+                'icon' => 'heroicon-m-clock',
+            ];
+        }
+
+        $signals = [...$signals, ...$this->interviewSignals($application)];
+
+        $analysisStatus = $this->enumValue($application->analysis_status);
+
+        if ($analysisStatus === 'failed' || $analysisStatus === 'pending_quota') {
+            $signals[] = [
+                'label' => $this->getAnalysisLabel($application),
+                'color' => $this->getAnalysisColor($application),
+                'icon' => $this->getAnalysisIcon($application),
+            ];
+        }
+
+        if ($this->showsScoreBadge($application)) {
+            $signals[] = [
+                'label' => (string) __('applications.admin.ai.criteria.fit_label', [
+                    'score' => (int) round((float) $application->analysis_score),
+                ]),
+                'color' => 'gray',
+                'icon' => 'heroicon-m-chart-bar',
+            ];
+        }
+
+        $needsValidation = (int) $application->getAttribute('needs_validation_count');
+
+        if ($needsValidation > 0) {
+            $signals[] = [
+                'label' => trans_choice('applications.admin.summary.needs_validation', $needsValidation, ['count' => $needsValidation]),
+                'color' => 'warning',
+                'icon' => 'heroicon-m-question-mark-circle',
+            ];
+        }
+
+        return $signals;
+    }
+
+    /**
+     * A booked interview is either reassuring or a problem, and the card has to
+     * say which: a decline or a calendar failure outranks the date itself.
+     *
+     * @return list<array{label: string, color: string, icon: string}>
+     */
+    private function interviewSignals(Application $application): array
+    {
+        $interview = $application->upcomingInterviews->first();
+
+        if (! $interview instanceof Interview) {
+            return [];
+        }
+
+        if ($interview->rsvp_status === InterviewRsvpStatus::Declined) {
+            return [[
+                'label' => (string) __('applications.pipeline.kanban.interview_declined'),
+                'color' => 'danger',
+                'icon' => 'heroicon-m-calendar-days',
+            ]];
+        }
+
+        if ($interview->calendar_sync_terminal || $interview->calendar_sync_status === InterviewCalendarSyncStatus::Failed) {
+            return [[
+                'label' => (string) __('applications.pipeline.kanban.interview_not_synced'),
+                'color' => 'danger',
+                'icon' => 'heroicon-m-exclamation-triangle',
+            ]];
+        }
+
+        return [[
+            'label' => (string) __('applications.pipeline.kanban.interview_on', [
+                'date' => $interview->scheduled_at->setTimezone($interview->timezone)->translatedFormat('M j · H:i'),
+            ]),
+            'color' => 'info',
+            'icon' => 'heroicon-m-calendar-days',
+        ]];
+    }
+
+    /**
+     * How long this person has been waiting where they are — the single most
+     * useful thing a stage column cannot show by itself.
+     */
+    public function getStageAgeLabel(Application $application): string
+    {
+        $days = $application->daysInCurrentStage();
+
+        return trans_choice('applications.pipeline.kanban.in_stage', $days, ['count' => $days]);
     }
 
     /**

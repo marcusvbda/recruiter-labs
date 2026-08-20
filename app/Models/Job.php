@@ -29,12 +29,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property bool $published
  * @property bool $applications_paused
  * @property int|null $application_limit
+ * @property int $hiring_target
  * @property bool $cover_letter_required
  * @property CoverLetterType $cover_letter_type
  * @property JobCriteriaProcessingStatus $criteria_processing_status
  * @property int $criteria_generation
  */
-#[Fillable(['company_id', 'pipeline_id', 'name', 'application_locale', 'description', 'starts_at', 'ends_at', 'published', 'applications_paused', 'application_limit', 'cover_letter_required', 'cover_letter_type', 'criteria_processing_status', 'criteria_generation'])]
+#[Fillable(['company_id', 'pipeline_id', 'name', 'application_locale', 'description', 'starts_at', 'ends_at', 'published', 'applications_paused', 'application_limit', 'hiring_target', 'cover_letter_required', 'cover_letter_type', 'criteria_processing_status', 'criteria_generation'])]
 class Job extends Model
 {
     /** @use HasFactory<JobFactory> */
@@ -48,6 +49,7 @@ class Job extends Model
         'application_locale' => ApplicationLocale::English->value,
         'published' => false,
         'applications_paused' => false,
+        'hiring_target' => 1,
         'cover_letter_required' => false,
         'cover_letter_type' => CoverLetterType::Text->value,
         'criteria_processing_status' => JobCriteriaProcessingStatus::NotStarted->value,
@@ -79,6 +81,7 @@ class Job extends Model
             'published' => 'boolean',
             'applications_paused' => 'boolean',
             'application_limit' => 'integer',
+            'hiring_target' => 'integer',
             'cover_letter_required' => 'boolean',
             'cover_letter_type' => CoverLetterType::class,
             'criteria_processing_status' => JobCriteriaProcessingStatus::class,
@@ -193,6 +196,17 @@ class Job extends Model
     public function hiredApplications(): HasMany
     {
         return $this->applications()->hired();
+    }
+
+    /**
+     * Candidates who have been waiting in their stage longer than that stage
+     * allows. The definition lives in {@see Application::scopeOverdueInStage()}.
+     *
+     * @return HasMany<Application, $this>
+     */
+    public function overdueApplications(): HasMany
+    {
+        return $this->applications()->overdueInStage();
     }
 
     /** @return HasMany<JobClick, $this> */

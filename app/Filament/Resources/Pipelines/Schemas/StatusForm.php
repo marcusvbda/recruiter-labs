@@ -41,7 +41,23 @@ class StatusForm
                         Toggle::make('is_terminal')
                             ->label(__('statuses.fields.is_terminal'))
                             ->helperText(__('statuses.fields.is_terminal_helper'))
-                            ->inline(false),
+                            ->inline(false)
+                            ->live(),
+                        // What "waiting too long" means differs per stage and per
+                        // workspace, so the expectation is configured here rather
+                        // than assumed by the product. A closing stage is not
+                        // waiting on anyone, so it has no expectation to set.
+                        TextInput::make('attention_after_days')
+                            ->label(__('statuses.fields.attention_after_days'))
+                            ->helperText(__('statuses.fields.attention_after_days_helper'))
+                            ->placeholder(__('statuses.fields.attention_after_days_placeholder'))
+                            ->suffix(__('statuses.fields.attention_after_days_suffix'))
+                            ->numeric()
+                            ->integer()
+                            ->minValue(1)
+                            ->maxValue(365)
+                            ->nullable()
+                            ->visible(fn (Get $get): bool => ! (bool) $get('is_terminal')),
                     ]),
                 Section::make(__('statuses.sections.communication'))
                     ->description(__('statuses.sections.communication_description'))

@@ -114,44 +114,36 @@
                                         </p>
                                     @endif
                                     <div class="rl-pipeline-card-summary">
+                                        {{-- Time in the current stage is the one
+                                             thing the column itself cannot show.
+                                             Answer and document counts used to sit
+                                             here; they are available inside the
+                                             application and never decided anything. --}}
                                         <div class="rl-pipeline-card-summary__meta">
-                                            <span>
-                                                <x-filament::icon icon="heroicon-m-calendar-days" class="size-3.5" />
-                                                {{ __('applications.pipeline.kanban.applied_on', ['date' => $record->created_at->translatedFormat('M j')]) }}
+                                            <span @class(['font-medium text-warning-600 dark:text-warning-400' => $record->isOverdueInCurrentStage()])>
+                                                <x-filament::icon icon="heroicon-m-clock" class="size-3.5" />
+                                                {{ $this->getStageAgeLabel($record) }}
                                             </span>
-                                            <span>
-                                                <x-filament::icon icon="heroicon-m-chat-bubble-left-right"
-                                                    class="size-3.5" />
-                                                {{ trans_choice('applications.pipeline.kanban.answers', $record->answers_count, ['count' => $record->answers_count]) }}
-                                            </span>
-                                            <span>
-                                                <x-filament::icon icon="heroicon-m-paper-clip" class="size-3.5" />
-                                                {{ trans_choice('applications.pipeline.kanban.documents', $record->documents_count, ['count' => $record->documents_count]) }}
-                                            </span>
-                                        </div>
-
-                                        @if ($isReferral)
-                                            <div class="flex my-2">
+                                            @if ($isReferral)
                                                 <span class="rl-pipeline-referral-badge"
                                                     title="{{ __('applications.pipeline.kanban.referral') }}">
                                                     <x-filament::icon icon="heroicon-m-user-plus" class="size-2" />
                                                     {{ __('applications.pipeline.kanban.referral') }}
                                                 </span>
-                                            </div>
-                                        @endif
-                                        <div class="flex my-2">
-                                            @if ($this->showsScoreBadge($record))
-                                                <x-filament::badge color="gray" :icon="$this->getAnalysisIcon($record)">
-                                                    {{ $this->getAnalysisLabel($record) }}
-                                                    ·
-                                                    {{ __('applications.admin.ai.criteria.fit_label', ['score' => (int) round((float) $record->analysis_score)]) }}
-                                                </x-filament::badge>
-                                            @else
-                                                <x-filament::badge :color="$this->getAnalysisColor($record)" :icon="$this->getAnalysisIcon($record)">
-                                                    {{ $this->getAnalysisLabel($record) }}
-                                                </x-filament::badge>
                                             @endif
                                         </div>
+
+                                        @php($signals = $this->getCardSignals($record))
+
+                                        @if (count($signals))
+                                            <div class="rl-pipeline-card-summary__signals">
+                                                @foreach ($signals as $signal)
+                                                    <x-filament::badge :color="$signal['color']" :icon="$signal['icon']" size="sm">
+                                                        {{ $signal['label'] }}
+                                                    </x-filament::badge>
+                                                @endforeach
+                                            </div>
+                                        @endif
 
                                         <a href="{{ $this->getApplicationUrl($record) }}" wire:navigate
                                             x-on:pointerdown.stop x-on:click.stop

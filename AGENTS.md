@@ -163,6 +163,85 @@ navigation group: the whole product is recruitment.
   resources, widgets, sections and badges. Do not introduce a new design
   system, and do not turn every metric into a card. Dark mode stays disabled.
 
+## Workflow-driven, not CRUD-driven
+
+The product conducts the recruiter through the process; it does not merely store
+recruitment data. Every screen should answer *what should I do next, and where do
+I do it* — a page that only exposes an entity has not finished its job.
+
+### Invariants
+
+- **The Overview is a work queue, not a metrics dashboard.** Widget order is the
+  hierarchy: attention, then the recruiter's own commitments, then active-process
+  health, then totals last. Metrics never outrank the queue.
+- **Attention items are derived, never persisted.** They come from
+  `RecruitmentAttentionService`, exist exactly as long as the state that produced
+  them, and have no task table, no dismiss flag and no owner. Do not add a
+  generic task/todo/reminder subsystem.
+- **Every attention item is explainable and actionable.** It carries a concrete
+  reason in the recruiter's terms ("waiting 6 days in Screening — this stage is
+  configured for attention after 4 days") plus a primary action URL into the page
+  that resolves it. No opaque labels, and no dead-end informational cards.
+- **Attention never acts.** It suggests work: the recruiter advances stages,
+  hires, rejects, schedules and closes jobs. Nothing is automated from a
+  heuristic.
+- **Attention must never rely on a new AI call.** Existing AI output (evaluation,
+  confidence, interview brief, job review) may inform what is displayed;
+  "what should the recruiter do?" is deterministic product state. AI never makes
+  a hiring decision.
+- **Prefer fewer reliable signals over many noisy ones.** A signal with no
+  trustworthy data behind it is not implemented. Each signal contributes a
+  bounded number of items and the remainder stays counted in
+  `RecruitmentAttentionQueue::hiddenCount()` — never silently dropped.
+- **Attention scope is deliberate:** interview items are personal (the signed-in
+  recruiter's calendar), application items cover every published job including
+  ones whose campaign window closed, and job items cover currently active
+  processes only.
+- **Stage age uses `applications.status_entered_at`, never `updated_at`.** It is
+  written on creation and by `MoveApplicationToStatus` only, so an evaluation
+  finishing or an interview being booked cannot make a waiting candidate look
+  freshly arrived. Re-entering the same status does not reset it.
+- **"Waiting too long" is workflow configuration, never a hard-coded number of
+  days.** A `Status` may declare `attention_after_days`; null means no age-based
+  warning. Terminal stages never carry one (`Status` nulls it on save). Default
+  workflows may ship conservative, clearly editable values — never a recruiting
+  policy baked into application logic.
+- **Hiring completion is measured against `job_postings.hiring_target`**
+  (defaults to 1, minimum 1), and actual hires always come from the workflow's
+  hired stages — never from a fit score, a final stage or an interview outcome.
+  It is unrelated to `application_limit` and to plan limits.
+- **Reaching the hiring target suggests, never acts.** The product states the
+  objective was met and offers a recruiter-controlled next step; it must not
+  pause intake, unpublish or close the job by itself.
+- **The primary click on a job means "work on this hiring process".** The jobs
+  table row navigates into the workspace — onto the board when the job has
+  candidates. Entering a job must never require opening an action menu; Edit,
+  Duplicate, Publish and the public URL stay secondary.
+- **Kanban cards prioritise work signals over passive metadata.** Time in stage,
+  overdue, upcoming interview, RSVP or calendar problems, evaluation failure,
+  evidence still needing validation, decision-needed and fit. Answer and
+  document counts do not belong there. Referral stays visible as sourcing
+  metadata and never affects fit or ranking. Keep cards short.
+- **Terminal outcomes are never rendered as future linear steps.** Hired and
+  rejected are alternative branches, so no "stage 3 of 6" and no left-to-right
+  chain through every stage. Show the current stage and how long the candidate
+  has been in it.
+- **Next-action guidance exposes the action.** The application summary renders
+  the corresponding Filament action next to its recommendation, reusing the
+  page's existing action builders (a distinct action *name* per copy, since
+  Filament mounts by name) — never a duplicated rule in Blade. Terminal outcomes
+  offer no recruiting action at all.
+- **Header action prominence is state-dependent.** One likely action leads:
+  join/manage a booked interview, decide in a late stage, schedule when nothing
+  is booked, reprocess a failed evaluation. A terminal application never offers
+  scheduling as primary. Demoted actions move into the overflow group, never
+  disappear.
+- **Navigation badges must be actionable.** No raw record totals in the sidebar,
+  and no invented notification counts.
+- **Normal plan and AI usage belong in Settings.** The persistent topbar is
+  reserved for the exception — an AI allowance close to blocking candidate
+  evaluations. Access to Plan and AI usage is never removed, only relocated.
+
 ## AI agents
 
 Every agent (`App\Ai\Agents\*`, using the Laravel AI SDK) must follow these conventions, established while building `ExtractJobCriteria`, to keep token consumption down without sacrificing output reliability.

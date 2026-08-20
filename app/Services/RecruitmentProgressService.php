@@ -8,7 +8,6 @@ use App\Models\Interview;
 use App\Models\Job;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Str;
 
@@ -33,10 +32,11 @@ class RecruitmentProgressService
         'interviewingApplications',
         'finalStageApplications',
         'hiredApplications',
+        'overdueApplications',
     ];
 
     /**
-     * @return array{applications: int, interviewing: int, finalists: int, hired: int}
+     * @return array{applications: int, interviewing: int, finalists: int, hired: int, waiting: int, hiring_target: int, remaining: int, target_reached: bool}
      */
     public function forJob(Job $job): array
     {
@@ -49,11 +49,23 @@ class RecruitmentProgressService
             $job->loadCount($missing);
         }
 
+        $hired = (int) $job->getAttribute('hired_applications_count');
+        // A target below one would make "objective reached" meaningless; the
+        // column defaults to 1 and validation enforces it, so this only guards
+        // against data written outside the product.
+        $target = max(1, $job->hiring_target);
+
         return [
             'applications' => (int) $job->getAttribute('applications_count'),
             'interviewing' => (int) $job->getAttribute('interviewing_applications_count'),
             'finalists' => (int) $job->getAttribute('final_stage_applications_count'),
-            'hired' => (int) $job->getAttribute('hired_applications_count'),
+            'hired' => $hired,
+            'waiting' => (int) $job->getAttribute('overdue_applications_count'),
+            'hiring_target' => $target,
+            'remaining' => max(0, $target - $hired),
+            // Hires are read from the workflow's own hired stages, never inferred
+            // from a fit score, a final stage or an interview outcome.
+            'target_reached' => $hired >= $target,
         ];
     }
 
@@ -79,6 +91,11 @@ class RecruitmentProgressService
      * that ended months ago cannot inflate "what is happening right now". The
      * interview figure is personal — the signed-in recruiter's own commitments.
      *
+     * Deliberately no "needs attention" figure: what needs attention is a queue
+     * of explainable items, and it is produced by
+     * {@see RecruitmentAttentionService}. Two definitions of the same word would
+     * drift apart within a release.
+     *
      * @return array{
      *     active_jobs: int,
      *     draft_jobs: int,
@@ -86,8 +103,7 @@ class RecruitmentProgressService
      *     interviewing: int,
      *     finalists: int,
      *     hired: int,
-     *     upcoming_interviews: int,
-     *     needs_attention: int
+     *     upcoming_interviews: int
      * }
      */
     public function workspaceSummary(Company $company, User $recruiter): array
@@ -105,27 +121,7 @@ class RecruitmentProgressService
             'finalists' => $this->activeJobApplications($company, $activeJobIds)->inFinalStage()->count(),
             'hired' => $this->activeJobApplications($company, $activeJobIds)->hired()->count(),
             'upcoming_interviews' => $this->upcomingInterviewsQuery($company, $recruiter)->count(),
-            'needs_attention' => $this->jobsNeedingAttention($company)->count(),
         ];
-    }
-
-    /**
-     * Active hiring processes that are not making progress: either nobody
-     * applied, or applicants arrived and none of them moved forward.
-     *
-     * @return Collection<int, Job>
-     */
-    public function jobsNeedingAttention(Company $company): Collection
-    {
-        return Job::query()
-            ->whereBelongsTo($company)
-            ->currentlyActive()
-            ->withCount(self::ProgressCounts)
-            ->get()
-            ->filter(fn (Job $job): bool => (int) $job->getAttribute('interviewing_applications_count') === 0
-                && (int) $job->getAttribute('final_stage_applications_count') === 0
-                && (int) $job->getAttribute('hired_applications_count') === 0)
-            ->values();
     }
 
     /**

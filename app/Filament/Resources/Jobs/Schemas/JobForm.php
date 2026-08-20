@@ -88,6 +88,16 @@ class JobForm
                         ->fileAttachments(false)
                         ->columnSpanFull(),
                     self::pipelineSelect(),
+                    // How many hires this process aims to produce. Unrelated to
+                    // `application_limit`, which caps how many people may apply.
+                    TextInput::make('hiring_target')
+                        ->label(__('jobs.fields.hiring_target'))
+                        ->helperText(__('jobs.fields.hiring_target_helper'))
+                        ->numeric()
+                        ->integer()
+                        ->minValue(1)
+                        ->default(1)
+                        ->required(),
                     Select::make('application_locale')
                         ->label(__('jobs.fields.application_locale'))
                         ->helperText(__('jobs.fields.application_locale_helper'))

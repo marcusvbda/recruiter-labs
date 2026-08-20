@@ -26,6 +26,7 @@ class PipelineSeeder extends Seeder
                 [
                     'name' => 'Applied',
                     'color' => '#3b82f6',
+                    'attention_after_days' => 3,
                     'sends_email' => true,
                     'email_subject' => 'We received your application - {{ job.title }}',
                     'email_body' => '<p>Hi {{ candidate.name }},</p><p>Thank you for applying for <strong>{{ job.title }}</strong> at {{ company.name }}. Your application is in and our team is reviewing it.</p><p>We will get back to you with an update as soon as we can.</p><p>Thanks,<br>{{ company.name }}</p>',
@@ -33,6 +34,7 @@ class PipelineSeeder extends Seeder
                 [
                     'name' => 'Screening',
                     'color' => '#f59e0b',
+                    'attention_after_days' => 5,
                     'sends_email' => false,
                 ],
                 [
@@ -46,6 +48,7 @@ class PipelineSeeder extends Seeder
                     'name' => 'Offer',
                     'color' => '#06b6d4',
                     'is_final_stage' => true,
+                    'attention_after_days' => 5,
                     'sends_email' => false,
                 ],
                 [
@@ -79,7 +82,7 @@ class PipelineSeeder extends Seeder
                     'email_body' => '<p>Hi {{ candidate.name }},</p><p>Your interest in <strong>{{ job.title }}</strong> has been shared with the hiring manager for review.</p><p>Thanks,<br>{{ company.name }}</p>',
                 ],
                 ['name' => 'Internal Interview', 'color' => '#8b5cf6', 'sends_email' => false],
-                ['name' => 'Approved', 'color' => '#06b6d4', 'is_final_stage' => true, 'sends_email' => false],
+                ['name' => 'Approved', 'color' => '#06b6d4', 'is_final_stage' => true, 'attention_after_days' => 5, 'sends_email' => false],
                 [
                     'name' => 'Transferred',
                     'color' => '#22c55e',
@@ -122,6 +125,7 @@ class PipelineSeeder extends Seeder
                         'is_final_stage' => $status['is_final_stage'] ?? false,
                         'is_hired' => $status['is_hired'] ?? false,
                         'is_terminal' => $status['is_terminal'] ?? false,
+                        'attention_after_days' => $status['attention_after_days'] ?? null,
                         'sends_email' => $status['sends_email'],
                         'email_subject' => $status['email_subject'] ?? null,
                         'email_body' => $status['email_body'] ?? null,

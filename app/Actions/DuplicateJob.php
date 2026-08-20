@@ -40,6 +40,9 @@ class DuplicateJob
                 'application_locale' => $job->application_locale,
                 'description' => $job->description,
                 'application_limit' => $job->application_limit,
+                // How many people the process aims to hire is part of what is
+                // being duplicated; the hires themselves obviously are not.
+                'hiring_target' => $job->hiring_target,
                 'applications_paused' => false,
                 'cover_letter_required' => $job->cover_letter_required,
                 'cover_letter_type' => $job->cover_letter_type,

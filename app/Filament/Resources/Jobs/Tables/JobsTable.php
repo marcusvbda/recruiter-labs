@@ -4,13 +4,13 @@ namespace App\Filament\Resources\Jobs\Tables;
 
 use App\Filament\Actions\CopyTrackedUrlAction;
 use App\Filament\Resources\Jobs\Actions\JobStateActions;
+use App\Filament\Resources\Jobs\JobResource;
 use App\Models\Job;
 use App\Services\RecruitmentProgressService;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
@@ -25,13 +25,20 @@ class JobsTable
             ->modifyQueryUsing(fn (Builder $query): Builder => $query
                 ->with('pipeline')
                 ->withCount(RecruitmentProgressService::ProgressCounts))
+            // The primary click means "work on this hiring process", not "open a
+            // menu": a job with candidates opens straight onto its board, and a
+            // job without any opens the workspace, where the useful next step is
+            // publishing or configuring it.
+            ->recordUrl(fn (Job $record): string => JobResource::getUrl('view', array_filter([
+                'record' => $record,
+                'section' => (int) $record->getAttribute('applications_count') > 0 ? 'pipeline' : null,
+            ])))
             ->defaultSort('created_at', 'desc')
             ->columns([
                 TextColumn::make('name')
                     ->label(__('jobs.fields.name'))
                     ->weight('medium')
                     ->description(fn (Job $record): ?string => $record->pipeline?->name)
-                    ->copyable()
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('published')
@@ -50,6 +57,8 @@ class JobsTable
                 SelectFilter::make('progress')
                     ->label(__('jobs.progress.filter_label'))
                     ->options([
+                        'target_reached' => __('jobs.progress.filters.target_reached'),
+                        'waiting' => __('jobs.progress.filters.waiting'),
                         'hired' => __('jobs.progress.filters.hired'),
                         'finalists' => __('jobs.progress.filters.finalists'),
                         'interviewing' => __('jobs.progress.filters.interviewing'),
@@ -64,7 +73,6 @@ class JobsTable
             ])
             ->recordActions([
                 ActionGroup::make([
-                    ViewAction::make(),
                     EditAction::make(),
                     CopyTrackedUrlAction::make('job.show'),
                     JobStateActions::publish(),
@@ -86,6 +94,15 @@ class JobsTable
     private static function applyProgressFilter(Builder $query, ?string $value): Builder
     {
         return match ($value) {
+            // Hires counted against the job's own target, in SQL so the filter
+            // and the column cannot disagree.
+            'target_reached' => $query->whereRaw(
+                '(select count(*) from applications'
+                .' inner join statuses on statuses.id = applications.status_id'
+                .' where applications.job_id = job_postings.id and statuses.is_hired = ?) >= job_postings.hiring_target',
+                [true],
+            ),
+            'waiting' => $query->has('overdueApplications'),
             'hired' => $query->has('hiredApplications'),
             'finalists' => $query->has('finalStageApplications'),
             'interviewing' => $query->has('interviewingApplications'),

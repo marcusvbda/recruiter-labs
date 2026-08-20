@@ -7,6 +7,7 @@ use App\Exceptions\RecruitmentWorkflowException;
 use App\Models\Application;
 use App\Models\Job;
 use App\Models\Status;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -45,6 +46,11 @@ class MoveApplicationToStatus
             $previousStatusId = (int) $lockedApplication->status_id;
 
             $lockedApplication->status()->associate($status);
+            // The stage clock restarts only on a real movement, which is why it
+            // is written here and not derived from `updated_at`: an evaluation
+            // finishing or an interview being booked must not make a waiting
+            // candidate look freshly arrived.
+            $lockedApplication->status_entered_at = CarbonImmutable::now();
             $lockedApplication->save();
 
             ApplicationEnteredStatus::dispatch(

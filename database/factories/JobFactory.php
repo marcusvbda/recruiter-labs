@@ -32,6 +32,7 @@ class JobFactory extends Factory
             'application_locale' => ApplicationLocale::English,
             'applications_paused' => false,
             'application_limit' => null,
+            'hiring_target' => 1,
             'cover_letter_required' => false,
             'cover_letter_type' => CoverLetterType::Text,
         ];

@@ -32,11 +32,6 @@ class ReferralResource extends Resource
         return __('referrals.plural_label');
     }
 
-    public static function getNavigationBadge(): ?string
-    {
-        return static::getModel()::count();
-    }
-
     public static function getNavigationLabel(): string
     {
         return __('referrals.navigation_label');

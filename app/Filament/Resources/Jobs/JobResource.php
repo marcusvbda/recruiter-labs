@@ -31,11 +31,6 @@ class JobResource extends Resource
 
     protected static ?int $globalSearchSort = 2;
 
-    public static function getNavigationBadge(): ?string
-    {
-        return static::getModel()::count();
-    }
-
     public static function getModelLabel(): string
     {
         return __('jobs.label');

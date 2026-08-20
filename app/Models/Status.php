@@ -20,11 +20,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property bool $is_hired
  * @property bool $is_final_stage
  * @property bool $is_terminal
+ * @property int|null $attention_after_days
  * @property bool $sends_email
  * @property string|null $email_subject
  * @property string|null $email_body
  */
-#[Fillable(['company_id', 'pipeline_id', 'name', 'color', 'order', 'is_hired', 'is_final_stage', 'is_terminal', 'sends_email', 'email_subject', 'email_body'])]
+#[Fillable(['company_id', 'pipeline_id', 'name', 'color', 'order', 'is_hired', 'is_final_stage', 'is_terminal', 'attention_after_days', 'sends_email', 'email_subject', 'email_body'])]
 class Status extends Model
 {
     /** @use HasFactory<StatusFactory> */
@@ -50,6 +51,9 @@ class Status extends Model
 
             if ($status->is_terminal) {
                 $status->is_final_stage = false;
+                // A closed process is not waiting on anyone, so an age
+                // expectation on it could only produce noise.
+                $status->attention_after_days = null;
             }
         });
 
@@ -71,6 +75,7 @@ class Status extends Model
             'is_hired' => 'boolean',
             'is_final_stage' => 'boolean',
             'is_terminal' => 'boolean',
+            'attention_after_days' => 'integer',
             'sends_email' => 'boolean',
         ];
     }
@@ -109,6 +114,15 @@ class Status extends Model
     public function isClosedWithoutHire(): bool
     {
         return $this->is_terminal && ! $this->is_hired;
+    }
+
+    /**
+     * Whether this stage declares how long a candidate may sit in it before the
+     * recruiter should be told. Optional by design: no threshold, no warning.
+     */
+    public function hasAttentionThreshold(): bool
+    {
+        return $this->attention_after_days !== null && ! $this->is_terminal;
     }
 
     /**

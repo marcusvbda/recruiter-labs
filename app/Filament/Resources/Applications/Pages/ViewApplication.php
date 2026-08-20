@@ -8,6 +8,7 @@ use App\Enums\ApplicationAnalysisStatus;
 use App\Enums\InterviewStatus;
 use App\Enums\PhoneCountry;
 use App\Enums\SocialNetwork;
+use App\Filament\Clusters\Settings\Pages\AiSettings;
 use App\Filament\Resources\Applications\ApplicationResource;
 use App\Filament\Resources\Applications\Pages\Concerns\ManagesApplicationInterviews;
 use App\Filament\Resources\Candidates\CandidateResource;
@@ -27,10 +28,14 @@ use Filament\Actions\ActionGroup;
 use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
+use Filament\Schemas\Components\Actions;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
+use Filament\Schemas\Components\Text;
 use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\FontWeight;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Carbon;
@@ -69,58 +74,54 @@ class ViewApplication extends ViewRecord
         ];
     }
 
+    /**
+     * Which action leads depends on where the application stands, because only
+     * one of them is plausibly the next thing to do. Nothing necessary is
+     * hidden: what stops being primary moves into the overflow group.
+     */
     protected function getHeaderActions(): array
     {
         $application = $this->getApplication();
         $nextInterview = $this->nextInterview($application);
-        $meetingUrl = $nextInterview?->meeting_url;
+        $status = $application->status;
+        $evaluationFailed = $application->analysis_status === ApplicationAnalysisStatus::Failed;
+
+        $primary = [];
+        $secondary = [];
+
+        if ($status->is_terminal) {
+            // The process ended. Correcting the stage stays possible; proposing a
+            // new interview for a rejected or hired candidate does not.
+            $primary[] = $this->moveStatusAction($application)->color('gray');
+            $secondary[] = $this->scheduleInterviewAction($application);
+        } elseif ($nextInterview !== null) {
+            if ($nextInterview->meeting_url !== null) {
+                $primary[] = $this->joinInterviewAction($nextInterview);
+            }
+
+            $primary[] = $this->moveStatusAction($application)->color('gray');
+            $secondary[] = $this->scheduleInterviewAction($application)
+                ->label(__('applications.admin.actions.schedule_another_interview'));
+        } elseif ($status->is_final_stage) {
+            $primary[] = $this->moveStatusAction($application)->color('primary');
+            $primary[] = $this->scheduleInterviewAction($application)->color('gray');
+        } else {
+            $primary[] = $this->scheduleInterviewAction($application)->color('primary');
+            $primary[] = $this->moveStatusAction($application)->color('gray');
+        }
+
+        // A failed evaluation is a recoverable problem, so its fix surfaces
+        // instead of staying buried while it is still relevant.
+        if ($evaluationFailed && ! $status->is_terminal) {
+            $primary[] = $this->reprocessApplicationAnalysisAction($application);
+        } else {
+            $secondary[] = $this->reprocessApplicationAnalysisAction($application);
+        }
 
         return [
-            Action::make('joinInterview')
-                ->label(__('applications.admin.actions.join_meet'))
-                ->icon(Heroicon::OutlinedVideoCamera)
-                ->color('success')
-                ->visible($meetingUrl !== null)
-                ->url($meetingUrl ?? '#')
-                ->openUrlInNewTab(),
-            $this->scheduleInterviewAction($application)
-                ->color($nextInterview === null ? 'primary' : 'gray')
-                ->label($nextInterview === null
-                    ? __('applications.admin.actions.schedule_interview')
-                    : __('applications.admin.actions.schedule_another_interview')),
-            Action::make('moveStatus')
-                ->label(__('applications.admin.actions.move_status'))
-                ->icon(Heroicon::OutlinedArrowsRightLeft)
-                ->color($nextInterview === null ? 'gray' : 'primary')
-                ->schema([
-                    Select::make('status_id')
-                        ->label(__('applications.admin.actions.choose_status'))
-                        ->options(fn (): array => $this->statusOptions($application))
-                        ->allowHtml()
-                        ->default($application->status_id)
-                        ->native(false)
-                        ->required(),
-                ])
-                ->action(function (array $data) use ($application): void {
-                    Gate::authorize('update', $application);
-
-                    $status = Status::query()
-                        ->where('company_id', $application->company_id)
-                        ->where('pipeline_id', $application->job->pipeline_id)
-                        ->findOrFail((int) $data['status_id']);
-
-                    app(MoveApplicationToStatus::class)->handle($application, $status);
-
-                    $this->record = ApplicationResource::getEloquentQuery()
-                        ->findOrFail((int) $application->getKey());
-
-                    Notification::make()
-                        ->title(__('applications.admin.actions.status_updated'))
-                        ->success()
-                        ->send();
-                }),
+            ...$primary,
             ActionGroup::make([
-                $this->reprocessApplicationAnalysisAction($application),
+                ...$secondary,
                 Action::make('backToPipeline')
                     ->label(__('applications.admin.actions.back_to_pipeline'))
                     ->icon(Heroicon::OutlinedViewColumns)
@@ -147,11 +148,64 @@ class ViewApplication extends ViewRecord
         ];
     }
 
-    private function reprocessApplicationAnalysisAction(Application $application): Action
+    private function joinInterviewAction(Interview $interview, string $name = 'joinInterview'): Action
+    {
+        return Action::make($name)
+            ->label(__('applications.admin.actions.join_meet'))
+            ->icon(Heroicon::OutlinedVideoCamera)
+            ->color('success')
+            ->url($interview->meeting_url ?? '#')
+            ->openUrlInNewTab();
+    }
+
+    /**
+     * Moving stage is the one recruitment decision this page makes, and it always
+     * goes through {@see MoveApplicationToStatus} so tenancy, pipeline integrity
+     * and the stage's own communication cannot be bypassed.
+     *
+     * The name is a parameter because the summary tab offers the same action
+     * again as the recommended next step; Filament identifies mounted actions by
+     * name, so the second button needs its own.
+     */
+    private function moveStatusAction(Application $application, string $name = 'moveStatus'): Action
+    {
+        return Action::make($name)
+            ->label(__('applications.admin.actions.move_status'))
+            ->icon(Heroicon::OutlinedArrowsRightLeft)
+            ->schema([
+                Select::make('status_id')
+                    ->label(__('applications.admin.actions.choose_status'))
+                    ->options(fn (): array => $this->statusOptions($application))
+                    ->allowHtml()
+                    ->default($application->status_id)
+                    ->native(false)
+                    ->required(),
+            ])
+            ->action(function (array $data) use ($application): void {
+                Gate::authorize('update', $application);
+
+                $status = Status::query()
+                    ->where('company_id', $application->company_id)
+                    ->where('pipeline_id', $application->job->pipeline_id)
+                    ->findOrFail((int) $data['status_id']);
+
+                app(MoveApplicationToStatus::class)->handle($application, $status);
+
+                $this->record = ApplicationResource::getEloquentQuery()
+                    ->findOrFail((int) $application->getKey());
+
+                Notification::make()
+                    ->title(__('applications.admin.actions.status_updated'))
+                    ->success()
+                    ->send();
+            });
+    }
+
+    private function reprocessApplicationAnalysisAction(Application $application, string $name = 'reprocessApplicationAnalysis'): Action
     {
         $isAwaitingCriteria = $application->analysis_status === ApplicationAnalysisStatus::AwaitingCriteria;
 
-        return Action::make('reprocessApplicationAnalysis')
+        return Action::make($name)
             ->label($isAwaitingCriteria
                 ? __('applications.admin.ai.start_action')
                 : __('applications.admin.ai.reprocess_action'))
@@ -204,6 +258,7 @@ class ViewApplication extends ViewRecord
                         ->key('summary')
                         ->icon(Heroicon::OutlinedUserCircle)
                         ->schema([
+                            $this->nextActionSection($application),
                             View::make('filament.resources.applications.components.summary')
                                 ->viewData(['summary' => $this->summaryData($application)]),
                         ]),
@@ -293,8 +348,113 @@ class ViewApplication extends ViewRecord
     }
 
     /**
-     * The process-first view of this application: stage, fit, commitment and
-     * the recruiter's most plausible next move.
+     * The recruiter's likely next step, with the action that performs it right
+     * there. A sentence on its own would send them looking for the button.
+     *
+     * It remains a recommendation: the recruiter presses it, and a terminal
+     * outcome offers no recruiting action at all.
+     */
+    private function nextActionSection(Application $application): Section
+    {
+        $key = $this->nextActionKey($application, $this->nextInterview($application));
+        $actions = $this->nextActionActions($application, $key);
+
+        // The heading stays "likely next step", never an instruction: the
+        // recommendation is guidance, and the recruiter is the one who acts.
+        return Section::make(__('applications.admin.summary.next_action_heading'))
+            ->icon($this->nextActionIcon($key))
+            ->columnSpanFull()
+            ->schema([
+                Text::make(__("applications.admin.summary.next_actions.{$key}.title"))
+                    ->weight(FontWeight::SemiBold),
+                Text::make(__("applications.admin.summary.next_actions.{$key}.description"))
+                    ->color('gray'),
+                ...($actions === [] ? [] : [Actions::make($actions)->key('application-next-action')]),
+            ]);
+    }
+
+    /**
+     * Every branch reuses the page's existing actions rather than restating any
+     * rule: the same handler, the same authorization, a distinct action name so
+     * both buttons can be mounted.
+     *
+     * @return list<Action>
+     */
+    private function nextActionActions(Application $application, string $key): array
+    {
+        $nextInterview = $this->nextInterview($application);
+
+        return match ($key) {
+            'schedule_interview' => [
+                $this->scheduleInterviewAction($application, 'nextActionScheduleInterview')->color('primary'),
+            ],
+            'prepare_interview' => array_values(array_filter([
+                $nextInterview?->meeting_url === null
+                    ? null
+                    : $this->joinInterviewAction($nextInterview, 'nextActionJoinInterview'),
+                $this->openTabAction('nextActionOpenInterviews', 'interviews', Heroicon::OutlinedCalendarDays),
+                $this->openTabAction('nextActionOpenBrief', 'evaluation', Heroicon::OutlinedClipboardDocumentCheck),
+            ])),
+            'decide' => [
+                $this->moveStatusAction($application, 'nextActionMoveStatus')->color('primary'),
+                $this->scheduleInterviewAction($application, 'nextActionScheduleInterview')->color('gray'),
+            ],
+            'evaluation_failed' => [
+                $this->reprocessApplicationAnalysisAction($application, 'nextActionReprocessAnalysis')->color('primary'),
+                $this->moveStatusAction($application, 'nextActionMoveStatus')->color('gray'),
+            ],
+            'evaluation_blocked' => [
+                Action::make('nextActionReviewAiUsage')
+                    ->label(__('settings.topbar.manage_ai'))
+                    ->icon(Heroicon::OutlinedBolt)
+                    ->color('primary')
+                    ->url(AiSettings::getUrl(tenant: $application->company)),
+                $this->openTabAction('nextActionOpenEvaluation', 'evaluation', Heroicon::OutlinedClipboardDocumentCheck),
+            ],
+            'await_evaluation' => [
+                $this->openTabAction('nextActionOpenEvaluation', 'evaluation', Heroicon::OutlinedClipboardDocumentCheck),
+            ],
+            // 'hired' and 'closed': the outcome is the answer, so no recruiting
+            // action is offered.
+            default => [],
+        };
+    }
+
+    private function openTabAction(string $name, string $section, Heroicon $icon): Action
+    {
+        $application = $this->getApplication();
+
+        return Action::make($name)
+            ->label(__("applications.admin.tabs.{$section}"))
+            ->icon($icon)
+            ->color('gray')
+            ->url(ApplicationResource::getUrl('view', [
+                'record' => $application,
+                'section' => $section,
+            ], tenant: $application->company));
+    }
+
+    private function nextActionIcon(string $key): Heroicon
+    {
+        return match ($key) {
+            'hired' => Heroicon::OutlinedCheckBadge,
+            'closed' => Heroicon::OutlinedArchiveBox,
+            'prepare_interview' => Heroicon::OutlinedCalendarDays,
+            'decide' => Heroicon::OutlinedHandRaised,
+            'evaluation_failed', 'evaluation_blocked' => Heroicon::OutlinedExclamationTriangle,
+            default => Heroicon::OutlinedFlag,
+        };
+    }
+
+    /**
+     * The process-first view of this application: stage, how long they have been
+     * in it, fit and commitment.
+     *
+     * There is deliberately no "stage 3 of 6" and no left-to-right chain of every
+     * stage: hired and rejected are alternative outcomes, not steps a candidate
+     * passes through, so a linear indicator would describe a process that does
+     * not exist. The current stage, and how long they have been waiting in it, is
+     * what a recruiter actually needs.
      *
      * @return array<string, mixed>
      */
@@ -302,31 +462,21 @@ class ViewApplication extends ViewRecord
     {
         $fit = $this->fitSummary($application);
         $nextInterview = $this->nextInterview($application);
-        $stages = Status::query()
-            ->where('company_id', $application->company_id)
-            ->where('pipeline_id', $application->job->pipeline_id)
-            ->orderBy('order')
-            ->orderBy('id')
-            ->get();
-        $currentIndex = $stages->search(
-            fn (Status $status): bool => (int) $status->getKey() === (int) $application->status_id,
-        );
         $analysisStatus = $this->enumValue($application->analysis_status);
+        $daysInStage = $application->daysInCurrentStage();
+        $threshold = $application->status->attention_after_days;
 
         return [
             'stage' => [
                 'name' => $application->status->name,
                 'color' => $application->status->color,
-                'position' => $currentIndex === false ? null : $currentIndex + 1,
-                'total' => $stages->count(),
                 'role' => $this->stageRole($application),
-                'flow' => $stages
-                    ->map(fn (Status $status): array => [
-                        'name' => $status->name,
-                        'color' => $status->color,
-                        'is_current' => (int) $status->getKey() === (int) $application->status_id,
-                    ])
-                    ->all(),
+                'entered_at' => $application->statusEnteredAt()->translatedFormat('M j, Y · H:i'),
+                'age' => trans_choice('attention.days', $daysInStage, ['count' => $daysInStage]),
+                'is_overdue' => $application->isOverdueInCurrentStage(),
+                'threshold' => $threshold === null
+                    ? null
+                    : trans_choice('attention.days', $threshold, ['count' => $threshold]),
             ],
             'fit' => [
                 'status' => $analysisStatus,
@@ -351,7 +501,6 @@ class ViewApplication extends ViewRecord
                     'section' => 'interviews',
                 ], tenant: $application->company),
             ],
-            'next_action' => $this->nextActionKey($application, $nextInterview),
             'applied_at' => $application->created_at->translatedFormat('M j, Y · H:i'),
         ];
     }
@@ -400,8 +549,13 @@ class ViewApplication extends ViewRecord
             // must stop proposing recruiting steps for this candidate.
             $application->status->is_terminal => 'closed',
             $nextInterview !== null => 'prepare_interview',
-            in_array($analysisStatus, ['pending', 'processing', 'awaiting_criteria'], strict: true) => 'await_evaluation',
+            // A candidate in a late stage is waiting on a decision, and that
+            // outranks the evaluation: the evaluation is evidence, and by this
+            // point the recruiter has interviewed the person themselves.
             $application->status->is_final_stage => 'decide',
+            $analysisStatus === 'failed' => 'evaluation_failed',
+            $analysisStatus === 'pending_quota' => 'evaluation_blocked',
+            in_array($analysisStatus, ['pending', 'processing', 'awaiting_criteria'], strict: true) => 'await_evaluation',
             default => 'schedule_interview',
         };
     }
