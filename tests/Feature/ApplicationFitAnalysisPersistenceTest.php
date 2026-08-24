@@ -72,7 +72,7 @@ test('an unknown criterion is persisted as null and excluded from overall fit', 
         ]),
         scoreRow($criteria, 'AWS', 70, 'medium'),
         scoreRow($criteria, 'Leadership', null, 'low'),
-    ], [], 1);
+    ], [], 1, 1);
 
     $application->refresh();
 
@@ -97,14 +97,14 @@ test('a null score does not lower overall fit', function (): void {
         scoreRow($criteria, 'Laravel', 90, 'high'),
         scoreRow($criteria, 'AWS', 70, 'medium'),
         scoreRow($criteria, 'Leadership', null, 'low'),
-    ], [], 1);
+    ], [], 1, 1);
 
     [$assessedOnly, $otherCriteria] = evaluationFixture(['Laravel' => 10, 'AWS' => 8]);
 
     app(ReplaceApplicationFitAnalysis::class)->handle($assessedOnly, [
         scoreRow($otherCriteria, 'Laravel', 90, 'high'),
         scoreRow($otherCriteria, 'AWS', 70, 'medium'),
-    ], [], 1);
+    ], [], 1, 1);
 
     expect((float) $withUnknown->refresh()->analysis_score)
         ->toBe((float) $assessedOnly->refresh()->analysis_score);
@@ -117,7 +117,7 @@ test('evidence coverage falls as important criteria go unassessed', function ():
         scoreRow($fullCriteria, 'Laravel', 90, 'high'),
         scoreRow($fullCriteria, 'AWS', 70, 'medium'),
         scoreRow($fullCriteria, 'Leadership', 55, 'medium'),
-    ], [], 1);
+    ], [], 1, 1);
 
     [$sparse, $sparseCriteria] = evaluationFixture();
 
@@ -125,7 +125,7 @@ test('evidence coverage falls as important criteria go unassessed', function ():
         scoreRow($sparseCriteria, 'Laravel', 90, 'high'),
         scoreRow($sparseCriteria, 'AWS', null, 'low'),
         scoreRow($sparseCriteria, 'Leadership', null, 'low'),
-    ], [], 1);
+    ], [], 1, 1);
 
     expect($full->refresh()->analysis_coverage)->toBe(100)
         ->and($sparse->refresh()->analysis_coverage)->toBe(42)
@@ -140,7 +140,7 @@ test('high confidence is normalised down when the criterion could not be assesse
         scoreRow($criteria, 'Laravel', null, 'high', [
             ['source' => 'resume', 'detail' => 'Nothing relevant, but claimed high confidence.'],
         ]),
-    ], [], 1);
+    ], [], 1, 1);
 
     $score = $application->refresh()->criterionScores->sole();
 
@@ -162,7 +162,7 @@ test('criterion text and weight are read from the job, never from the response',
             'confidence' => 'high',
             'evidence' => [['source' => 'cover_letter', 'detail' => 'Built a Laravel payments API.']],
         ],
-    ], [], 1);
+    ], [], 1, 1);
 
     $score = $application->refresh()->criterionScores->sole();
 
@@ -177,7 +177,7 @@ test('a response missing a criterion fails instead of scoring what it returned',
     expect(fn () => app(ReplaceApplicationFitAnalysis::class)->handle($application, [
         scoreRow($criteria, 'Laravel', 90, 'high'),
         scoreRow($criteria, 'AWS', 70, 'medium'),
-    ], [], 1))->toThrow(ValidationException::class);
+    ], [], 1, 1))->toThrow(ValidationException::class);
 
     expect($application->refresh()->analysis_status)->toBe(ApplicationAnalysisStatus::Pending)
         ->and($application->criterionScores)->toHaveCount(0);
@@ -190,7 +190,7 @@ test('a duplicated criterion fails instead of being scored twice', function (): 
         scoreRow($criteria, 'Laravel', 90, 'high'),
         scoreRow($criteria, 'Laravel', 40, 'low'),
         scoreRow($criteria, 'AWS', 70, 'medium'),
-    ], [], 1))->toThrow(ValidationException::class);
+    ], [], 1, 1))->toThrow(ValidationException::class);
 });
 
 test('an unknown criterion id fails instead of receiving a fallback weight', function (): void {
@@ -205,7 +205,7 @@ test('an unknown criterion id fails instead of receiving a fallback weight', fun
             'confidence' => 'medium',
             'evidence' => [],
         ],
-    ], [], 1))->toThrow(ValidationException::class);
+    ], [], 1, 1))->toThrow(ValidationException::class);
 
     expect(ApplicationCriterionScore::query()->count())->toBe(0);
 });
@@ -226,7 +226,7 @@ test('a criterion belonging to another company cannot be scored', function (): v
             'confidence' => 'medium',
             'evidence' => [],
         ],
-    ], [], 1))->toThrow(ValidationException::class);
+    ], [], 1, 1))->toThrow(ValidationException::class);
 });
 
 test('interview brief items reference criteria strictly by id', function (): void {
@@ -242,7 +242,7 @@ test('interview brief items reference criteria strictly by id', function (): voi
             'reason' => 'Nothing in the application speaks to team leadership.',
             'question' => 'Tell me about the largest team you have been responsible for.',
         ],
-    ], 1);
+    ], 1, 1);
 
     $briefItem = $application->refresh()->interviewBriefItems->sole();
 
@@ -263,7 +263,7 @@ test('an interview brief item referencing an unknown criterion fails', function 
             'reason' => 'Refers to nothing.',
             'question' => 'Unanswerable.',
         ],
-    ], 1))->toThrow(ValidationException::class);
+    ], 1, 1))->toThrow(ValidationException::class);
 });
 
 test('referral sourcing does not change the evaluation result', function (): void {
@@ -275,7 +275,7 @@ test('referral sourcing does not change the evaluation result', function (): voi
     ];
 
     [$direct, $directCriteria] = evaluationFixture(['Laravel' => 10, 'AWS' => 8]);
-    app(ReplaceApplicationFitAnalysis::class)->handle($direct, $scores($directCriteria), [], 1);
+    app(ReplaceApplicationFitAnalysis::class)->handle($direct, $scores($directCriteria), [], 1, 1);
 
     [$referred, $referredCriteria] = evaluationFixture(['Laravel' => 10, 'AWS' => 8]);
     $referral = Referral::factory()->create([
@@ -287,7 +287,7 @@ test('referral sourcing does not change the evaluation result', function (): voi
         'referral_id' => $referral->getKey(),
     ])->saveQuietly();
 
-    app(ReplaceApplicationFitAnalysis::class)->handle($referred, $scores($referredCriteria), [], 1);
+    app(ReplaceApplicationFitAnalysis::class)->handle($referred, $scores($referredCriteria), [], 1, 1);
 
     expect((float) $referred->refresh()->analysis_score)->toBe((float) $direct->refresh()->analysis_score)
         ->and($referred->analysis_coverage)->toBe($direct->analysis_coverage);
@@ -299,7 +299,7 @@ test('zero-weight criteria cannot distort evidence coverage', function (): void 
     app(ReplaceApplicationFitAnalysis::class)->handle($application, [
         scoreRow($criteria, 'Laravel', 80, 'high'),
         scoreRow($criteria, 'AWS', null, 'low'),
-    ], [], 1);
+    ], [], 1, 1);
 
     // With no weight to rank them, each criterion counts once.
     expect($application->refresh()->analysis_coverage)->toBe(50)

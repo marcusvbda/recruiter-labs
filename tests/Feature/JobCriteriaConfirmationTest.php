@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\ConfirmJobCriteria;
+use App\Actions\MoveApplicationToStatus;
 use App\Actions\ReplaceJobCriteria;
 use App\Actions\RequireJobCriteriaReview;
 use App\Actions\ScheduleApplicationFitAnalysis;
@@ -13,6 +14,7 @@ use App\Models\Job;
 use App\Models\Plan;
 use App\Models\Status;
 use App\Models\User;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
@@ -27,6 +29,15 @@ function criteriaCompany(): Company
     );
 
     return Company::factory()->create();
+}
+
+/** A human who belongs to the workspace — what every confirmation requires. */
+function criteriaRecruiter(Company $company): User
+{
+    $recruiter = User::factory()->create();
+    $recruiter->companies()->attach($company);
+
+    return $recruiter;
 }
 
 test('a finished extraction awaits human review and releases no evaluations', function (): void {
@@ -83,8 +94,7 @@ test('confirming the criteria releases the applications waiting for them', funct
     Queue::fake();
 
     $company = criteriaCompany();
-    $recruiter = User::factory()->create();
-    $recruiter->companies()->attach($company);
+    $recruiter = criteriaRecruiter($company);
 
     $job = Job::factory()->withCriteriaAwaitingReview()->create(['company_id' => $company->getKey()]);
     $waiting = Application::factory()->create([
@@ -93,7 +103,7 @@ test('confirming the criteria releases the applications waiting for them', funct
         'analysis_status' => ApplicationAnalysisStatus::AwaitingCriteria,
     ]);
 
-    $confirmed = app(ConfirmJobCriteria::class)->handle($job, (int) $recruiter->getKey());
+    $confirmed = app(ConfirmJobCriteria::class)->handle($job, $recruiter);
 
     $job->refresh();
 
@@ -116,8 +126,60 @@ test('confirming a job with no criteria is refused', function (): void {
         'criteria_generation' => 1,
     ]);
 
-    expect(app(ConfirmJobCriteria::class)->handle($job))->toBeFalse()
+    expect(app(ConfirmJobCriteria::class)->handle($job, criteriaRecruiter($company)))->toBeFalse()
         ->and($job->refresh()->hasConfirmedCriteria())->toBeFalse();
+});
+
+test('a recruiter outside the job workspace cannot confirm its criteria', function (): void {
+    $jobCompany = criteriaCompany();
+    $outsiderCompany = criteriaCompany();
+    $outsider = criteriaRecruiter($outsiderCompany);
+    $job = Job::factory()->withCriteriaAwaitingReview()->create(['company_id' => $jobCompany->getKey()]);
+
+    expect(fn () => app(ConfirmJobCriteria::class)->handle($job, $outsider))
+        ->toThrow(AuthorizationException::class);
+
+    expect($job->refresh()->criteria_processing_status)->toBe(JobCriteriaProcessingStatus::AwaitingReview)
+        ->and($job->criteria_confirmed_generation)->toBeNull()
+        ->and($job->criteria_confirmed_by_id)->toBeNull();
+});
+
+test('a terminal application is not scheduled until it is reopened into an active stage', function (): void {
+    Queue::fake();
+
+    $company = criteriaCompany();
+    $job = Job::factory()->withConfirmedCriteria()->create(['company_id' => $company->getKey()]);
+    $terminalStatus = Status::query()
+        ->where('pipeline_id', $job->pipeline_id)
+        ->where('is_terminal', true)
+        ->firstOrFail();
+    $activeStatus = Status::query()
+        ->where('pipeline_id', $job->pipeline_id)
+        ->where('is_terminal', false)
+        ->firstOrFail();
+    $application = Application::factory()->create([
+        'company_id' => $company->getKey(),
+        'job_id' => $job->getKey(),
+        'status_id' => $terminalStatus->getKey(),
+        'analysis_status' => ApplicationAnalysisStatus::Completed,
+        'analysis_generation' => 4,
+        'analysis_criteria_generation' => $job->criteria_generation,
+        'analysis_score' => 82,
+    ]);
+
+    app(ScheduleApplicationFitAnalysis::class)->handle($application);
+
+    expect($application->refresh()->analysis_status)->toBe(ApplicationAnalysisStatus::Completed)
+        ->and($application->analysis_generation)->toBe(4)
+        ->and((float) $application->analysis_score)->toBe(82.0);
+    Queue::assertNotPushed(AnalyzeApplicationFit::class);
+
+    app(MoveApplicationToStatus::class)->handle($application, $activeStatus);
+    app(ScheduleApplicationFitAnalysis::class)->handle($application);
+
+    expect($application->refresh()->analysis_status)->toBe(ApplicationAnalysisStatus::Pending)
+        ->and($application->analysis_generation)->toBe(5);
+    Queue::assertPushed(AnalyzeApplicationFit::class, 1);
 });
 
 test('editing confirmed criteria makes the confirmation and the evaluations stale', function (): void {
@@ -179,7 +241,7 @@ test('reconfirming refreshes in-process stale evaluations but leaves terminal on
     ]);
 
     app(RequireJobCriteriaReview::class)->handle($job);
-    app(ConfirmJobCriteria::class)->handle($job->refresh());
+    app(ConfirmJobCriteria::class)->handle($job->refresh(), criteriaRecruiter($company));
 
     expect($inProcess->refresh()->analysis_status)->toBe(ApplicationAnalysisStatus::Pending)
         // A closed process keeps its historical evaluation rather than spending

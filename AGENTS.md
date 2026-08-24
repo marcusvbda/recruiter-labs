@@ -335,7 +335,19 @@ quietly claim more than it knows. AI proposes; Laravel computes; a human decides
   application waits in `ApplicationAnalysisStatus::AwaitingCriteria`, and
   confirming releases it through the existing queue, quota and BYOK path. Never
   bypass those actions.
-- **An evaluation belongs to the criteria revision that produced it.**
+- **An evaluation belongs to two exact revisions.** The Application analysis
+  generation identifies the evaluation request, and the confirmed Job criteria
+  generation identifies the semantic criteria snapshot used to build it. Capture
+  both before the AI request, then revalidate both inside the persistence
+  transaction while locking the Application and Job. A response produced for
+  criteria revision X can never be persisted as revision Y, including on a cache
+  hit or when every criterion ID is unchanged: IDs guarantee mapping identity;
+  the generation guarantees semantic revision identity.
+- **Terminal Applications cannot schedule candidate evaluation.** Hired,
+  rejected, withdrawn and disqualified Applications keep their historical
+  evaluation but expose no start or reprocess action and dispatch no evaluation
+  job. A human must first reopen the Application into an active stage.
+- **The stored criteria revision identifies the evaluation that produced it.**
   `applications.analysis_criteria_generation` records it, and
   `Application::hasCurrentEvaluation()` is the only way to ask whether a stored
   fit still describes this hiring process. `criteria_generation` doubles as the

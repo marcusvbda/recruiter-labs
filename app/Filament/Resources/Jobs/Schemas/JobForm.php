@@ -14,6 +14,7 @@ use App\Models\Company;
 use App\Models\CvFileType;
 use App\Models\Job;
 use App\Models\Pipeline;
+use App\Models\User;
 use Closure;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
@@ -37,7 +38,6 @@ use Filament\Schemas\Schema;
 use Filament\Support\Enums\Alignment;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\Auth;
 
 class JobForm
 {
@@ -423,7 +423,13 @@ class JobForm
                 // write checks (see JobPipelineKanban::authorizeMoveRecord()).
                 abort_unless(JobResource::canEdit($record), 403);
 
-                app(ConfirmJobCriteria::class)->handle($record, self::currentUserId());
+                // AI proposes criteria; a human confirms them. The action
+                // requires that human, so there is no signed-out path to a
+                // confirmed revision.
+                $user = Filament::auth()->user();
+                abort_unless($user instanceof User, 403);
+
+                app(ConfirmJobCriteria::class)->handle($record, $user);
 
                 Notification::make()
                     ->title(__('jobs.criteria.confirmed_notification'))
@@ -456,7 +462,7 @@ class JobForm
     /** The signed-in recruiter, for actions that record who asked for them. */
     private static function currentUserId(): ?int
     {
-        $id = Auth::id();
+        $id = Filament::auth()->id();
 
         return $id === null ? null : (int) $id;
     }

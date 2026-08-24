@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Actions\ReplaceApplicationFitAnalysis;
+use App\Actions\ScheduleApplicationFitAnalysis;
 use App\Ai\Agents\ScoreApplicationAgainstCriteria;
 use App\Enums\AiUsageStatus;
 use App\Enums\ApplicationAnalysisStatus;
@@ -11,6 +12,7 @@ use App\Enums\Limit;
 use App\Models\AiAgentResponseCache;
 use App\Models\AiUsageRecord;
 use App\Models\Application;
+use App\Models\Job;
 use App\Services\AiCredentialsResolver;
 use App\Services\AiUsageTracker;
 use App\Services\CandidateEvaluationContextSanitizer;
@@ -19,6 +21,7 @@ use App\Services\ResumeTextExtractor;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Laravel\Ai\Responses\StructuredAgentResponse;
 use Throwable;
@@ -67,6 +70,7 @@ class AnalyzeApplicationFit implements ShouldBeUnique, ShouldQueue
 
     public function handle(
         ReplaceApplicationFitAnalysis $replaceApplicationFitAnalysis,
+        ScheduleApplicationFitAnalysis $scheduleApplicationFitAnalysis,
         AiUsageTracker $usageTracker,
         AiCredentialsResolver $credentialsResolver,
         LimitManager $limitManager,
@@ -74,21 +78,26 @@ class AnalyzeApplicationFit implements ShouldBeUnique, ShouldQueue
         CandidateEvaluationContextSanitizer $contextSanitizer,
     ): void {
         $application = Application::query()
-            ->with(['job.jobCriteria', 'candidate', 'answers', 'documents', 'company'])
+            ->with(['candidate', 'answers', 'documents', 'company'])
             ->find($this->applicationId);
 
         if ($application === null || $application->analysis_generation !== $this->generation) {
             return;
         }
 
-        // A candidate is never evaluated against criteria no recruiter has
-        // confirmed, and the gate is re-checked here: criteria can be edited
-        // between scheduling and this job actually running.
-        if (! $application->job->hasConfirmedCriteria() || $application->job->jobCriteria->isEmpty()) {
+        $job = $this->captureConfirmedCriteriaSnapshot($application);
+
+        if ($job === null) {
             $this->markCurrentGenerationAs(ApplicationAnalysisStatus::AwaitingCriteria);
 
             return;
         }
+
+        // This hydrated relation is deliberately the locked snapshot above. The
+        // context builder must not reload it after the lock has been released:
+        // the exact confirmed revision and criterion set are one unit of work.
+        $application->setRelation('job', $job);
+        $expectedCriteriaGeneration = (int) $job->criteria_generation;
 
         $configuration = $credentialsResolver->resolve($application->company);
         $model = $configuration->usesOwnKey ? $configuration->model : self::MODEL;
@@ -101,7 +110,13 @@ class AnalyzeApplicationFit implements ShouldBeUnique, ShouldQueue
         // context — never from the identity-bearing original.
         $agent = new ScoreApplicationAgainstCriteria($application);
         $context = $agent->applicationContext($contextSanitizer->sanitize($application, $resumeText));
-        $fingerprint = ScoreApplicationAgainstCriteria::CACHE_SCHEMA_VERSION."\n---\n".$agent->instructions()."\n---\n".$context;
+        $fingerprint = implode("\n---\n", [
+            ScoreApplicationAgainstCriteria::CACHE_SCHEMA_VERSION,
+            'job_id:'.$job->getKey(),
+            'criteria_generation:'.$expectedCriteriaGeneration,
+            (string) $agent->instructions(),
+            $context,
+        ]);
 
         $cached = AiAgentResponseCache::lookup(self::OPERATION, $model, $fingerprint);
 
@@ -122,7 +137,23 @@ class AnalyzeApplicationFit implements ShouldBeUnique, ShouldQueue
                 return;
             }
 
-            $replaceApplicationFitAnalysis->handle($application, $scores, $interviewBriefItems, $this->generation);
+            // A cached answer is bound to its criteria revision exactly like a
+            // fresh one: the fingerprint proves the request matched, the
+            // revision check proves the job has not moved on since.
+            $persisted = $replaceApplicationFitAnalysis->handle(
+                $application,
+                $scores,
+                $interviewBriefItems,
+                $this->generation,
+                $expectedCriteriaGeneration,
+            );
+
+            if (! $persisted) {
+                $this->scheduleCurrentCriteriaIfStillAwaiting(
+                    $scheduleApplicationFitAnalysis,
+                    $application,
+                );
+            }
 
             return;
         }
@@ -175,9 +206,26 @@ class AnalyzeApplicationFit implements ShouldBeUnique, ShouldQueue
                 throw new UnexpectedValueException('The application fit agent response did not contain the expected structured output.');
             }
 
-            $replaceApplicationFitAnalysis->handle($application, $scores, $interviewBriefItems, $this->generation);
+            // A stale revision makes the answer unusable, not the call a
+            // failure: the provider really did the work, so the usage record
+            // stays honest and the response is still cached under its own
+            // fingerprint. What it must not become is a current evaluation.
+            $persisted = $replaceApplicationFitAnalysis->handle(
+                $application,
+                $scores,
+                $interviewBriefItems,
+                $this->generation,
+                $expectedCriteriaGeneration,
+            );
             $usageTracker->complete($usageRecord, $response->usage, $this->elapsedMilliseconds($startedAt));
             AiAgentResponseCache::remember(self::OPERATION, $model, $fingerprint, $response->toArray());
+
+            if (! $persisted) {
+                $this->scheduleCurrentCriteriaIfStillAwaiting(
+                    $scheduleApplicationFitAnalysis,
+                    $application,
+                );
+            }
         } catch (Throwable $exception) {
             $usageTracker->fail($usageRecord, $this->elapsedMilliseconds($startedAt));
 
@@ -205,6 +253,50 @@ class AnalyzeApplicationFit implements ShouldBeUnique, ShouldQueue
             ->whereKey($this->applicationId)
             ->where('analysis_generation', $this->generation)
             ->update(['analysis_status' => $status]);
+    }
+
+    /**
+     * Lock only long enough to bind one confirmed criteria revision to the
+     * prompt. Provider, cache and sanitizer work all happen after this
+     * transaction commits; persistence verifies this same revision again.
+     */
+    private function captureConfirmedCriteriaSnapshot(Application $application): ?Job
+    {
+        return DB::transaction(function () use ($application): ?Job {
+            $job = Job::query()
+                ->whereKey($application->job_id)
+                ->lockForUpdate()
+                ->first();
+
+            if ($job === null) {
+                return null;
+            }
+
+            $job->load('jobCriteria');
+
+            return $job->hasConfirmedCriteria() && $job->jobCriteria->isNotEmpty()
+                ? $job
+                : null;
+        });
+    }
+
+    /**
+     * A response can become stale after the next revision has already been
+     * confirmed. Confirmation intentionally skips an in-flight application, so
+     * schedule the new revision only after persistence has released its locks.
+     */
+    private function scheduleCurrentCriteriaIfStillAwaiting(
+        ScheduleApplicationFitAnalysis $scheduleApplicationFitAnalysis,
+        Application $application,
+    ): void {
+        $application->refresh();
+
+        if ($application->analysis_generation !== $this->generation
+            || $application->analysis_status !== ApplicationAnalysisStatus::AwaitingCriteria) {
+            return;
+        }
+
+        $scheduleApplicationFitAnalysis->handle($application, $this->userId, $this->generation);
     }
 
     private function elapsedMilliseconds(int $startedAt): int

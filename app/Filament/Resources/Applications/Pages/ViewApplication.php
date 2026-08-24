@@ -117,12 +117,18 @@ class ViewApplication extends ViewRecord
             $primary[] = $this->scheduleInterviewAction($application)->color('gray');
         }
 
-        // A failed evaluation is a recoverable problem, so its fix surfaces
-        // instead of staying buried while it is still relevant.
-        if ($evaluationFailed && ! $status->is_terminal) {
-            $primary[] = $this->reprocessApplicationAnalysisAction($application);
-        } else {
-            $secondary[] = $this->reprocessApplicationAnalysisAction($application);
+        // A terminal application offers no evaluation action at all — not
+        // primary, not in the overflow. Re-running an evaluation for somebody
+        // who was hired or rejected spends AI allowance on a decision nobody
+        // will make again, and the stored evaluation stays readable regardless.
+        // A failed evaluation on a live process is a recoverable problem, so its
+        // fix surfaces instead of staying buried while it is still relevant.
+        if (! $status->is_terminal) {
+            if ($evaluationFailed) {
+                $primary[] = $this->reprocessApplicationAnalysisAction($application);
+            } else {
+                $secondary[] = $this->reprocessApplicationAnalysisAction($application);
+            }
         }
 
         return [

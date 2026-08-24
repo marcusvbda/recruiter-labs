@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\MoveApplicationToStatus;
 use App\Enums\ApplicationAnalysisStatus;
 use App\Filament\Resources\Applications\Pages\ViewApplication;
 use App\Models\Application;
@@ -24,6 +25,24 @@ function nextActionKeyFor(Application $application): string
     $method = new ReflectionMethod($page, 'nextActionKey');
 
     return $method->invoke($page, $application, null);
+}
+
+/** @return list<string> */
+function headerActionNamesFor(Application $application): array
+{
+    actAsCompany($application->company);
+    Filament::setCurrentPanel('admin');
+    Filament::setTenant($application->company, isQuiet: true);
+    Filament::bootCurrentPanel();
+
+    $page = new ViewApplication;
+    (new ReflectionProperty($page, 'record'))->setValue($page, $application);
+
+    return collect((new ReflectionMethod($page, 'getHeaderActions'))->invoke($page))
+        ->flatMap(fn (mixed $action): array => method_exists($action, 'getActions')
+            ? array_map(fn (mixed $nested): string => $nested->getName(), $action->getActions())
+            : [$action->getName()])
+        ->all();
 }
 
 function nextActionCompany(): Company
@@ -94,28 +113,37 @@ test('a terminal application offers no recruiting next step', function (): void 
         ->and($actions->invoke($page, $hired, 'hired'))->toBe([]);
 });
 
-test('a terminal application never offers interview scheduling, not even in the overflow', function (): void {
+test('a terminal application never offers interview scheduling or evaluation, even in the overflow', function (): void {
     $application = applicationInStatus(
         nextActionCompany(),
         fn ($statuses) => $statuses->where('is_terminal', true)->where('is_hired', false)->firstOrFail(),
+        ['analysis_status' => ApplicationAnalysisStatus::Failed],
     );
 
-    // Building Filament actions resolves resource URLs, which needs a booted
-    // panel, a signed-in user and an active tenant.
-    actAsCompany($application->company);
-    Filament::setCurrentPanel('admin');
-    Filament::setTenant($application->company, isQuiet: true);
-    Filament::bootCurrentPanel();
-
-    $page = new ViewApplication;
-    (new ReflectionProperty($page, 'record'))->setValue($page, $application);
-
-    $names = collect((new ReflectionMethod($page, 'getHeaderActions'))->invoke($page))
-        ->flatMap(fn (mixed $action): array => method_exists($action, 'getActions')
-            ? array_map(fn (mixed $nested): string => $nested->getName(), $action->getActions())
-            : [$action->getName()])
-        ->all();
+    $names = headerActionNamesFor($application);
 
     expect($names)->not->toContain('scheduleInterview')
-        ->and($names)->toContain('moveStatus');
+        ->not->toContain('reprocessApplicationAnalysis')
+        ->toContain('moveStatus');
+});
+
+test('reopening an application restores interview scheduling and evaluation actions', function (): void {
+    $application = applicationInStatus(
+        nextActionCompany(),
+        fn ($statuses) => $statuses->where('is_terminal', true)->where('is_hired', false)->firstOrFail(),
+        ['analysis_status' => ApplicationAnalysisStatus::Failed],
+    );
+
+    $activeStatus = Status::query()
+        ->where('pipeline_id', $application->job->pipeline_id)
+        ->where('is_terminal', false)
+        ->orderBy('order')
+        ->firstOrFail();
+
+    app(MoveApplicationToStatus::class)->handle($application, $activeStatus);
+
+    $names = headerActionNamesFor($application->fresh(['status', 'job']));
+
+    expect($names)->toContain('scheduleInterview')
+        ->toContain('reprocessApplicationAnalysis');
 });

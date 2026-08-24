@@ -18,6 +18,8 @@ class EditJob extends EditRecord
 {
     protected static string $resource = JobResource::class;
 
+    protected ?bool $hasDatabaseTransactions = true;
+
     public string $activeJobEditTab = 'edit';
 
     private RequireJobCriteriaReview $requireJobCriteriaReview;

@@ -8,6 +8,7 @@ use App\Enums\CriterionEvidenceSource;
 use App\Models\Application;
 use App\Models\ApplicationCriterionScore;
 use App\Models\ApplicationInterviewBriefItem;
+use App\Models\Job;
 use App\Models\JobCriterion;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -24,6 +25,13 @@ use Illuminate\Validation\ValidationException;
  *   the current {@see JobCriterion}. There is no fallback weight and no
  *   case-insensitive string match, because both silently invent an assessment
  *   for a criterion nobody can point at.
+ * - **Criterion IDs prove mapping identity; the criteria generation proves
+ *   semantic revision identity, and both are required.** A recruiter can rewrite
+ *   a criterion's text, meaning and weight while its database row keeps the same
+ *   ID, so "every returned ID still exists" is no evidence that the response
+ *   describes the criteria this hiring process runs on now. The evaluation is
+ *   therefore requested against, and persisted against, one exact confirmed
+ *   criteria revision.
  * - **The response is all-or-nothing.** Every current criterion must appear
  *   exactly once, and nothing else may appear. A structurally inconsistent
  *   response fails so the queue can retry it, rather than producing a partial
@@ -39,41 +47,57 @@ class ReplaceApplicationFitAnalysis
     /**
      * @param  array<int, mixed>  $scores
      * @param  array<int, mixed>  $interviewBriefItems
+     * @param  int  $expectedGeneration  The application analysis generation this
+     *                                   response was requested for.
+     * @param  int  $expectedCriteriaGeneration  The confirmed job criteria
+     *                                           revision the request was built
+     *                                           from.
+     * @return bool Whether the evaluation was persisted. False when the response
+     *              no longer describes the current state: a newer analysis is in
+     *              flight, or the criteria revision it measured is no longer the
+     *              confirmed one.
      */
-    public function handle(Application $application, array $scores, array $interviewBriefItems, int $expectedGeneration): bool
-    {
-        $validated = Validator::make(
-            ['scores' => $scores, 'interview_brief_items' => $interviewBriefItems],
-            [
-                'scores' => ['required', 'array', 'min:1', 'max:20'],
-                'scores.*' => ['required', 'array:criterion_id,score,reason,confidence,evidence'],
-                'scores.*.criterion_id' => ['required', 'integer'],
-                // Nullable on purpose: "not enough information to assess this" is
-                // a legitimate answer and must not be coerced into a number.
-                'scores.*.score' => ['present', 'nullable', 'integer', 'between:0,100'],
-                'scores.*.reason' => ['required', 'string', 'max:220'],
-                'scores.*.confidence' => ['required', 'string', 'in:high,medium,low'],
-                'scores.*.evidence' => ['present', 'array', 'max:3'],
-                'scores.*.evidence.*' => ['required', 'array:source,detail'],
-                'scores.*.evidence.*.source' => ['required', 'string', 'in:'.implode(',', CriterionEvidenceSource::values())],
-                'scores.*.evidence.*.detail' => ['required', 'string', 'max:180'],
-                'interview_brief_items' => ['present', 'array', 'max:6'],
-                'interview_brief_items.*' => ['required', 'array:criterion_id,priority,reason,question'],
-                'interview_brief_items.*.criterion_id' => ['required', 'integer'],
-                'interview_brief_items.*.priority' => ['required', 'string', 'in:high,medium,low'],
-                'interview_brief_items.*.reason' => ['required', 'string', 'max:220'],
-                'interview_brief_items.*.question' => ['required', 'string', 'max:300'],
-            ],
-        )->validate();
-
-        return DB::transaction(function () use ($application, $validated, $expectedGeneration): bool {
+    public function handle(
+        Application $application,
+        array $scores,
+        array $interviewBriefItems,
+        int $expectedGeneration,
+        int $expectedCriteriaGeneration,
+    ): bool {
+        return DB::transaction(function () use ($application, $scores, $interviewBriefItems, $expectedGeneration, $expectedCriteriaGeneration): bool {
             $lockedApplication = Application::query()->whereKey($application->getKey())->lockForUpdate()->first();
 
             if ($lockedApplication === null || $lockedApplication->analysis_generation !== $expectedGeneration) {
                 return false;
             }
 
-            $job = $lockedApplication->job()->with('jobCriteria')->firstOrFail();
+            $job = Job::query()
+                ->whereKey($lockedApplication->job_id)
+                ->lockForUpdate()
+                ->firstOrFail();
+            $job->load('jobCriteria');
+
+            if (! $this->criteriaRevisionIsStill($job, $expectedCriteriaGeneration)) {
+                // The recruiter changed the criteria while the provider request
+                // was running, so this answer describes a revision that no longer
+                // governs the process. Nothing is persisted — not the scores, not
+                // the evidence, not the brief, not the fit, and not the revision
+                // link — and the application goes back to waiting for criteria so
+                // confirming the new revision reschedules it through the normal
+                // path. This is an expected concurrency outcome, not a provider
+                // failure, so it does not throw: retrying would only replay the
+                // same stale response.
+                $lockedApplication->forceFill([
+                    'analysis_status' => ApplicationAnalysisStatus::AwaitingCriteria,
+                ])->saveQuietly();
+
+                $application->setRawAttributes($lockedApplication->getAttributes(), true);
+
+                return false;
+            }
+
+            $validated = $this->validateResponse($scores, $interviewBriefItems);
+
             $criteria = $this->authoritativeCriteria($job->jobCriteria, (int) $lockedApplication->company_id);
 
             $this->assertCriteriaMatchExactly($criteria, $validated['scores']);
@@ -113,10 +137,12 @@ class ReplaceApplicationFitAnalysis
 
             $lockedApplication->forceFill([
                 'analysis_status' => ApplicationAnalysisStatus::Completed,
-                // The revision this evaluation measured. Without it, a criteria
-                // change would leave this fit quietly presenting itself as the
-                // current assessment.
-                'analysis_criteria_generation' => $job->criteria_generation,
+                // The revision this evaluation measured — the one the request
+                // was built from, verified above to still be the confirmed one,
+                // never "whatever revision the job happens to carry now".
+                // Without it, a criteria change would leave this fit quietly
+                // presenting itself as the current assessment.
+                'analysis_criteria_generation' => $expectedCriteriaGeneration,
                 'analysis_score' => $this->overallFit($rows),
                 'analysis_coverage' => $this->evidenceCoverage($rows),
                 'analyzed_at' => now(),
@@ -124,6 +150,56 @@ class ReplaceApplicationFitAnalysis
 
             return true;
         });
+    }
+
+    /**
+     * @param  array<int, mixed>  $scores
+     * @param  array<int, mixed>  $interviewBriefItems
+     * @return array{scores: array<int, array<string, mixed>>, interview_brief_items: array<int, array<string, mixed>>}
+     */
+    private function validateResponse(array $scores, array $interviewBriefItems): array
+    {
+        /** @var array{scores: array<int, array<string, mixed>>, interview_brief_items: array<int, array<string, mixed>>} $validated */
+        $validated = Validator::make(
+            ['scores' => $scores, 'interview_brief_items' => $interviewBriefItems],
+            [
+                'scores' => ['required', 'array', 'min:1', 'max:20'],
+                'scores.*' => ['required', 'array:criterion_id,score,reason,confidence,evidence'],
+                'scores.*.criterion_id' => ['required', 'integer'],
+                'scores.*.score' => ['present', 'nullable', 'integer', 'between:0,100'],
+                'scores.*.reason' => ['required', 'string', 'max:220'],
+                'scores.*.confidence' => ['required', 'string', 'in:high,medium,low'],
+                'scores.*.evidence' => ['present', 'array', 'max:3'],
+                'scores.*.evidence.*' => ['required', 'array:source,detail'],
+                'scores.*.evidence.*.source' => ['required', 'string', 'in:'.implode(',', CriterionEvidenceSource::values())],
+                'scores.*.evidence.*.detail' => ['required', 'string', 'max:180'],
+                'interview_brief_items' => ['present', 'array', 'max:6'],
+                'interview_brief_items.*' => ['required', 'array:criterion_id,priority,reason,question'],
+                'interview_brief_items.*.criterion_id' => ['required', 'integer'],
+                'interview_brief_items.*.priority' => ['required', 'string', 'in:high,medium,low'],
+                'interview_brief_items.*.reason' => ['required', 'string', 'max:220'],
+                'interview_brief_items.*.question' => ['required', 'string', 'max:300'],
+            ],
+        )->validate();
+
+        return $validated;
+    }
+
+    /**
+     * Whether the job still runs on the exact confirmed criteria revision the AI
+     * request was built from.
+     *
+     * All three conditions matter. The revision must be unchanged, the recorded
+     * confirmation must still point at it, and the job must still be in a
+     * confirmed state at all — editing criteria advances the revision *and*
+     * drops the job back to review, and either half on its own would let a stale
+     * answer through.
+     */
+    private function criteriaRevisionIsStill(Job $job, int $expectedCriteriaGeneration): bool
+    {
+        return $job->criteria_generation === $expectedCriteriaGeneration
+            && $job->criteria_confirmed_generation === $expectedCriteriaGeneration
+            && $job->hasConfirmedCriteria();
     }
 
     /**

@@ -11,6 +11,7 @@ use App\Models\Application;
 use App\Models\Company;
 use App\Models\Job;
 use App\Models\Plan;
+use App\Models\User;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
@@ -52,6 +53,16 @@ function renderFixture(): array
     return [$company, $job, $application];
 }
 
+/** The signed-in workspace member — the human every confirmation needs. */
+function currentRecruiter(): User
+{
+    $user = auth()->user();
+
+    expect($user)->toBeInstanceOf(User::class);
+
+    return $user;
+}
+
 test('the criteria tab shows suggested criteria awaiting confirmation', function (): void {
     [$company, $job] = renderFixture();
 
@@ -67,7 +78,7 @@ test('the criteria tab shows suggested criteria awaiting confirmation', function
 test('the evaluation tab shows fit, coverage, evidence and the identity disclosure', function (): void {
     [$company, $job, $application] = renderFixture();
 
-    app(ConfirmJobCriteria::class)->handle($job);
+    app(ConfirmJobCriteria::class)->handle($job, currentRecruiter());
     $criteria = $job->refresh()->jobCriteria()->get()->keyBy('criterion');
 
     $application->forceFill(['analysis_generation' => 1])->saveQuietly();
@@ -96,7 +107,7 @@ test('the evaluation tab shows fit, coverage, evidence and the identity disclosu
             'reason' => 'Team leadership is important here and the application says nothing about it.',
             'question' => 'What is the largest engineering team you have been responsible for?',
         ],
-    ], 1);
+    ], 1, 1);
 
     $this->get(ApplicationResource::getUrl('view', [
         'record' => $application,
@@ -132,7 +143,7 @@ test('an application waiting for criteria says the criteria need confirming', fu
 test('an evaluation measured against superseded criteria is not shown as current', function (): void {
     [$company, $job, $application] = renderFixture();
 
-    app(ConfirmJobCriteria::class)->handle($job);
+    app(ConfirmJobCriteria::class)->handle($job, currentRecruiter());
 
     $application->forceFill([
         'analysis_status' => ApplicationAnalysisStatus::Completed,
@@ -165,7 +176,7 @@ test('a recruiter can confirm the criteria from the job workspace', function ():
     // rest of the job surfaces use.
     expect(JobResource::canEdit($job))->toBeTrue();
 
-    app(ConfirmJobCriteria::class)->handle($job, (int) auth()->id());
+    app(ConfirmJobCriteria::class)->handle($job, currentRecruiter());
 
     expect($job->refresh()->hasConfirmedCriteria())->toBeTrue()
         ->and($job->criteria_confirmed_by_id)->toBe((int) auth()->id())
