@@ -49,6 +49,11 @@ class DuplicateJob
                 'published' => false,
                 'criteria_processing_status' => JobCriteriaProcessingStatus::NotStarted,
                 'criteria_generation' => 0,
+                // A copy has no confirmed criteria of its own: the recruiter
+                // confirmed the original's, not this one's.
+                'criteria_confirmed_generation' => null,
+                'criteria_confirmed_at' => null,
+                'criteria_confirmed_by_id' => null,
             ]);
 
             $copy->acceptedCvTypes()->sync($job->acceptedCvTypes->modelKeys());

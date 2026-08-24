@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Applications\Pages;
 use App\Actions\MoveApplicationToStatus;
 use App\Actions\ScheduleApplicationFitAnalysis;
 use App\Enums\ApplicationAnalysisStatus;
+use App\Enums\CriterionEvidenceSource;
 use App\Enums\InterviewStatus;
 use App\Enums\PhoneCountry;
 use App\Enums\SocialNetwork;
@@ -91,9 +92,11 @@ class ViewApplication extends ViewRecord
 
         if ($status->is_terminal) {
             // The process ended. Correcting the stage stays possible; proposing a
-            // new interview for a rejected or hired candidate does not.
+            // new interview for a rejected or hired candidate does not — not as a
+            // primary action and not buried in the overflow either. Reopening the
+            // candidate into an active stage is what makes recruiting actions
+            // available again, and that stays a human decision.
             $primary[] = $this->moveStatusAction($application)->color('gray');
-            $secondary[] = $this->scheduleInterviewAction($application);
         } elseif ($nextInterview !== null) {
             if ($nextInterview->meeting_url !== null) {
                 $primary[] = $this->joinInterviewAction($nextInterview);
@@ -106,8 +109,12 @@ class ViewApplication extends ViewRecord
             $primary[] = $this->moveStatusAction($application)->color('primary');
             $primary[] = $this->scheduleInterviewAction($application)->color('gray');
         } else {
-            $primary[] = $this->scheduleInterviewAction($application)->color('primary');
-            $primary[] = $this->moveStatusAction($application)->color('gray');
+            // Moving the candidate through the workspace's own workflow leads:
+            // an early custom stage (Screening, Assessment, Manager Review) is
+            // not an implicit instruction to book an interview. Scheduling stays
+            // one click away for when it genuinely is the next step.
+            $primary[] = $this->moveStatusAction($application)->color('primary');
+            $primary[] = $this->scheduleInterviewAction($application)->color('gray');
         }
 
         // A failed evaluation is a recoverable problem, so its fix surfaces
@@ -311,7 +318,7 @@ class ViewApplication extends ViewRecord
      */
     private function headerData(Application $application): array
     {
-        $analysisStatus = $this->enumValue($application->analysis_status);
+        $analysisStatus = $this->evaluationStateKey($application);
         $fit = $this->fitSummary($application);
         $nextInterview = $this->nextInterview($application);
 
@@ -334,6 +341,7 @@ class ViewApplication extends ViewRecord
             'status_color' => $application->status->color,
             'stage_role' => $this->stageRole($application),
             'score' => $fit['score'],
+            'coverage' => $fit['coverage'],
             'needs_validation_count' => $fit['needs_validation_count'],
             'analysis_status' => $analysisStatus,
             'analysis_label' => __("applications.admin.ai.states.{$analysisStatus}.label"),
@@ -385,8 +393,10 @@ class ViewApplication extends ViewRecord
         $nextInterview = $this->nextInterview($application);
 
         return match ($key) {
-            'schedule_interview' => [
-                $this->scheduleInterviewAction($application, 'nextActionScheduleInterview')->color('primary'),
+            'review_candidate' => [
+                $this->moveStatusAction($application, 'nextActionMoveStatus')->color('primary'),
+                $this->openTabAction('nextActionOpenEvaluation', 'evaluation', Heroicon::OutlinedClipboardDocumentCheck),
+                $this->scheduleInterviewAction($application, 'nextActionScheduleInterview')->color('gray'),
             ],
             'prepare_interview' => array_values(array_filter([
                 $nextInterview?->meeting_url === null
@@ -414,6 +424,21 @@ class ViewApplication extends ViewRecord
             'await_evaluation' => [
                 $this->openTabAction('nextActionOpenEvaluation', 'evaluation', Heroicon::OutlinedClipboardDocumentCheck),
             ],
+            // The evaluation is blocked on a decision nobody has made yet: the
+            // job's criteria still need reviewing and confirming.
+            'awaiting_criteria' => array_values(array_filter([
+                JobResource::canEdit($application->job)
+                    ? Action::make('nextActionReviewJobCriteria')
+                        ->label(__('jobs.criteria.confirm_action'))
+                        ->icon(Heroicon::OutlinedClipboardDocumentCheck)
+                        ->color('primary')
+                        ->url(JobResource::getUrl('edit', [
+                            'record' => $application->job,
+                            'activeJobEditTab' => 'ai-criteria',
+                        ], tenant: $application->company))
+                    : null,
+                $this->moveStatusAction($application, 'nextActionMoveStatus')->color('gray'),
+            ])),
             // 'hired' and 'closed': the outcome is the answer, so no recruiting
             // action is offered.
             default => [],
@@ -441,6 +466,8 @@ class ViewApplication extends ViewRecord
             'closed' => Heroicon::OutlinedArchiveBox,
             'prepare_interview' => Heroicon::OutlinedCalendarDays,
             'decide' => Heroicon::OutlinedHandRaised,
+            'awaiting_criteria' => Heroicon::OutlinedClipboardDocumentCheck,
+            'review_candidate' => Heroicon::OutlinedUserCircle,
             'evaluation_failed', 'evaluation_blocked' => Heroicon::OutlinedExclamationTriangle,
             default => Heroicon::OutlinedFlag,
         };
@@ -480,10 +507,11 @@ class ViewApplication extends ViewRecord
             ],
             'fit' => [
                 'status' => $analysisStatus,
-                'label' => __("applications.admin.ai.states.{$analysisStatus}.label"),
+                'label' => __("applications.admin.ai.states.{$this->evaluationStateKey($application)}.label"),
                 'score' => $fit['score'],
+                'coverage' => $fit['coverage'],
                 'needs_validation_count' => $fit['needs_validation_count'],
-                'established_evidence_count' => $fit['established_evidence_count'],
+                'supported_count' => $fit['supported_count'],
                 'url' => ApplicationResource::getUrl('view', [
                     'record' => $application,
                     'section' => 'evaluation',
@@ -506,33 +534,52 @@ class ViewApplication extends ViewRecord
     }
 
     /**
-     * Fit and confidence, read from the stored evaluation. Confidence is not
-     * folded into the score: unknowns reduce certainty, never the fit itself.
+     * Fit, evidence coverage and confidence, read from the stored evaluation.
      *
-     * @return array{score: int|null, needs_validation_count: int, established_evidence_count: int}
+     * Three separate numbers, deliberately never merged. Fit is the weighted
+     * average of the criteria that could be assessed. Coverage is how much of the
+     * weighted criteria the application actually allowed to be assessed at all.
+     * Confidence is how strongly the submitted material supports each assessment.
+     * A single "confidence-adjusted fit" would hide exactly the thing a recruiter
+     * needs to see.
+     *
+     * Nothing is returned unless the evaluation is the *current* one: a fit
+     * measured against criteria the job has since changed is not an answer to
+     * "how does this candidate match this job".
+     *
+     * @return array{score: int|null, coverage: int|null, needs_validation_count: int, supported_count: int}
      */
     private function fitSummary(Application $application): array
     {
-        if ($this->enumValue($application->analysis_status) !== 'completed') {
-            return ['score' => null, 'needs_validation_count' => 0, 'established_evidence_count' => 0];
+        if (! $application->hasCurrentEvaluation()) {
+            return ['score' => null, 'coverage' => null, 'needs_validation_count' => 0, 'supported_count' => 0];
         }
 
         $application->loadMissing('criterionScores');
-
-        $needsValidation = $application->criterionScores
-            ->filter(fn (ApplicationCriterionScore $score): bool => $score->confidence->value !== 'high'
-                && $this->importanceForWeight($score->weight) === 'high')
-            ->count();
 
         return [
             'score' => $application->analysis_score === null
                 ? null
                 : (int) round((float) $application->analysis_score),
-            'needs_validation_count' => $needsValidation,
-            'established_evidence_count' => $application->criterionScores
-                ->filter(fn (ApplicationCriterionScore $score): bool => $score->confidence->value === 'high')
+            'coverage' => $application->analysis_coverage,
+            'needs_validation_count' => $application->criterionScores
+                ->filter(fn (ApplicationCriterionScore $score): bool => $this->needsValidation($score)
+                    && $this->importanceForWeight($score->weight) === 'high')
+                ->count(),
+            'supported_count' => $application->criterionScores
+                ->reject(fn (ApplicationCriterionScore $score): bool => $this->needsValidation($score))
                 ->count(),
         ];
+    }
+
+    /**
+     * A criterion needs human validation when the application either could not
+     * support a judgement at all, or supported it only weakly. Both are
+     * uncertainty; neither is a verdict on the candidate.
+     */
+    private function needsValidation(ApplicationCriterionScore $score): bool
+    {
+        return ! $score->isAssessed() || $score->confidence->value !== 'high';
     }
 
     /**
@@ -555,8 +602,14 @@ class ViewApplication extends ViewRecord
             $application->status->is_final_stage => 'decide',
             $analysisStatus === 'failed' => 'evaluation_failed',
             $analysisStatus === 'pending_quota' => 'evaluation_blocked',
-            in_array($analysisStatus, ['pending', 'processing', 'awaiting_criteria'], strict: true) => 'await_evaluation',
-            default => 'schedule_interview',
+            $analysisStatus === 'awaiting_criteria' => 'awaiting_criteria',
+            in_array($analysisStatus, ['pending', 'processing'], strict: true) => 'await_evaluation',
+            // Deliberately not "schedule an interview". Workspaces run their own
+            // workflows — Applied, Screening, Assessment, Manager Review — and
+            // "no interview exists" is not evidence that an interview is the next
+            // step. Reviewing the candidate and moving them along their own
+            // pipeline is the step that is always true.
+            default => 'review_candidate',
         };
     }
 
@@ -666,17 +719,29 @@ class ViewApplication extends ViewRecord
         return array_values($documents);
     }
 
+    /**
+     * The evaluation state as the recruiter experiences it, which is not always
+     * the stored status: a completed evaluation whose criteria have moved on is
+     * `outdated`, because presenting it as "complete" would be presenting a
+     * measurement of criteria that no longer govern this hiring process.
+     */
+    private function evaluationStateKey(Application $application): string
+    {
+        return $application->hasOutdatedEvaluation()
+            ? 'outdated'
+            : $this->enumValue($application->analysis_status);
+    }
+
     /** @return view-string */
     private function analysisViewName(Application $application): string
     {
-        $status = $this->enumValue($application->analysis_status);
-
-        return match ($status) {
+        return match ($this->evaluationStateKey($application)) {
             'pending' => 'filament.resources.applications.components.ai-analysis-pending',
             'processing' => 'filament.resources.applications.components.ai-analysis-processing',
             'completed' => 'filament.resources.applications.components.ai-analysis-completed',
             'failed' => 'filament.resources.applications.components.ai-analysis-failed',
             'pending_quota' => 'filament.resources.applications.components.ai-analysis-pending-quota',
+            'outdated' => 'filament.resources.applications.components.ai-analysis-outdated',
             default => 'filament.resources.applications.components.ai-analysis-awaiting-criteria',
         };
     }
@@ -686,7 +751,7 @@ class ViewApplication extends ViewRecord
      */
     private function analysisData(Application $application): array
     {
-        $status = $this->enumValue($application->analysis_status);
+        $status = $this->evaluationStateKey($application);
 
         $data = [
             'status' => $status,
@@ -697,63 +762,95 @@ class ViewApplication extends ViewRecord
             'received_at' => $application->created_at->translatedFormat('M j, Y · H:i'),
         ];
 
-        if ($status === 'completed') {
-            $application->loadMissing('criterionScores');
-
-            $data['score'] = $application->analysis_score !== null
-                ? (int) round((float) $application->analysis_score)
-                : null;
-            $data['analyzed_at'] = $application->analyzed_at?->translatedFormat('M j, Y · H:i');
-            $criteria = $application->criterionScores
-                ->map(fn (ApplicationCriterionScore $score): array => [
-                    'criterion' => $score->criterion,
-                    'score' => $score->score,
-                    'weight' => $score->weight,
-                    'importance' => $this->importanceForWeight($score->weight),
-                    'reason' => $score->reason,
-                    'confidence' => $score->confidence->value,
-                    'confidence_rank' => $this->confidenceRank($score->confidence->value),
-                ])
-                ->values();
-            $needsValidation = $criteria
-                ->filter(fn (array $criterion): bool => $criterion['confidence'] !== 'high')
-                ->sortBy([
-                    ['weight', 'desc'],
-                    ['confidence_rank', 'asc'],
-                    ['criterion', 'asc'],
-                ])
-                ->values()
-                ->all();
-            $establishedEvidence = $criteria
-                ->filter(fn (array $criterion): bool => $criterion['confidence'] === 'high')
-                ->sortBy([
-                    ['weight', 'desc'],
-                    ['criterion', 'asc'],
-                ])
-                ->values()
-                ->all();
-
-            $data['criteria'] = [
-                'needs_validation' => $needsValidation,
-                'established_evidence' => $establishedEvidence,
-                'needs_validation_count' => collect($needsValidation)
-                    ->where('importance', 'high')
-                    ->count(),
-                'established_evidence_count' => count($establishedEvidence),
-            ];
-            $application->loadMissing('interviewBriefItems');
-
-            $data['interview_brief_items'] = $application->interviewBriefItems
-                ->map(fn (ApplicationInterviewBriefItem $item): array => [
-                    'criterion' => $item->criterion,
-                    'priority' => $item->priority,
-                    'reason' => $item->reason,
-                    'question' => $item->question,
-                ])
-                ->all();
+        if ($status !== 'completed') {
+            return $data;
         }
 
+        $application->loadMissing(['criterionScores', 'interviewBriefItems']);
+
+        $data['score'] = $application->analysis_score !== null
+            ? (int) round((float) $application->analysis_score)
+            : null;
+        $data['coverage'] = $application->analysis_coverage;
+        $data['analyzed_at'] = $application->analyzed_at?->translatedFormat('M j, Y · H:i');
+
+        $criteria = $application->criterionScores
+            ->map(fn (ApplicationCriterionScore $score): array => [
+                'criterion' => $score->criterion,
+                'score' => $score->score,
+                'is_assessed' => $score->isAssessed(),
+                'weight' => $score->weight,
+                'importance' => $this->importanceForWeight($score->weight),
+                'reason' => $score->reason,
+                'confidence' => $score->confidence->value,
+                'confidence_rank' => $this->confidenceRank($score->confidence->value),
+                'evidence' => $this->evidenceFor($score),
+            ])
+            ->values();
+
+        // Unassessed criteria sit at the top of the validation list: the most
+        // useful thing the evaluation can tell a recruiter is what it could not
+        // establish, not which criterion scored lowest.
+        $needsValidation = $criteria
+            ->filter(fn (array $criterion): bool => ! $criterion['is_assessed'] || $criterion['confidence'] !== 'high')
+            ->sortBy([
+                ['is_assessed', 'asc'],
+                ['weight', 'desc'],
+                ['confidence_rank', 'asc'],
+                ['criterion', 'asc'],
+            ])
+            ->values()
+            ->all();
+        $supported = $criteria
+            ->filter(fn (array $criterion): bool => $criterion['is_assessed'] && $criterion['confidence'] === 'high')
+            ->sortBy([
+                ['weight', 'desc'],
+                ['criterion', 'asc'],
+            ])
+            ->values()
+            ->all();
+
+        $data['criteria'] = [
+            'needs_validation' => $needsValidation,
+            'supported' => $supported,
+            'needs_validation_count' => collect($needsValidation)
+                ->where('importance', 'high')
+                ->count(),
+            'unassessed_count' => collect($needsValidation)
+                ->where('is_assessed', false)
+                ->count(),
+            'supported_count' => count($supported),
+        ];
+
+        $data['interview_brief_items'] = $application->interviewBriefItems
+            ->map(fn (ApplicationInterviewBriefItem $item): array => [
+                'criterion' => $item->criterion,
+                'priority' => $item->priority,
+                'reason' => $item->reason,
+                'question' => $item->question,
+            ])
+            ->all();
+
         return $data;
+    }
+
+    /**
+     * The concrete support the evaluation found for a criterion, and where in the
+     * submitted application it found it. This is what lets "supported by
+     * application evidence" be checked rather than believed — and it is support
+     * found in what the candidate submitted, never external verification.
+     *
+     * @return list<array{source: string, detail: string}>
+     */
+    private function evidenceFor(ApplicationCriterionScore $score): array
+    {
+        return array_map(fn (array $item): array => [
+            // Every stored source came through the enum on the way in; the
+            // fallback only covers a value retired from the enum later.
+            'source' => (string) (CriterionEvidenceSource::tryFrom($item['source'])?->label()
+                ?? __('applications.admin.ai.evidence.sources.application_answer')),
+            'detail' => $item['detail'],
+        ], $score->evidence ?? []);
     }
 
     private function analysisIcon(string $status): string
@@ -763,6 +860,8 @@ class ViewApplication extends ViewRecord
             'completed' => 'heroicon-o-document-magnifying-glass',
             'failed' => 'heroicon-o-x-circle',
             'pending_quota' => 'heroicon-o-bolt-slash',
+            'outdated' => 'heroicon-o-arrow-path',
+            'awaiting_criteria' => 'heroicon-o-clipboard-document-check',
             default => 'heroicon-o-clock',
         };
     }
@@ -774,6 +873,7 @@ class ViewApplication extends ViewRecord
             'completed' => 'gray',
             'failed' => 'danger',
             'pending_quota' => 'warning',
+            'outdated' => 'warning',
             default => 'gray',
         };
     }

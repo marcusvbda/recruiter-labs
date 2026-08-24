@@ -96,9 +96,12 @@ class ViewCandidate extends ViewRecord
                         $application->status->is_final_stage => 'final_stage',
                         default => null,
                     },
-                    'score' => $application->analysis_score === null
-                        ? null
-                        : (int) round((float) $application->analysis_score),
+                    // Only a fit that still measures the job's confirmed criteria
+                    // is shown; an evaluation the criteria have moved past is not
+                    // this candidate's current match for that process.
+                    'score' => $application->hasCurrentEvaluation() && $application->analysis_score !== null
+                        ? (int) round((float) $application->analysis_score)
+                        : null,
                     'applied_at' => $application->created_at->translatedFormat('M j, Y'),
                     // Where they are is only half the answer; how long they have
                     // been there is what tells the recruiter whether this process

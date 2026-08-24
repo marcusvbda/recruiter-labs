@@ -34,8 +34,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property CoverLetterType $cover_letter_type
  * @property JobCriteriaProcessingStatus $criteria_processing_status
  * @property int $criteria_generation
+ * @property int|null $criteria_confirmed_generation
+ * @property CarbonImmutable|null $criteria_confirmed_at
+ * @property int|null $criteria_confirmed_by_id
  */
-#[Fillable(['company_id', 'pipeline_id', 'name', 'application_locale', 'description', 'starts_at', 'ends_at', 'published', 'applications_paused', 'application_limit', 'hiring_target', 'cover_letter_required', 'cover_letter_type', 'criteria_processing_status', 'criteria_generation'])]
+#[Fillable(['company_id', 'pipeline_id', 'name', 'application_locale', 'description', 'starts_at', 'ends_at', 'published', 'applications_paused', 'application_limit', 'hiring_target', 'cover_letter_required', 'cover_letter_type', 'criteria_processing_status', 'criteria_generation', 'criteria_confirmed_generation', 'criteria_confirmed_at', 'criteria_confirmed_by_id'])]
 class Job extends Model
 {
     /** @use HasFactory<JobFactory> */
@@ -86,6 +89,8 @@ class Job extends Model
             'cover_letter_type' => CoverLetterType::class,
             'criteria_processing_status' => JobCriteriaProcessingStatus::class,
             'criteria_generation' => 'integer',
+            'criteria_confirmed_generation' => 'integer',
+            'criteria_confirmed_at' => 'immutable_datetime',
         ];
     }
 
@@ -148,6 +153,33 @@ class Job extends Model
     public function canChangePipeline(): bool
     {
         return ! $this->applications()->exists();
+    }
+
+    /**
+     * Whether the criteria currently stored for this job are the criteria a
+     * recruiter confirmed. Both halves matter: the status says a human signed
+     * off, and the generation says they signed off on *this* revision — a later
+     * edit or rerun advances the generation and the confirmation goes stale.
+     *
+     * This is the only gate candidate evaluation is allowed to pass through.
+     */
+    public function hasConfirmedCriteria(): bool
+    {
+        return $this->criteria_processing_status === JobCriteriaProcessingStatus::Completed
+            && $this->criteria_confirmed_generation !== null
+            && $this->criteria_confirmed_generation === $this->criteria_generation;
+    }
+
+    /** Criteria exist and are waiting for a recruiter to confirm them. */
+    public function criteriaAwaitReview(): bool
+    {
+        return $this->criteria_processing_status === JobCriteriaProcessingStatus::AwaitingReview;
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function criteriaConfirmedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'criteria_confirmed_by_id');
     }
 
     /** @return HasMany<JobCriterion, $this> */

@@ -58,18 +58,42 @@
             :heading="__('applications.admin.summary.fit_heading')"
             icon="heroicon-o-clipboard-document-check"
         >
-            @if ($summary['fit']['score'] !== null)
-                <p class="text-3xl font-bold tracking-tight text-gray-950 tabular-nums dark:text-white">
-                    {{ $summary['fit']['score'] }}<span class="text-lg font-medium text-gray-400">/100</span>
-                </p>
+            @if ($summary['fit']['score'] !== null || $summary['fit']['coverage'] !== null)
+                {{-- Fit and evidence coverage stand side by side, never combined:
+                     one says how well the assessable criteria were matched, the
+                     other how much could be assessed at all. --}}
+                <div class="flex flex-wrap gap-x-8 gap-y-3">
+                    @if ($summary['fit']['score'] !== null)
+                        <div>
+                            <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                                {{ __('applications.admin.ai.overall_score_label') }}
+                            </p>
+                            <p class="mt-1 text-3xl font-bold tracking-tight text-gray-950 tabular-nums dark:text-white">
+                                {{ $summary['fit']['score'] }}<span class="text-lg font-medium text-gray-400">/100</span>
+                            </p>
+                        </div>
+                    @endif
+
+                    @if ($summary['fit']['coverage'] !== null)
+                        <div>
+                            <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                                {{ __('applications.admin.ai.coverage_label') }}
+                            </p>
+                            <p class="mt-1 text-3xl font-bold tracking-tight text-gray-950 tabular-nums dark:text-white">
+                                {{ $summary['fit']['coverage'] }}<span class="text-lg font-medium text-gray-400">%</span>
+                            </p>
+                        </div>
+                    @endif
+                </div>
+
                 <ul class="mt-4 space-y-2 text-sm">
                     <li class="flex items-center justify-between gap-3">
                         <span class="text-gray-500 dark:text-gray-400">{{ __('applications.admin.summary.needs_validation_label') }}</span>
                         <span class="font-semibold text-gray-950 tabular-nums dark:text-white">{{ $summary['fit']['needs_validation_count'] }}</span>
                     </li>
                     <li class="flex items-center justify-between gap-3">
-                        <span class="text-gray-500 dark:text-gray-400">{{ __('applications.admin.summary.established_evidence_label') }}</span>
-                        <span class="font-semibold text-gray-950 tabular-nums dark:text-white">{{ $summary['fit']['established_evidence_count'] }}</span>
+                        <span class="text-gray-500 dark:text-gray-400">{{ __('applications.admin.summary.supported_label') }}</span>
+                        <span class="font-semibold text-gray-950 tabular-nums dark:text-white">{{ $summary['fit']['supported_count'] }}</span>
                     </li>
                 </ul>
                 <p class="mt-4 text-xs leading-5 text-gray-500 dark:text-gray-400">

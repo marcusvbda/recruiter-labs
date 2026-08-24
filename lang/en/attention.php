@@ -50,7 +50,7 @@ return [
         ],
         'job_stalled' => [
             'title' => ':job has applications but no progress',
-            'explanation' => '{1} 1 candidate applied and none has reached an interview, a final stage or a hire.|[2,*] :count candidates applied and none has reached an interview, a final stage or a hire.',
+            'explanation' => '{1} 1 of :applications candidates has been waiting past what their stage allows, and nobody has reached an interview, a final stage or a hire.|[2,*] :count of :applications candidates have been waiting past what their stage allows, and nobody has reached an interview, a final stage or a hire.',
             'action' => 'Open pipeline',
         ],
         'job_ending_without_finalists' => [

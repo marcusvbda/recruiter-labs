@@ -50,7 +50,7 @@ return [
         ],
         'job_stalled' => [
             'title' => ':job tem candidaturas, mas nenhum avanço',
-            'explanation' => '{1} 1 candidato se inscreveu e nenhum chegou a uma entrevista, etapa final ou contratação.|[2,*] :count candidatos se inscreveram e nenhum chegou a uma entrevista, etapa final ou contratação.',
+            'explanation' => '{1} 1 de :applications candidatos está esperando além do que a etapa permite, e nenhum chegou a uma entrevista, etapa final ou contratação.|[2,*] :count de :applications candidatos estão esperando além do que a etapa permite, e nenhum chegou a uma entrevista, etapa final ou contratação.',
             'action' => 'Abrir pipeline',
         ],
         'job_ending_without_finalists' => [

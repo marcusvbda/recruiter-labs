@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Enums\ApplicationLocale;
 use App\Enums\ApplicationQuestionType;
 use App\Enums\CoverLetterType;
+use App\Enums\JobCriteriaProcessingStatus;
 use App\Models\Company;
 use App\Models\CvFileType;
 use App\Models\Job;
@@ -170,6 +171,18 @@ HTML,
                     'reason' => 'The role benefits from product thinking and evidence of delivering valuable features through production.',
                 ],
             ]);
+
+            // These criteria are authored here, by a human, not proposed by a
+            // model — so the demo workspace can legitimately record them as
+            // confirmed and show a working evaluation flow. A seeder must never
+            // mark AI-generated criteria as human-confirmed.
+            $job->forceFill([
+                'criteria_processing_status' => JobCriteriaProcessingStatus::Completed,
+                'criteria_generation' => max(1, $job->criteria_generation),
+                'criteria_confirmed_generation' => max(1, $job->criteria_generation),
+                'criteria_confirmed_at' => now(),
+                'criteria_confirmed_by_id' => $admin->getKey(),
+            ])->save();
 
             $this->seedAnalytics($job, $admin);
             $this->seedDraftJob($company, $externalPipeline);

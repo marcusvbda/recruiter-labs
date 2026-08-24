@@ -41,6 +41,12 @@
             </x-filament::badge>
         @endif
 
+        @if ($header['coverage'] !== null)
+            <x-filament::badge color="gray" icon="heroicon-m-chart-pie">
+                {{ __('applications.admin.summary.coverage_badge', ['coverage' => $header['coverage']]) }}
+            </x-filament::badge>
+        @endif
+
         @if ($header['needs_validation_count'] > 0)
             <x-filament::badge color="warning" icon="heroicon-m-question-mark-circle">
                 {{ trans_choice('applications.admin.summary.needs_validation', $header['needs_validation_count'], ['count' => $header['needs_validation_count']]) }}

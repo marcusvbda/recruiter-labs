@@ -4,7 +4,6 @@ namespace App\Filament\Resources\Jobs\Widgets;
 
 use App\Actions\MoveApplicationToStatus;
 use App\Enums\AnalysisConfidence;
-use App\Enums\ApplicationAnalysisStatus;
 use App\Enums\ApplicationSource;
 use App\Enums\InterviewCalendarSyncStatus;
 use App\Enums\InterviewRsvpStatus;
@@ -162,14 +161,20 @@ class JobPipelineKanban extends StateKanbanBoard
             'completed' => 'heroicon-m-document-check',
             'failed' => 'heroicon-m-exclamation-triangle',
             'pending_quota' => 'heroicon-m-bolt-slash',
+            'awaiting_criteria' => 'heroicon-m-clipboard-document-check',
             default => 'heroicon-m-clock',
         };
     }
 
+    /**
+     * A fit only appears once it is the *current* one. An evaluation produced
+     * against criteria the job has since changed is history, and a badge is not
+     * the place to explain that.
+     */
     public function showsScoreBadge(Application $application): bool
     {
-        return $application->analysis_status === ApplicationAnalysisStatus::Completed
-            && $application->analysis_score !== null;
+        return $application->analysis_score !== null
+            && $application->hasCurrentEvaluation();
     }
 
     private function enumValue(mixed $value): string
@@ -189,7 +194,10 @@ class JobPipelineKanban extends StateKanbanBoard
         return Application::query()
             ->whereBelongsTo($this->record, 'job')
             ->where('company_id', $this->record->company_id)
-            ->with(['candidate', 'status', 'upcomingInterviews'])
+            // `job` is loaded because whether an evaluation is still current
+            // depends on the job's confirmed criteria revision, not on the
+            // application alone.
+            ->with(['candidate', 'status', 'job', 'upcomingInterviews'])
             // Only evidence that is both weakly established and important enough
             // to matter is worth a badge — the same rule the evaluation tab uses.
             ->withCount(['criterionScores as needs_validation_count' => fn (Builder $scores): Builder => $scores
@@ -235,11 +243,19 @@ class JobPipelineKanban extends StateKanbanBoard
 
         $analysisStatus = $this->enumValue($application->analysis_status);
 
-        if ($analysisStatus === 'failed' || $analysisStatus === 'pending_quota') {
+        if ($analysisStatus === 'failed' || $analysisStatus === 'pending_quota' || $analysisStatus === 'awaiting_criteria') {
             $signals[] = [
                 'label' => $this->getAnalysisLabel($application),
                 'color' => $this->getAnalysisColor($application),
                 'icon' => $this->getAnalysisIcon($application),
+            ];
+        }
+
+        if ($application->hasOutdatedEvaluation()) {
+            $signals[] = [
+                'label' => (string) __('applications.admin.ai.states.outdated.label'),
+                'color' => 'gray',
+                'icon' => 'heroicon-m-arrow-path',
             ];
         }
 
@@ -255,7 +271,7 @@ class JobPipelineKanban extends StateKanbanBoard
 
         $needsValidation = (int) $application->getAttribute('needs_validation_count');
 
-        if ($needsValidation > 0) {
+        if ($needsValidation > 0 && $application->hasCurrentEvaluation()) {
             $signals[] = [
                 'label' => trans_choice('applications.admin.summary.needs_validation', $needsValidation, ['count' => $needsValidation]),
                 'color' => 'warning',
@@ -317,12 +333,20 @@ class JobPipelineKanban extends StateKanbanBoard
     }
 
     /**
-     * Highest Candidate Evaluation score appears first within each column.
-     * Explicit null ordering keeps evaluated zero scores ahead of applications
-     * that do not have a completed score and behaves consistently on PostgreSQL.
+     * Longest waiting in the stage first — operational work state, never AI fit.
      *
-     * `created_at` asc then `updated_at` desc are kept as tie-breakers, for
-     * parity with the parent class's default card ordering.
+     * A column *is* a status, so every card in it shares that stage's own
+     * `attention_after_days` threshold. Ordering by `status_entered_at` ascending
+     * therefore puts the genuinely overdue candidates at the top of the column by
+     * construction, without a second query or a derived priority column.
+     *
+     * Fit deliberately takes no part in this. Sorting the board by
+     * `analysis_score` would make "highest AI score first" the default order a
+     * recruiter reads candidates in, which is an automated hiring recommendation
+     * wearing a layout's clothes. Fit stays on the card as context.
+     *
+     * `created_at` then `id` are deterministic tie-breakers, so two candidates who
+     * entered a stage in the same second do not swap places between renders.
      *
      * @template TModel of Model
      *
@@ -332,10 +356,9 @@ class JobPipelineKanban extends StateKanbanBoard
     private function applyCardOrdering(Builder $query): Builder
     {
         return $query
-            ->orderByRaw('CASE WHEN analysis_score IS NULL THEN 1 ELSE 0 END')
-            ->orderByDesc('analysis_score')
+            ->orderBy('status_entered_at')
             ->orderBy('created_at')
-            ->orderByDesc('updated_at');
+            ->orderBy('id');
     }
 
     /**

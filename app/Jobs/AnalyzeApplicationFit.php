@@ -7,13 +7,13 @@ use App\Ai\Agents\ScoreApplicationAgainstCriteria;
 use App\Enums\AiUsageStatus;
 use App\Enums\ApplicationAnalysisStatus;
 use App\Enums\ApplicationDocumentType;
-use App\Enums\JobCriteriaProcessingStatus;
 use App\Enums\Limit;
 use App\Models\AiAgentResponseCache;
 use App\Models\AiUsageRecord;
 use App\Models\Application;
 use App\Services\AiCredentialsResolver;
 use App\Services\AiUsageTracker;
+use App\Services\CandidateEvaluationContextSanitizer;
 use App\Services\LimitManager;
 use App\Services\ResumeTextExtractor;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
@@ -71,6 +71,7 @@ class AnalyzeApplicationFit implements ShouldBeUnique, ShouldQueue
         AiCredentialsResolver $credentialsResolver,
         LimitManager $limitManager,
         ResumeTextExtractor $resumeTextExtractor,
+        CandidateEvaluationContextSanitizer $contextSanitizer,
     ): void {
         $application = Application::query()
             ->with(['job.jobCriteria', 'candidate', 'answers', 'documents', 'company'])
@@ -80,7 +81,10 @@ class AnalyzeApplicationFit implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        if ($application->job->criteria_processing_status !== JobCriteriaProcessingStatus::Completed || $application->job->jobCriteria->isEmpty()) {
+        // A candidate is never evaluated against criteria no recruiter has
+        // confirmed, and the gate is re-checked here: criteria can be edited
+        // between scheduling and this job actually running.
+        if (! $application->job->hasConfirmedCriteria() || $application->job->jobCriteria->isEmpty()) {
             $this->markCurrentGenerationAs(ApplicationAnalysisStatus::AwaitingCriteria);
 
             return;
@@ -92,8 +96,11 @@ class AnalyzeApplicationFit implements ShouldBeUnique, ShouldQueue
         $resumeDocument = $application->documents->firstWhere('type', ApplicationDocumentType::Cv);
         $resumeText = $resumeDocument === null ? null : $resumeTextExtractor->extract($resumeDocument);
 
+        // Direct candidate identifiers are removed before anything reaches the
+        // provider, and the fingerprint below is built from that reduced
+        // context — never from the identity-bearing original.
         $agent = new ScoreApplicationAgainstCriteria($application);
-        $context = $agent->applicationContext($resumeText);
+        $context = $agent->applicationContext($contextSanitizer->sanitize($application, $resumeText));
         $fingerprint = ScoreApplicationAgainstCriteria::CACHE_SCHEMA_VERSION."\n---\n".$agent->instructions()."\n---\n".$context;
 
         $cached = AiAgentResponseCache::lookup(self::OPERATION, $model, $fingerprint);

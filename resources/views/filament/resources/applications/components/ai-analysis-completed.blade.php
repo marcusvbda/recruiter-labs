@@ -15,17 +15,37 @@
             </div>
         </div>
 
-        @if ($analysis['score'] !== null)
-            <div class="sm:text-right">
-                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                    {{ __('applications.admin.ai.overall_score_label') }}
-                </p>
-                <p class="mt-1 text-2xl font-semibold text-gray-950 dark:text-white">
-                    {{ $analysis['score'] }}<span class="text-sm font-medium text-gray-500 dark:text-gray-400">/100</span>
-                </p>
-            </div>
-        @endif
+        {{-- Fit and evidence coverage answer two different questions and are
+             never merged into one number: a candidate can match everything that
+             could be checked while most of the profile is still unknown. --}}
+        <div class="flex flex-wrap gap-x-8 gap-y-3 sm:justify-end">
+            @if ($analysis['score'] !== null)
+                <div class="sm:text-right">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        {{ __('applications.admin.ai.overall_score_label') }}
+                    </p>
+                    <p class="mt-1 text-2xl font-semibold text-gray-950 tabular-nums dark:text-white">
+                        {{ $analysis['score'] }}<span class="text-sm font-medium text-gray-500 dark:text-gray-400">/100</span>
+                    </p>
+                </div>
+            @endif
+
+            @if ($analysis['coverage'] !== null)
+                <div class="sm:text-right">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        {{ __('applications.admin.ai.coverage_label') }}
+                    </p>
+                    <p class="mt-1 text-2xl font-semibold text-gray-950 tabular-nums dark:text-white">
+                        {{ $analysis['coverage'] }}<span class="text-sm font-medium text-gray-500 dark:text-gray-400">%</span>
+                    </p>
+                </div>
+            @endif
+        </div>
     </div>
+
+    <p class="text-xs leading-5 text-gray-500 dark:text-gray-400">
+        {{ __('applications.admin.ai.scope_disclosure') }}
+    </p>
 
     <div class="flex flex-col gap-3">
         <div>
@@ -35,8 +55,13 @@
                 <span class="rounded-full bg-warning-50 px-2.5 py-1 dark:bg-warning-950/30">
                     {{ trans_choice('applications.admin.ai.criteria.needs_validation_count', $analysis['criteria']['needs_validation_count'], ['count' => $analysis['criteria']['needs_validation_count']]) }}
                 </span>
+                @if ($analysis['criteria']['unassessed_count'] > 0)
+                    <span class="rounded-full bg-gray-100 px-2.5 py-1 dark:bg-white/10">
+                        {{ trans_choice('applications.admin.ai.criteria.unassessed_count', $analysis['criteria']['unassessed_count'], ['count' => $analysis['criteria']['unassessed_count']]) }}
+                    </span>
+                @endif
                 <span class="rounded-full bg-gray-100 px-2.5 py-1 dark:bg-white/10">
-                    {{ trans_choice('applications.admin.ai.criteria.established_evidence_count', $analysis['criteria']['established_evidence_count'], ['count' => $analysis['criteria']['established_evidence_count']]) }}
+                    {{ trans_choice('applications.admin.ai.criteria.supported_count', $analysis['criteria']['supported_count'], ['count' => $analysis['criteria']['supported_count']]) }}
                 </span>
             </div>
         </div>
@@ -45,28 +70,11 @@
             <h4 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                 {{ __('applications.admin.ai.criteria.needs_validation_heading') }}</h4>
             @forelse ($analysis['criteria']['needs_validation'] as $criterionScore)
-                <div class="rounded-lg border border-gray-200 p-4 dark:border-white/10">
-                    <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                        <div>
-                            <p class="text-sm font-medium text-gray-950 dark:text-white">{{ $criterionScore['criterion'] }}</p>
-                            <div class="mt-2 flex flex-wrap gap-2 text-xs font-medium text-gray-500 dark:text-gray-400">
-                                <span>{{ __('applications.admin.ai.criteria.weight_label', ['weight' => $criterionScore['weight']]) }}</span>
-                                <span>·</span>
-                                <span>{{ __('applications.admin.ai.criteria.importance_label') }} {{ __("applications.admin.ai.criteria.importance.{$criterionScore['importance']}") }}</span>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <x-filament::badge color="gray">{{ __('applications.admin.ai.criteria.fit_label', ['score' => $criterionScore['score']]) }}</x-filament::badge>
-                            <x-filament::badge color="warning" icon="heroicon-o-shield-exclamation">
-                                {{ __('applications.admin.ai.confidence_label') }} {{ __("applications.admin.ai.confidence.{$criterionScore['confidence']}") }}
-                            </x-filament::badge>
-                        </div>
-                    </div>
-                    <div class="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-white/10">
-                        <div class="h-full rounded-full bg-gray-500 dark:bg-gray-400" style="width: {{ $criterionScore['score'] }}%"></div>
-                    </div>
-                    <p class="mt-2 text-sm leading-6 text-gray-600 dark:text-gray-300">{{ $criterionScore['reason'] }}</p>
-                </div>
+                @include('filament.resources.applications.components.criterion-result', [
+                    'criterionScore' => $criterionScore,
+                    'confidenceColor' => 'warning',
+                    'confidenceIcon' => 'heroicon-o-shield-exclamation',
+                ])
             @empty
                 <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('applications.admin.ai.criteria.no_needs_validation') }}</p>
             @endforelse
@@ -74,32 +82,15 @@
 
         <div class="flex flex-col gap-3">
             <h4 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                {{ __('applications.admin.ai.criteria.established_evidence_heading') }}</h4>
-            @forelse ($analysis['criteria']['established_evidence'] as $criterionScore)
-                <div class="rounded-lg border border-gray-200 p-4 dark:border-white/10">
-                    <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                        <div>
-                            <p class="text-sm font-medium text-gray-950 dark:text-white">{{ $criterionScore['criterion'] }}</p>
-                            <div class="mt-2 flex flex-wrap gap-2 text-xs font-medium text-gray-500 dark:text-gray-400">
-                                <span>{{ __('applications.admin.ai.criteria.weight_label', ['weight' => $criterionScore['weight']]) }}</span>
-                                <span>·</span>
-                                <span>{{ __('applications.admin.ai.criteria.importance_label') }} {{ __("applications.admin.ai.criteria.importance.{$criterionScore['importance']}") }}</span>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <x-filament::badge color="gray">{{ __('applications.admin.ai.criteria.fit_label', ['score' => $criterionScore['score']]) }}</x-filament::badge>
-                            <x-filament::badge color="success" icon="heroicon-o-shield-check">
-                                {{ __('applications.admin.ai.confidence_label') }} {{ __("applications.admin.ai.confidence.{$criterionScore['confidence']}") }}
-                            </x-filament::badge>
-                        </div>
-                    </div>
-                    <div class="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-white/10">
-                        <div class="h-full rounded-full bg-gray-500 dark:bg-gray-400" style="width: {{ $criterionScore['score'] }}%"></div>
-                    </div>
-                    <p class="mt-2 text-sm leading-6 text-gray-600 dark:text-gray-300">{{ $criterionScore['reason'] }}</p>
-                </div>
+                {{ __('applications.admin.ai.criteria.supported_heading') }}</h4>
+            @forelse ($analysis['criteria']['supported'] as $criterionScore)
+                @include('filament.resources.applications.components.criterion-result', [
+                    'criterionScore' => $criterionScore,
+                    'confidenceColor' => 'success',
+                    'confidenceIcon' => 'heroicon-o-shield-check',
+                ])
             @empty
-                <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('applications.admin.ai.criteria.no_established_evidence') }}</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('applications.admin.ai.criteria.no_supported') }}</p>
             @endforelse
         </div>
     </div>

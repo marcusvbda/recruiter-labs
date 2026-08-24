@@ -2,13 +2,20 @@
 
 namespace App\Actions;
 
-use App\Enums\ApplicationAnalysisStatus;
 use App\Enums\JobCriteriaProcessingStatus;
-use App\Models\Application;
 use App\Models\Job;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
+/**
+ * Stores the criteria and job review an extraction produced.
+ *
+ * The result is a *suggestion*: it lands in
+ * {@see JobCriteriaProcessingStatus::AwaitingReview}, editable and clearly
+ * AI-assisted, and no candidate evaluation runs against it. A recruiter has to
+ * confirm it first — {@see ConfirmJobCriteria} — because extraction finishing is
+ * not the same thing as evaluation criteria being approved.
+ */
 class ReplaceJobCriteria
 {
     /**
@@ -25,7 +32,10 @@ class ReplaceJobCriteria
                 'criteria.*.criterion' => ['required', 'string', 'max:150'],
                 'criteria.*.weight' => ['required', 'integer', 'between:0,10'],
                 'criteria.*.reason' => ['required', 'string', 'max:150'],
-                'review_alerts' => ['required', 'array', 'max:5'],
+                // `present`, not `required`: the agent's schema allows zero alerts,
+                // and "no material issues found" is a valid job review that
+                // `required` would reject as a missing field.
+                'review_alerts' => ['present', 'array', 'max:5'],
                 'review_alerts.*' => ['required', 'array:category,severity,excerpt,issue,suggestion'],
                 'review_alerts.*.category' => ['required', 'string', 'max:80'],
                 'review_alerts.*.severity' => ['required', 'string', 'in:high,medium,low'],
@@ -65,20 +75,13 @@ class ReplaceJobCriteria
             $lockedJob->reviewAlerts()->createMany($alertRows);
 
             $lockedJob->forceFill([
-                'criteria_processing_status' => JobCriteriaProcessingStatus::Completed,
+                'criteria_processing_status' => JobCriteriaProcessingStatus::AwaitingReview,
             ])->saveQuietly();
+
+            $job->setRawAttributes($lockedJob->getAttributes(), true);
 
             return true;
         });
-
-        if ($replaced) {
-            $job->applications()
-                ->where('analysis_status', ApplicationAnalysisStatus::AwaitingCriteria)
-                ->get()
-                ->each(function (Application $application): void {
-                    app(ScheduleApplicationFitAnalysis::class)->handle($application);
-                });
-        }
 
         return $replaced;
     }

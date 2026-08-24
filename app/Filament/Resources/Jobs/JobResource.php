@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Jobs;
 
+use App\Filament\Resources\Applications\ApplicationResource;
 use App\Filament\Resources\Jobs\Pages\CreateJob;
 use App\Filament\Resources\Jobs\Pages\EditJob;
 use App\Filament\Resources\Jobs\Pages\ListJobs;
@@ -44,6 +45,29 @@ class JobResource extends Resource
     public static function getNavigationLabel(): string
     {
         return __('jobs.navigation_label');
+    }
+
+    /**
+     * The application workspace is registered without its own navigation entry —
+     * a recruiter reaches a candidate from inside a hiring process, not from the
+     * sidebar. That left every application page with no active sidebar item at
+     * all, so the sidebar silently lost the recruiter's place on the one screen
+     * they spend the most time in.
+     *
+     * Jobs is the honest answer: the application belongs to a hiring process,
+     * which is exactly what the page's own breadcrumbs already say
+     * (Jobs → job → candidate).
+     *
+     * @return string|array<string>
+     */
+    public static function getNavigationItemActiveRoutePattern(): string|array
+    {
+        // Both sides may already be a list of patterns, so they are flattened
+        // rather than nested: `routeIs()` matches a flat list of patterns only.
+        return [
+            ...(array) parent::getNavigationItemActiveRoutePattern(),
+            ...(array) ApplicationResource::getNavigationItemActiveRoutePattern(),
+        ];
     }
 
     public static function form(Schema $schema): Schema

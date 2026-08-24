@@ -196,6 +196,14 @@ I do it* — a page that only exposes an entity has not finished its job.
   trustworthy data behind it is not implemented. Each signal contributes a
   bounded number of items and the remainder stays counted in
   `RecruitmentAttentionQueue::hiddenCount()` — never silently dropped.
+- **A signal needs waiting evidence, and the most specific one wins.** A job is
+  not stalled because candidates arrived, nobody has an interview yet, or it is
+  new: "stalled" requires applications genuinely overdue against their stage's
+  own threshold with nothing having moved forward. Two items must never ask for
+  one decision — a finalist awaiting a decision raises `DecisionPending`, not
+  also `StageOverdue`, and a campaign ending without finalists explains itself
+  without a generic `JobStalled` beside it. Keep this as explicit conditions in
+  `RecruitmentAttentionService`; do not grow a rule engine.
 - **Attention scope is deliberate:** interview items are personal (the signed-in
   recruiter's calendar), application items cover every published job including
   ones whose campaign window closed, and job items cover currently active
@@ -241,6 +249,13 @@ I do it* — a page that only exposes an entity has not finished its job.
   disappear.
 - **Navigation badges must be actionable.** No raw record totals in the sidebar,
   and no invented notification counts.
+- **Every page keeps the sidebar pointing somewhere.** A resource may be
+  registered without its own navigation entry — the application workspace is
+  reached from inside a hiring process, not from the sidebar — but it must never
+  leave the sidebar with nothing selected. Claim the page from the nav item it
+  belongs under via `getNavigationItemActiveRoutePattern()`, matching the page's
+  own breadcrumbs: application pages keep **Jobs** active. A test asserts no
+  admin route is left unclaimed.
 - **Normal plan and AI usage belong in Settings.** The persistent topbar is
   reserved for the exception — an AI allowance close to blocking candidate
   evaluations. Access to Plan and AI usage is never removed, only relocated.
@@ -297,6 +312,118 @@ Every agent (`App\Ai\Agents\*`, using the Laravel AI SDK) must follow these conv
 **Keep instructions short.** The system prompt is sent on every call — trim it to the essential task description, format note (if the context encoding needs explaining), and constraints. Avoid restating things the schema already enforces.
 
 **Verify token savings with a real call.** After any token-efficiency change, dispatch a real request against the actual provider (not `Agent::fake()`) and compare the recorded `input_tokens`/`output_tokens`/`total_tokens` (via `AiUsageRecord`) against a baseline. Faked responses don't exercise the real tokenizer, so they can't confirm a token-reduction claim — only a live call can.
+
+## Evaluation integrity
+
+The product's thesis is that a recruiter's judgement, supported by application
+evidence, beats a model's opinion. Everything below exists so the product cannot
+quietly claim more than it knows. AI proposes; Laravel computes; a human decides.
+
+### Invariants
+
+- **AI proposes evaluation criteria; a human confirms the ones that govern
+  candidate evaluation.** A finished extraction lands in
+  `JobCriteriaProcessingStatus::AwaitingReview` — editable, clearly labelled as
+  an AI suggestion, and authoritative for nothing. `ConfirmJobCriteria` is the
+  only path to `Completed`, and it records `criteria_confirmed_generation`,
+  `criteria_confirmed_at` and `criteria_confirmed_by_id`. Extraction finishing is
+  not criteria being approved.
+- **Candidate evaluation cannot run against unconfirmed criteria.** The single
+  gate is `Job::hasConfirmedCriteria()` — status *and* confirmed revision — and
+  both `ScheduleApplicationFitAnalysis` and `AnalyzeApplicationFit` check it, the
+  second because criteria can change between queueing and running. Until then the
+  application waits in `ApplicationAnalysisStatus::AwaitingCriteria`, and
+  confirming releases it through the existing queue, quota and BYOK path. Never
+  bypass those actions.
+- **An evaluation belongs to the criteria revision that produced it.**
+  `applications.analysis_criteria_generation` records it, and
+  `Application::hasCurrentEvaluation()` is the only way to ask whether a stored
+  fit still describes this hiring process. `criteria_generation` doubles as the
+  criteria revision: `RequireJobCriteriaReview` advances it, which invalidates an
+  in-flight extraction and the recorded confirmation in one write.
+- **A stale evaluation is never presented as current.** Scores are not deleted —
+  they stop being shown as the answer. Every surface that displays fit (header,
+  summary, evaluation tab, Kanban card, candidate view) goes through
+  `hasCurrentEvaluation()`, and the evaluation tab renders an explicit
+  `outdated` state instead. Reconfirming reschedules in-process applications;
+  terminal ones keep their historical evaluation.
+- **Only evaluation-relevant job changes cost the confirmation.** Title,
+  description, application locale, application questions and cover-letter
+  configuration feed the criteria, as do the criteria themselves. Campaign dates,
+  paused intake, hiring target and other operational metadata do not.
+  `EditJob` snapshots those inputs around the save and only then calls
+  `RequireJobCriteriaReview` — never increment on every edit, or recruiters learn
+  to click through the confirmation without reading it.
+- **Direct candidate identifiers are removed from the AI evaluation context.**
+  `CandidateEvaluationContextSanitizer` deterministically redacts the stored
+  name (and its word-bounded parts), email, phone and social profiles, plus any
+  email address, `+`-prefixed or parenthesised phone number, and known
+  personal-profile URL, into `[redacted-name]` / `[redacted-email]` /
+  `[redacted-phone]` / `[redacted-profile]`. `candidate_name` is not in the
+  payload at all, and neither is referral or any other sourcing metadata.
+- **Identity reduction is never marketed as anonymity.** Employers,
+  institutions, technologies, projects, titles, dates, tenure, qualifications and
+  numbers stay — they are the evidence. Never build a protected-characteristic
+  detector or infer sensitive attributes. Copy may say only that direct candidate
+  identifiers are excluded from the AI evaluation context; never "anonymous",
+  "unbiased", "bias-free", "objective" or "legally compliant". Candidate identity
+  stays fully visible to the human recruiter everywhere else.
+- **Unknown evidence produces a null fit, never an invented penalty.**
+  `application_criterion_scores.score` is nullable: null means the application
+  did not support a judgement, and it is not 0, not 50, not a failure. Nothing
+  may substitute a number after the model returned unknown, and a null score is
+  normalised to low confidence.
+- **Overall fit excludes unknown criteria.** It is the weighted average over
+  criteria with a non-null score only — unknowns are in neither numerator nor
+  denominator. When every criterion carries zero weight each counts once.
+- **Evidence coverage is separate from fit, and confidence from both.**
+  `applications.analysis_coverage` is assessed weight over total weight, 0-100.
+  Display fit and coverage as two figures; never merge them into a
+  "confidence-adjusted fit", never colour fit as pass/fail, and never turn
+  coverage into a second ranking metric.
+- **Confidence means strength of support in the submitted material** — not
+  probability of a good hire, not external verification, not statistical
+  certainty. The product verifies nothing against the outside world, so copy uses
+  "supported by application evidence", never "verified" or "proven".
+- **Each criterion result carries structured provenance.**
+  `application_criterion_scores.evidence` holds at most three
+  `{source, detail}` items, `source` being a `CriterionEvidenceSource`
+  (`resume`, `cover_letter`, `application_answer`). Evidence comes only from the
+  sanitized context, is dropped when the criterion could not be assessed, and is
+  never an external-verification claim.
+- **AI output maps to `JobCriterion` by ID.** The context carries
+  `criterion_id`; `ReplaceApplicationFitAnalysis` reads the authoritative
+  criterion text and weight from the current record, validates that every current
+  criterion appears exactly once with nothing unknown, missing or duplicated and
+  nothing from another tenant, and fails the execution otherwise. There is no
+  fallback weight and no string matching — both silently invent an assessment.
+  Interview-brief items reference criteria by ID too.
+- **Interview Brief prioritises important uncertainty, not low scores.** Weight,
+  unknown scores, low or medium confidence and weak or conflicting evidence drive
+  priority. Fit 95 with low confidence can outrank fit 35 with high confidence.
+  Max six items, practical and non-leading, never about protected
+  characteristics.
+- **Referral is sourcing metadata and nothing else.** It never reaches the
+  evaluation agent, never enters fit or coverage, carries no bonus, and never
+  changes candidate order. It stays visible as sourcing context.
+- **AI fit is never a default operational priority.** The Kanban orders by
+  `status_entered_at` ascending — longest waiting first, which within a column
+  (one status, one threshold) puts the genuinely overdue at the top — then
+  `created_at`, then `id`. Ordering candidates by `analysis_score` is an
+  automated hiring recommendation wearing a layout's clothes. Do not add a
+  sort-by-fit control.
+- **Candidate Evaluation, Interview Brief and per-criterion evidence are one AI
+  execution.** Do not add an agent, an execution, or a separate anonymisation
+  call — redaction is deterministic Laravel code. When the request or response
+  contract changes, bump the agent's `CACHE_SCHEMA_VERSION` so old cached
+  responses cannot be consumed, and fingerprint the sanitized context, never the
+  identity-bearing original.
+- **Next-action guidance is workflow-safe.** "No interview exists" is not
+  evidence that an interview is the next step: workspaces run their own stages
+  (Applied, Screening, Assessment, Manager Review), so the generic fallback is
+  `review_candidate`, with stage movement leading. A terminal application offers
+  no interview scheduling at all, primary or overflow — reopening it into an
+  active stage is what makes recruiting actions available again.
 
 ===
 

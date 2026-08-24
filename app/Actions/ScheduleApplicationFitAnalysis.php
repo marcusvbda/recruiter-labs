@@ -3,11 +3,19 @@
 namespace App\Actions;
 
 use App\Enums\ApplicationAnalysisStatus;
-use App\Enums\JobCriteriaProcessingStatus;
 use App\Jobs\AnalyzeApplicationFit;
 use App\Models\Application;
+use App\Models\Job;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * Queues a candidate evaluation, if the job is allowed to have one.
+ *
+ * The gate is {@see Job::hasConfirmedCriteria()}: a candidate is
+ * never evaluated against criteria no recruiter has confirmed. Until then the
+ * application waits in {@see ApplicationAnalysisStatus::AwaitingCriteria}, and
+ * {@see ConfirmJobCriteria} releases it.
+ */
 class ScheduleApplicationFitAnalysis
 {
     public function handle(Application $application, ?int $userId = null): void
@@ -19,7 +27,7 @@ class ScheduleApplicationFitAnalysis
                 ->firstOrFail();
             $job = $lockedApplication->job()->with('jobCriteria')->firstOrFail();
 
-            if ($job->criteria_processing_status !== JobCriteriaProcessingStatus::Completed || $job->jobCriteria->isEmpty()) {
+            if (! $job->hasConfirmedCriteria() || $job->jobCriteria->isEmpty()) {
                 $lockedApplication->forceFill([
                     'analysis_status' => ApplicationAnalysisStatus::AwaitingCriteria,
                 ])->saveQuietly();

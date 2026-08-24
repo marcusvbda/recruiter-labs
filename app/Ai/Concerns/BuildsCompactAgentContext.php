@@ -2,18 +2,26 @@
 
 namespace App\Ai\Concerns;
 
+use App\Services\CandidateEvaluationContextSanitizer;
 use HelgeSverre\Toon\EncodeOptions;
 use HelgeSverre\Toon\Toon;
 
 /**
  * Shared helpers for agents that build a token-efficient TOON context payload
  * from application data (e.g. rich-text fields, sparse optional attributes).
+ *
+ * {@see CandidateEvaluationContextSanitizer} uses `plainText()`
+ * too: candidate-controlled rich text has to be reduced to plain text before
+ * identifiers can be redacted out of it, and the rule must be the same one the
+ * agent's context would have applied.
  */
 trait BuildsCompactAgentContext
 {
     /**
      * Encode a context array as TOON, dropping empty optional values (null,
      * empty string, empty array) since they add tokens without adding meaning.
+     *
+     * @param  array<string, mixed>  $data
      */
     protected function compactContext(array $data): string
     {

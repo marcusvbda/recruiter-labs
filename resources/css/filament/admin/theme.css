@@ -151,6 +151,31 @@
         @apply mt-0.5 text-xl font-semibold text-gray-950 dark:text-white;
     }
 
+    /*
+     * A workspace tab's primary action belongs on the tab row, right-aligned —
+     * not on a full-width band of whitespace beneath it.
+     *
+     * The action is declared inside its own tab's panel, because only that tab
+     * has one, so it is lifted onto the tab bar instead of the tab bar being
+     * rebuilt around it. The inset matches `nav.fi-tabs`' own padding
+     * (0.625rem block / 0.75rem inline) so the button lines up with the tab
+     * labels rather than merely floating near them.
+     *
+     * Below `lg` it stays in normal flow, stacked under the tabs: a narrow tab
+     * bar can scroll or collapse into a dropdown, and an overlaid button would
+     * sit on top of it.
+     */
+    .rl-workspace-tabs {
+        @apply lg:relative;
+    }
+
+    .rl-workspace-tabs__actions {
+        /* `h-fit` is load-bearing: Filament gives `.fi-sc-actions` `height: 100%`,
+           which once positioned would stretch an invisible box over the whole
+           panel and swallow clicks meant for the board underneath. */
+        @apply lg:absolute lg:end-0 lg:top-0 lg:z-10 lg:flex lg:h-fit lg:w-fit lg:items-center lg:py-2.5 lg:pe-3;
+    }
+
     .rl-application-header {
         @apply border-primary-200/70 dark:border-primary-400/20 relative flex flex-col gap-4 overflow-hidden rounded-2xl border bg-white p-5 shadow-sm lg:flex-row lg:items-center lg:justify-between sm:p-6 dark:bg-gray-900;
     }

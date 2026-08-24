@@ -244,8 +244,17 @@ class RecruitmentAttentionService
             )
             ->with(['candidate', 'job', 'status']);
 
+        // A finalist with nothing booked already raises "decision pending", which
+        // is the same recruiter decision described more precisely. Raising
+        // "waiting too long" alongside it would ask twice for one action, so the
+        // more specific signal wins and the age one steps aside.
         [$overdue, $overdueTotal] = $this->bounded(
-            $base()->overdueInStage($company)->orderBy('status_entered_at'),
+            $base()
+                ->overdueInStage($company)
+                ->whereNot(fn (Builder $query): Builder => $query
+                    ->inFinalStage()
+                    ->whereDoesntHave('upcomingInterviews'))
+                ->orderBy('status_entered_at'),
         );
 
         [$awaitingDecision, $awaitingDecisionTotal] = $this->bounded(
@@ -408,14 +417,29 @@ class RecruitmentAttentionService
             $interviewing = (int) $activeJob->getAttribute('interviewing_applications_count');
             $finalists = (int) $activeJob->getAttribute('final_stage_applications_count');
             $hired = (int) $activeJob->getAttribute('hired_applications_count');
+            $overdue = (int) $activeJob->getAttribute('overdue_applications_count');
             $target = max(1, $activeJob->hiring_target);
             $endsAt = $activeJob->ends_at;
+            $endingWithoutFinalistsApplies = $endsAt !== null
+                && $endsAt->lessThanOrEqualTo($endsSoonBefore)
+                && $finalists === 0
+                && $hired === 0;
 
-            if ($applications > 0 && $interviewing === 0 && $finalists === 0 && $hired === 0) {
+            // "Stalled" now needs actual waiting evidence behind it. Candidates
+            // arriving, nobody being interviewed yet, and the job being new are
+            // all normal early states — calling that stalled trains recruiters to
+            // ignore the queue. What makes it real is candidates sitting past the
+            // threshold their own stage declares, with nothing having moved
+            // forward. Where the campaign is also about to end, that signal says
+            // it better, so this one stands down.
+            if ($overdue > 0 && $interviewing === 0 && $finalists === 0 && $hired === 0 && ! $endingWithoutFinalistsApplies) {
                 $stalled[] = new RecruitmentAttentionItem(
                     type: RecruitmentAttentionType::JobStalled,
                     title: (string) __('attention.items.job_stalled.title', ['job' => $activeJob->name]),
-                    explanation: trans_choice('attention.items.job_stalled.explanation', $applications, ['count' => $applications]),
+                    explanation: trans_choice('attention.items.job_stalled.explanation', $overdue, [
+                        'count' => $overdue,
+                        'applications' => $applications,
+                    ]),
                     actionLabel: (string) __('attention.items.job_stalled.action'),
                     actionUrl: $this->jobUrl($activeJob, 'pipeline'),
                     context: $activeJob->name,
@@ -423,7 +447,7 @@ class RecruitmentAttentionService
                 );
             }
 
-            if ($endsAt !== null && $endsAt->lessThanOrEqualTo($endsSoonBefore) && $finalists === 0 && $hired === 0) {
+            if ($endingWithoutFinalistsApplies) {
                 $endingWithoutFinalists[] = new RecruitmentAttentionItem(
                     type: RecruitmentAttentionType::JobEndingWithoutFinalists,
                     title: (string) __('attention.items.job_ending_without_finalists.title', ['job' => $activeJob->name]),

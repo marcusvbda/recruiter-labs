@@ -142,11 +142,17 @@ class ViewJob extends ViewRecord
                             ->key('pipeline')
                             ->icon(Heroicon::OutlinedViewColumns)
                             ->schema([
+                                // Lifted onto the tab row by CSS rather than
+                                // sitting in a band of its own beneath it — see
+                                // `.rl-workspace-tabs` in the panel theme. The
+                                // end alignment is the small-screen fallback,
+                                // where it stays stacked under the tabs.
                                 Actions::make([
                                     $this->makeAddCandidateAction(),
                                 ])
                                     ->key('pipeline-actions')
-                                    ->alignment(Alignment::End),
+                                    ->alignment(Alignment::End)
+                                    ->extraAttributes(['class' => 'rl-workspace-tabs__actions']),
                                 Livewire::make(JobPipelineKanban::class, ['record' => $job])
                                     ->key("job-pipeline-{$job->getKey()}"),
                             ]),
@@ -171,6 +177,7 @@ class ViewJob extends ViewRecord
                             ]),
                     ])
                     ->persistTabInQueryString('section')
+                    ->extraAttributes(['class' => 'rl-workspace-tabs'])
                     ->columnSpanFull(),
             ]);
     }

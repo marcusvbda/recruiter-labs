@@ -2,11 +2,14 @@
 
 namespace App\Filament\Resources\Jobs\Schemas;
 
+use App\Actions\ConfirmJobCriteria;
 use App\Actions\ScheduleJobCriteriaExtraction;
+use App\Enums\ApplicationAnalysisStatus;
 use App\Enums\ApplicationLocale;
 use App\Enums\ApplicationQuestionType;
 use App\Enums\CoverLetterType;
 use App\Enums\JobCriteriaProcessingStatus;
+use App\Filament\Resources\Jobs\JobResource;
 use App\Models\Company;
 use App\Models\CvFileType;
 use App\Models\Job;
@@ -22,6 +25,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Actions;
 use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Section;
@@ -283,7 +287,14 @@ class JobForm
             ->columns(2);
     }
 
-    /** @return array<Component> */
+    /**
+     * The criteria area has to make the ownership obvious: AI *suggests* the
+     * criteria, the recruiter reviews and edits them, the recruiter confirms
+     * them, and only then do they govern candidate evaluation. A finished
+     * extraction is a draft, so it is presented as one.
+     *
+     * @return array<Component>
+     */
     private static function aiCriteriaComponents(): array
     {
         return [
@@ -299,9 +310,24 @@ class JobForm
                 ], strict: true)),
             View::make('filament.resources.jobs.components.ai-criteria-failed')
                 ->visible(fn (Job $record): bool => $record->criteria_processing_status === JobCriteriaProcessingStatus::Failed),
+            View::make('filament.resources.jobs.components.ai-criteria-awaiting-review')
+                ->viewData(fn (Job $record): array => [
+                    'wasConfirmedBefore' => $record->criteria_confirmed_generation !== null,
+                    'waitingApplications' => $record->applications()
+                        ->where('analysis_status', ApplicationAnalysisStatus::AwaitingCriteria)
+                        ->count(),
+                ])
+                ->visible(fn (Job $record): bool => $record->criteriaAwaitReview()),
+            View::make('filament.resources.jobs.components.ai-criteria-confirmed')
+                ->viewData(fn (Job $record): array => [
+                    'confirmedAt' => $record->criteria_confirmed_at?->translatedFormat('M j, Y · H:i'),
+                    'confirmedBy' => $record->criteriaConfirmedBy?->name,
+                ])
+                ->visible(fn (Job $record): bool => $record->hasConfirmedCriteria()),
             // Actions are always rendered, each individually visible for its own status, so
             // that a hidden action while processing is still "hidden" rather than "missing".
             Actions::make([
+                self::confirmEvaluationCriteriaAction(),
                 self::runAiCriteriaAnalysisAction(
                     'startAiCriteriaAnalysis',
                     __('jobs.criteria.start_action'),
@@ -316,7 +342,7 @@ class JobForm
                 self::runAiCriteriaAnalysisAction(
                     'rerunAiCriteriaAnalysis',
                     __('jobs.criteria.rerun_action'),
-                    fn (Job $record): bool => $record->criteria_processing_status === JobCriteriaProcessingStatus::Completed,
+                    fn (Job $record): bool => $record->criteria_processing_status->hasCriteria(),
                     requiresConfirmation: true,
                 ),
             ])
@@ -363,15 +389,49 @@ class JobForm
                         ->addActionLabel(__('jobs.criteria.add'))
                         ->reorderable(false),
                 ])
-                ->visible(fn (Job $record): bool => $record->criteria_processing_status === JobCriteriaProcessingStatus::Completed),
+                ->visible(fn (Job $record): bool => $record->criteria_processing_status->hasCriteria()),
             View::make('filament.resources.jobs.components.ai-review-alerts')
                 ->viewData(fn (Job $record): array => [
                     'alerts' => $record->reviewAlerts()
                         ->orderBy('sort_order')
                         ->get(),
                 ])
-                ->visible(fn (Job $record): bool => $record->criteria_processing_status === JobCriteriaProcessingStatus::Completed),
+                ->visible(fn (Job $record): bool => $record->criteria_processing_status->hasCriteria()),
         ];
+    }
+
+    /**
+     * The product-integrity step, not a compliance ceremony: one clear action
+     * that says these criteria will be used to evaluate candidates. Confirming
+     * also releases the candidates whose evaluation was waiting for it, which is
+     * why the copy mentions it rather than leaving it as a surprise.
+     */
+    private static function confirmEvaluationCriteriaAction(): Action
+    {
+        return Action::make('confirmEvaluationCriteria')
+            ->label(__('jobs.criteria.confirm_action'))
+            ->icon(Heroicon::OutlinedCheckCircle)
+            ->button()
+            ->visible(fn (Job $record): bool => $record->criteriaAwaitReview())
+            ->requiresConfirmation()
+            ->modalHeading(__('jobs.criteria.confirm_modal_heading'))
+            ->modalDescription((string) __('jobs.criteria.confirm_modal_description'))
+            ->modalSubmitActionLabel(__('jobs.criteria.confirm_action'))
+            ->action(function (Job $record): void {
+                // Jobs have no policy in this application; editability is the
+                // resource's own gate, which is what every other job-level
+                // write checks (see JobPipelineKanban::authorizeMoveRecord()).
+                abort_unless(JobResource::canEdit($record), 403);
+
+                app(ConfirmJobCriteria::class)->handle($record, self::currentUserId());
+
+                Notification::make()
+                    ->title(__('jobs.criteria.confirmed_notification'))
+                    ->success()
+                    ->send();
+
+                $record->refresh();
+            });
     }
 
     private static function runAiCriteriaAnalysisAction(
@@ -386,11 +446,19 @@ class JobForm
             ->button()
             ->visible($visible)
             ->requiresConfirmation($requiresConfirmation)
-            ->modalDescription($requiresConfirmation ? __('jobs.criteria.overwrite_confirmation') : null)
+            ->modalDescription($requiresConfirmation ? (string) __('jobs.criteria.overwrite_confirmation') : null)
             ->action(function (Job $record): void {
-                app(ScheduleJobCriteriaExtraction::class)->handle($record, Auth::id());
+                app(ScheduleJobCriteriaExtraction::class)->handle($record, self::currentUserId());
                 $record->refresh();
             });
+    }
+
+    /** The signed-in recruiter, for actions that record who asked for them. */
+    private static function currentUserId(): ?int
+    {
+        $id = Auth::id();
+
+        return $id === null ? null : (int) $id;
     }
 
     private static function tenantCompanyId(): int

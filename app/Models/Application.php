@@ -27,13 +27,15 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property ApplicationSource $source
  * @property ApplicationAnalysisStatus $analysis_status
  * @property int $analysis_generation
+ * @property int|null $analysis_criteria_generation
  * @property string|null $analysis_score
+ * @property int|null $analysis_coverage
  * @property CarbonImmutable|null $analyzed_at
  * @property ApplicationCoverLetterType $cover_letter_type
  * @property string|null $cover_letter_text
  * @property string|null $submitted_ip
  */
-#[Fillable(['company_id', 'job_id', 'candidate_id', 'status_id', 'status_entered_at', 'referral_id', 'source', 'analysis_status', 'analysis_generation', 'analysis_score', 'analyzed_at', 'cover_letter_type', 'cover_letter_text', 'submitted_ip'])]
+#[Fillable(['company_id', 'job_id', 'candidate_id', 'status_id', 'status_entered_at', 'referral_id', 'source', 'analysis_status', 'analysis_generation', 'analysis_criteria_generation', 'analysis_score', 'analysis_coverage', 'analyzed_at', 'cover_letter_type', 'cover_letter_text', 'submitted_ip'])]
 class Application extends Model
 {
     /** @use HasFactory<ApplicationFactory> */
@@ -72,7 +74,9 @@ class Application extends Model
             'source' => ApplicationSource::class,
             'analysis_status' => ApplicationAnalysisStatus::class,
             'analysis_generation' => 'integer',
+            'analysis_criteria_generation' => 'integer',
             'analysis_score' => 'decimal:2',
+            'analysis_coverage' => 'integer',
             'analyzed_at' => 'immutable_datetime',
             'status_entered_at' => 'immutable_datetime',
             'cover_letter_type' => ApplicationCoverLetterType::class,
@@ -162,6 +166,40 @@ class Application extends Model
                     ->where('status_entered_at', '<=', $now->subDays((int) $days)));
             }
         });
+    }
+
+    /**
+     * Whether the stored evaluation still describes the criteria the recruiter
+     * confirmed. A completed evaluation produced against an earlier revision is
+     * history, not the current assessment, and must never be shown as if it
+     * were: the criteria it measured no longer govern this hiring process.
+     *
+     * Evaluations produced before the revision link existed have no recorded
+     * revision, so they cannot claim to be current either.
+     */
+    public function hasCurrentEvaluation(): bool
+    {
+        if ($this->analysis_status !== ApplicationAnalysisStatus::Completed) {
+            return false;
+        }
+
+        $job = $this->job;
+
+        return $job instanceof Job
+            && $job->hasConfirmedCriteria()
+            && $this->analysis_criteria_generation !== null
+            && $this->analysis_criteria_generation === $job->criteria_generation;
+    }
+
+    /**
+     * A finished evaluation that measured criteria the job has since moved on
+     * from. Distinguished from "no evaluation yet" so the UI can say *why* there
+     * is nothing current to show.
+     */
+    public function hasOutdatedEvaluation(): bool
+    {
+        return $this->analysis_status === ApplicationAnalysisStatus::Completed
+            && ! $this->hasCurrentEvaluation();
     }
 
     /**
