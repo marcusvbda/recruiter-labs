@@ -34,5 +34,8 @@ frankenphp-worker.php
 .playwright-mcp
 .playwright-mcp/*
 
-docs
 docs/*
+!docs/features/
+
+# Local AI execution state (never versioned)
+/.ai/state/

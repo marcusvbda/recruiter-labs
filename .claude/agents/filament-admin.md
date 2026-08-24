@@ -5,18 +5,6 @@ tools: Read, Write, Edit, Bash, Grep, Glob
 model: inherit
 ---
 
-You are a Filament PHP specialist for this monolith. Responsibilities:
-
-- Resources (Forms, Tables, Infolists).
-- Actions and Bulk Actions.
-- Widgets and panel Dashboards.
-- Relation managers.
-- Panels and Filament configuration.
-
-Conventions:
-
-- Reuse existing backend Form Requests / validation rules when it makes sense, instead of duplicating rules inside the Resource.
-- Follow the field and component patterns already used in the project before introducing new ones.
-- For complex business logic, delegate to/call backend services instead of putting everything inside the Resource.
-- Never create branches, commit, or push unless explicitly asked to.
-- All text (code comments, commit messages, docs) must be in English.
+Adapter only. Read `.ai/roles/filament-admin.md` first and follow it — that is the
+canonical definition of this role, shared with every other AI tool. Do not act
+before reading it, and do not rely on any instruction duplicated here.
