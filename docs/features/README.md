@@ -20,7 +20,8 @@ plans live outside `docs/features/**` and are deleted after execution
 (`AGENTS.md` → Documentation).
 
 Execution of a documented feature follows
-`.ai/skills/execute-feature/SKILL.md`. Progress state lives in
+`.ai/skills/execute-feature/SKILL.md`, which refuses to start until all three
+documents exist and never writes them itself. Progress state lives in
 `.ai/state/<feature>.md`, which is local and git-ignored — no product or
 technical decision may live there.
 

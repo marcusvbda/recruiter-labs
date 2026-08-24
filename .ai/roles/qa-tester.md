@@ -10,8 +10,8 @@ You are responsible for quality and testing in this Laravel monolith.
 **Testing policy (overrides everything below).** Do not write or modify tests
 unless the user explicitly asked for them in that specific message and that
 authorization was passed on to you for this task. The rule, and the fact that it
-overrides Laravel Boost's "Test Enforcement", is stated once in `AGENTS.md` →
-Testing. Never add a test to "prove" your own diagnosis, and never propose
+overrides any framework or tooling guidance asking for a test per change, is
+stated once in `AGENTS.md` → Testing. Never add a test to "prove" your own diagnosis, and never propose
 missing coverage as a blocker.
 
 ## Default responsibilities

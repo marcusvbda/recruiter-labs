@@ -1,11 +1,42 @@
 ---
 name: execute-feature
-description: Orchestration workflow for implementing a feature that already has docs/features/<feature>/spec.md, plan.md and tasks.md. Drives task-by-task delegation, deterministic verification, independent code review against acceptance criteria, bounded correction loops, resumable state in .ai/state/, and a final integrated feature review. Load when asked to execute, implement or continue a documented feature.
+description: Orchestration workflow for implementing a feature whose spec.md, plan.md and tasks.md already exist under docs/features/<feature>/ — it refuses to run and never writes those documents if any is missing. Drives task-by-task delegation, deterministic verification, independent code review against acceptance criteria, bounded correction loops, resumable state in .ai/state/, and a final integrated feature review. Load when asked to execute, implement or continue a documented feature.
 ---
 
 # Execute feature
 
-Use this skill when a feature already has:
+## Execution boundary
+
+```text
+PRODUCT / DESIGN PHASE
+
+spec.md
+    ↓
+plan.md
+    ↓
+tasks.md
+
+-----------------------------
+EXECUTION BOUNDARY
+-----------------------------
+
+execute-feature
+    ↓
+implementation
+    ↓
+verification
+    ↓
+review
+```
+
+This skill starts **below** the boundary. It never brainstorms product
+requirements, never designs the feature, and never makes a major design
+decision on the user's behalf. Everything above the boundary is produced by the
+product/planning workflow, by a human, before execution begins.
+
+## Entry gate
+
+A feature is executable only when **all three** files already exist:
 
 ```text
 docs/features/<feature>/spec.md
@@ -13,8 +44,22 @@ docs/features/<feature>/plan.md
 docs/features/<feature>/tasks.md
 ```
 
-If any of those is missing, stop and produce the missing document first (see
-`docs/features/README.md`) — do not improvise a feature from a one-line request.
+If any one of them is missing:
+
+```text
+STOP.
+Report exactly which artifact is missing.
+Do not create it.
+Do not infer it.
+Do not start implementation.
+```
+
+The missing artifact is produced first through the product/planning workflow
+(see `docs/features/README.md` for what each document must contain). An empty,
+placeholder or obviously unfinished document counts as missing — say so and
+stop. Never satisfy the gate by writing the document yourself.
+
+## Your role
 
 You are the **orchestrator**. You do not implement the whole feature yourself.
 You scope one task at a time, delegate it, verify it deterministically, have it
@@ -24,7 +69,28 @@ Global rules in `AGENTS.md` always win: English only, no branches/commits/pushes
 unless explicitly asked in that message, no new or modified tests unless
 explicitly asked in that message.
 
+### Decisions you may make, and decisions you may not
+
+Decide freely while executing, when spec, plan and task are clear and several
+equivalent implementations exist:
+
+- method, variable and class naming;
+- small internal extraction or inlining;
+- exact placement of a helper within the agreed structure;
+- minor sequencing inside a task.
+
+Never decide silently — stop and surface it instead:
+
+- a new business rule or changed user-visible behaviour;
+- anything that expands or reduces the feature's scope;
+- a new product requirement the spec does not state;
+- a major architectural change the plan does not describe.
+
+Those belong above the execution boundary.
+
 ## 0. Start or resume
+
+Only once the entry gate above has passed:
 
 1. Read `tasks.md` in full (it is the shortest document and the task list).
 2. Read the *table of contents / headings* of `spec.md` and `plan.md` — not the
@@ -145,15 +211,30 @@ Each fix round addresses only the blocking findings, handled by the same
 domain role, and records `Correction round: N` in the state file.
 
 After the second failed re-review, stop applying patches and re-evaluate the
-task against `spec.md` and `plan.md` to determine which of these it is:
+task against `spec.md` and `plan.md`. What you may do next depends on whether
+the fix stays below the execution boundary.
 
-1. the implementation strategy is wrong → change the approach, reset the task
-   (still one task), and note the change in `plan.md`;
-2. the task is underspecified → rewrite the task in `tasks.md` (splitting it if
-   needed) and restart it;
-3. the plan is incorrect → correct `plan.md`, then re-derive the affected tasks;
-4. the spec is ambiguous → surface the ambiguity to the user as a blocker, with
-   the options and your recommendation, and stop that task.
+**Continue automatically** — implementation-level corrections that keep the
+approved behaviour and scope:
+
+- the implementation strategy is wrong → change the approach, reset the task
+  (still one task), and record the technical change in `plan.md`;
+- a plan detail is technically incorrect and the spec clearly dictates the right
+  answer → correct that detail in `plan.md` and re-derive the affected tasks;
+- the task is oversized or unclear in its steps → rewrite or split it in
+  `tasks.md` **without changing scope**, then restart it.
+
+**Stop and surface to the user** — anything that would redefine the feature:
+
+- the spec is ambiguous, or the desired product behaviour is unclear;
+- acceptance criteria conflict with each other or with the plan;
+- fixing the issue changes the feature's scope;
+- a major architectural decision is missing from the plan.
+
+When you stop, report the blocker, the options you see and your recommendation,
+mark the task blocked in `.ai/state/<feature>.md`, and wait. Do not resolve
+product ambiguity yourself, do not rewrite `spec.md`, and never edit acceptance
+criteria to match what the code does.
 
 Never keep patching blindly, and never mark a task `DONE` to escape the loop.
 
@@ -191,9 +272,10 @@ When the feature passes the final review, report concisely:
 - non-blocking findings left open;
 - anything intentionally out of scope or blocked.
 
-Then update `docs/features/<feature>/` if the implementation legitimately
-diverged from the plan — that documentation is persistent and must reflect
-reality. Delete `.ai/state/<feature>.md` only if the user asks; it is
-git-ignored either way. **Never** delete anything under `docs/features/**`.
+Then bring `plan.md` and `tasks.md` back in line with what was actually built —
+that documentation is persistent and must reflect reality. `spec.md` is product
+truth: propose changes to it, never edit it to match the implementation. Delete
+`.ai/state/<feature>.md` only if the user asks; it is git-ignored either way.
+**Never** delete anything under `docs/features/**`.
 
 Do not commit, branch or push unless the user explicitly asks in that message.
