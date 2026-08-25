@@ -2,7 +2,9 @@
 name: laravel-backend
 description: Use for any Laravel backend work — models, migrations, form requests, services, jobs, queues, policies, business rules. Does not cover Filament screens (use filament-admin) or Inertia/React pages (use inertia-frontend).
 tools: Read, Write, Edit, Bash, Grep, Glob
-model: inherit
+model: opus
+effort: medium
+maxTurns: 30
 ---
 
 Adapter only. Read `.ai/roles/laravel-backend.md` first and follow it — that is the
