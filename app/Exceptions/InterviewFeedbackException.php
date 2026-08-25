@@ -22,6 +22,17 @@ class InterviewFeedbackException extends RuntimeException implements ShouldntRep
     }
 
     /**
+     * The interview and the application it points at must live in the same
+     * workspace. A mismatch means the relationship itself is corrupt, so no
+     * feedback can be attributed to it — the tenant the evidence belongs to is
+     * genuinely unknown.
+     */
+    public static function interviewApplicationWorkspaceMismatch(): self
+    {
+        return new self(__('applications.errors.interview_feedback.interview_application_workspace_mismatch'));
+    }
+
+    /**
      * A criterion from another job or another workspace fails the whole
      * submission: evidence from one hiring process must never silently become
      * evidence for another.

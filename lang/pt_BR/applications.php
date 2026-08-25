@@ -51,6 +51,7 @@ return [
     'errors' => [
         'interview_feedback' => [
             'interview_cancelled' => 'Esta entrevista foi cancelada e não pode receber devolutiva de entrevista.',
+            'interview_application_workspace_mismatch' => 'Esta entrevista não pertence ao mesmo workspace da candidatura para a qual foi agendada, portanto nenhuma devolutiva de entrevista pode ser registrada para ela.',
             'criterion_outside_interviewed_job' => 'A devolutiva de entrevista deve ser registrada sobre critérios da vaga para a qual o candidato foi entrevistado.',
             'no_criteria_submitted' => 'A devolutiva de entrevista deve incluir ao menos um resultado de critério.',
             'duplicate_criterion' => 'Cada critério da vaga só pode ser avaliado uma vez em um mesmo envio de devolutiva de entrevista.',

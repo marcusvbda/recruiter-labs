@@ -51,6 +51,7 @@ return [
     'errors' => [
         'interview_feedback' => [
             'interview_cancelled' => 'This interview was cancelled and cannot receive interview feedback.',
+            'interview_application_workspace_mismatch' => 'This interview does not belong to the same workspace as the application it was scheduled for, so no interview feedback can be recorded for it.',
             'criterion_outside_interviewed_job' => 'Interview feedback must be recorded against criteria of the job the candidate was interviewed for.',
             'no_criteria_submitted' => 'Interview feedback must include at least one criterion result.',
             'duplicate_criterion' => 'Each job criterion may be assessed only once in a single interview feedback submission.',

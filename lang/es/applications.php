@@ -51,6 +51,7 @@ return [
     'errors' => [
         'interview_feedback' => [
             'interview_cancelled' => 'Esta entrevista fue cancelada y no puede recibir devolución de entrevista.',
+            'interview_application_workspace_mismatch' => 'Esta entrevista no pertenece al mismo workspace que la postulación para la que fue agendada, por lo que no se puede registrar ninguna devolución de entrevista para ella.',
             'criterion_outside_interviewed_job' => 'La devolución de entrevista debe registrarse sobre criterios de la vacante para la que se entrevistó al candidato.',
             'no_criteria_submitted' => 'La devolución de entrevista debe incluir al menos un resultado de criterio.',
             'duplicate_criterion' => 'Cada criterio de la vacante solo puede evaluarse una vez en un mismo envío de devolución de entrevista.',

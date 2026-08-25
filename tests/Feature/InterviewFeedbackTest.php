@@ -288,6 +288,47 @@ test('a criterion from another job or another workspace is refused and nothing i
         ->and(InterviewFeedbackCriterion::query()->count())->toBe(0);
 });
 
+test('an interview whose application belongs to another workspace is refused and nothing is written', function (): void {
+    $company = feedbackCompany();
+    $otherCompany = feedbackCompany();
+
+    $interviewer = feedbackInterviewer($company);
+    // Membership in both, so the refusal below can only come from the mismatched
+    // pair rather than from the workspace-membership check that runs first.
+    $interviewer->companies()->attach($otherCompany);
+
+    $job = feedbackJob($company, [
+        ['criterion' => 'Production Laravel experience', 'weight' => 10],
+    ]);
+    $application = applicationForJob($job);
+    $interview = heldInterview($application);
+
+    [$criterion] = jobCriteriaOf($job);
+
+    $results = [
+        ['job_criterion_id' => $criterion->id, 'result' => InterviewFeedbackResult::Confirmed, 'evidence_note' => 'Six years shipping Laravel.'],
+    ];
+
+    // The consistent pair ScheduleInterview produces is recorded normally.
+    expect(recordFeedback()->handle($interview, $interviewer, $results)->exists)->toBeTrue();
+
+    InterviewFeedbackCriterion::query()->delete();
+    InterviewFeedback::query()->delete();
+
+    // The same interview, now pointing at an application in another workspace,
+    // establishes nothing: there is no tenant the evidence belongs to.
+    $interview->forceFill(['company_id' => $otherCompany->id])->save();
+
+    expect(fn () => recordFeedback()->handle($interview, $interviewer, $results))
+        ->toThrow(
+            InterviewFeedbackException::class,
+            InterviewFeedbackException::interviewApplicationWorkspaceMismatch()->getMessage(),
+        );
+
+    expect(InterviewFeedback::query()->count())->toBe(0)
+        ->and(InterviewFeedbackCriterion::query()->count())->toBe(0);
+});
+
 test('a submission with no criteria at all is refused', function (): void {
     $company = feedbackCompany();
     $interviewer = feedbackInterviewer($company);

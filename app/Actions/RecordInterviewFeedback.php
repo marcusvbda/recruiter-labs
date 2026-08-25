@@ -32,6 +32,10 @@ use Illuminate\Validation\Rule;
  *   submission time are all written; the author must be a member of the
  *   interview's workspace. Membership only — no owner, recruiter or
  *   hiring-manager distinction is implied or introduced.
+ * - **The interview and its application share one workspace.** The pair is
+ *   verified here rather than assumed from how {@see ScheduleInterview} built
+ *   it, because a mismatch would file one workspace's evidence under another's
+ *   tenant. It fails before anything is written.
  * - **The interview was not cancelled.** A cancelled interview never happened,
  *   so it can establish nothing and is refused
  *   ({@see Interview::canReceiveFeedback()}). Timing is not a gate: feedback may
@@ -84,9 +88,11 @@ class RecordInterviewFeedback
      *
      * @throws AuthorizationException When the author does not belong to the
      *                                interview's workspace.
-     * @throws InterviewFeedbackException When the interview cannot receive
-     *                                    feedback, or a criterion does not
-     *                                    belong to the interviewed job.
+     * @throws InterviewFeedbackException When the interview and its application
+     *                                    belong to different workspaces, the
+     *                                    interview cannot receive feedback, or a
+     *                                    criterion does not belong to the
+     *                                    interviewed job.
      */
     public function handle(
         Interview $interview,
@@ -106,6 +112,8 @@ class RecordInterviewFeedback
             $application = Application::query()
                 ->whereKey($lockedInterview->application_id)
                 ->firstOrFail();
+
+            $this->assertSameWorkspace($lockedInterview, $application);
 
             $job = Job::query()->whereKey($application->job_id)->firstOrFail();
 
@@ -163,6 +171,25 @@ class RecordInterviewFeedback
     {
         if ($interview->status === InterviewStatus::Cancelled) {
             throw InterviewFeedbackException::interviewCancelled();
+        }
+    }
+
+    /**
+     * The interview and the application it points at must belong to the same
+     * workspace. {@see ScheduleInterview} creates them consistently, but this
+     * action re-checks rather than trusting that: every write below is stamped
+     * with the *interview's* `company_id` while the criteria are resolved
+     * against the *application's*, so a mismatched pair would file one
+     * workspace's evidence under another's tenant. Verified here, before any
+     * write, because it is a corrupt relationship rather than a caller mistake —
+     * there is no tenant it could be safely recorded under.
+     *
+     * @throws InterviewFeedbackException
+     */
+    private function assertSameWorkspace(Interview $interview, Application $application): void
+    {
+        if ($interview->company_id !== $application->company_id) {
+            throw InterviewFeedbackException::interviewApplicationWorkspaceMismatch();
         }
     }
 
