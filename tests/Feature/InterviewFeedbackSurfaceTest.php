@@ -101,18 +101,46 @@ function submitInterviewFeedback(
     return $component->setActionData($data)->callMountedAction();
 }
 
-it('offers the record-feedback affordance only for held interviews', function (): void {
+it('offers the record-feedback affordance for every interview except a cancelled one', function (): void {
+    // Timing does not gate recording: an interviewer taking notes live should
+    // not have to wait for the slot to end. Cancellation still does — a
+    // cancelled interview never happened.
     [, , $application] = interviewFeedbackFixture();
 
     $held = Interview::factory()->held()->for($application)->create(['company_id' => $application->company_id]);
     $future = Interview::factory()->for($application)->create(['company_id' => $application->company_id]);
-    $cancelled = Interview::factory()->held()->cancelled()->for($application)->create(['company_id' => $application->company_id]);
+    // Both cancelled timings, because cancellation is now the only gate: if it
+    // ever started reading `ends_at` again, one of these two would survive.
+    $cancelledPast = Interview::factory()->held()->cancelled()->for($application)->create(['company_id' => $application->company_id]);
+    $cancelledFuture = Interview::factory()->cancelled()->for($application)->create(['company_id' => $application->company_id]);
 
     $response = Livewire::test(ViewApplication::class, ['record' => $application->getKey()]);
 
     $response->assertSee("mountAction('recordInterviewFeedback', { interview: {$held->getKey()} })", false);
-    $response->assertDontSee("mountAction('recordInterviewFeedback', { interview: {$future->getKey()} })", false);
-    $response->assertDontSee("mountAction('recordInterviewFeedback', { interview: {$cancelled->getKey()} })", false);
+    $response->assertSee("mountAction('recordInterviewFeedback', { interview: {$future->getKey()} })", false);
+    $response->assertDontSee("mountAction('recordInterviewFeedback', { interview: {$cancelledPast->getKey()} })", false);
+    $response->assertDontSee("mountAction('recordInterviewFeedback', { interview: {$cancelledFuture->getKey()} })", false);
+});
+
+it('marks feedback recorded before the interview finished as written in advance', function (): void {
+    // AC09: the gate is gone, but the reader must never mistake a note written
+    // before the interview ended for something the interview established.
+    [, , $application, $criterion] = interviewFeedbackFixture();
+
+    $future = Interview::factory()->for($application)->create(['company_id' => $application->company_id]);
+
+    app(RecordInterviewFeedback::class)->handle($future, currentInterviewer(), [
+        [
+            'job_criterion_id' => $criterion->getKey(),
+            'result' => InterviewFeedbackResult::Confirmed,
+            'evidence_note' => 'Screening call already covered the team-size question.',
+        ],
+    ]);
+
+    $response = Livewire::test(ViewApplication::class, ['record' => $application->getKey()]);
+
+    $response->assertSee('Screening call already covered the team-size question.');
+    $response->assertSee(__('applications.admin.interviews.evidence.interview_states.not_yet_held'));
 });
 
 it('persists attributed feedback without touching the hiring workflow', function (): void {

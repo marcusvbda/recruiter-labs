@@ -32,11 +32,13 @@ use Illuminate\Validation\Rule;
  *   submission time are all written; the author must be a member of the
  *   interview's workspace. Membership only — no owner, recruiter or
  *   hiring-manager distinction is implied or introduced.
- * - **The interview actually happened.** A cancelled interview never took place,
- *   and an interview that has not ended yet cannot have established anything.
- *   Feedback is evidence, not a pre-interview judgement, so neither is allowed
- *   in. This reads the schedule ({@see Interview::canReceiveFeedback()}) rather
- *   than adding a "completed" interview status.
+ * - **The interview was not cancelled.** A cancelled interview never happened,
+ *   so it can establish nothing and is refused
+ *   ({@see Interview::canReceiveFeedback()}). Timing is not a gate: feedback may
+ *   be recorded before, during or after the interview, because an interviewer
+ *   taking notes live should not have to wait for the slot to end. *When* the
+ *   feedback was written relative to the interview is preserved through
+ *   `submitted_at` and surfaced to readers rather than prevented here.
  * - **Criterion identity is an ID belonging to the interviewed job.** Each
  *   result is resolved against a {@see JobCriterion} of the application's own
  *   job *and* company, and the authoritative `criterion` text and `weight` are
@@ -99,7 +101,7 @@ class RecordInterviewFeedback
                 ->firstOrFail();
 
             $this->assertBelongsToWorkspace($lockedInterview, $author);
-            $this->assertInterviewHasTakenPlace($lockedInterview);
+            $this->assertInterviewWasNotCancelled($lockedInterview);
 
             $application = Application::query()
                 ->whereKey($lockedInterview->application_id)
@@ -151,20 +153,16 @@ class RecordInterviewFeedback
     }
 
     /**
-     * Feedback describes an interview that happened. The two ways it cannot have
-     * happened are reported separately because they mean different things to the
-     * recruiter: one was called off, the other simply has not run yet.
+     * A cancelled interview never happened, so it is the one thing that refuses
+     * feedback. Nothing about the schedule is asserted here: recording is
+     * allowed before, during and after the interview.
      *
      * @throws InterviewFeedbackException
      */
-    private function assertInterviewHasTakenPlace(Interview $interview): void
+    private function assertInterviewWasNotCancelled(Interview $interview): void
     {
         if ($interview->status === InterviewStatus::Cancelled) {
             throw InterviewFeedbackException::interviewCancelled();
-        }
-
-        if (! $interview->canReceiveFeedback()) {
-            throw InterviewFeedbackException::interviewNotHeldYet();
         }
     }
 

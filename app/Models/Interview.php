@@ -94,19 +94,22 @@ class Interview extends Model
     }
 
     /**
-     * Whether this interview can receive structured feedback: it was not
-     * cancelled, and it has already ended. The exact complement of
-     * {@see scopeUpcoming()} — a commitment that has been kept — so the
-     * eligibility rule is stated once and every surface composes it instead of
-     * restating "not cancelled and in the past".
+     * Whether this interview can receive structured feedback: it can, unless it
+     * was cancelled. A cancelled interview never happened, so there is nothing
+     * for a human to have observed in it.
      *
-     * There is deliberately no "completed" interview status behind this: the
-     * schedule already knows when the interview ended.
+     * Timing deliberately does not gate recording. An interviewer taking notes
+     * live should not have to wait for the slot to end before saving them, so
+     * feedback may be recorded before, during or after the interview. *When* it
+     * was written relative to the interview is preserved and surfaced by the
+     * reading surfaces rather than prevented here.
+     *
+     * The eligibility rule is stated once and every surface composes it instead
+     * of restating "not cancelled".
      */
     public function canReceiveFeedback(): bool
     {
-        return $this->status !== InterviewStatus::Cancelled
-            && $this->ends_at->isPast();
+        return $this->status !== InterviewStatus::Cancelled;
     }
 
     /** @return BelongsTo<Company, $this> */

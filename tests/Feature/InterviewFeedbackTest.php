@@ -52,7 +52,7 @@ function feedbackJob(Company $company, array $criteria = []): Job
         ->create(['company_id' => $company->id]);
 }
 
-/** An interview whose slot has already passed — the only one feedback fits. */
+/** An interview whose slot has already passed. */
 function heldInterview(Application $application): Interview
 {
     return Interview::factory()->held()->create([
@@ -210,29 +210,54 @@ test('a cancelled interview cannot receive feedback', function (): void {
     expect(InterviewFeedback::query()->count())->toBe(0);
 });
 
-test('an interview that has not ended yet cannot receive feedback', function (): void {
+test('feedback is recorded whatever the interview timing is', function (string $timing, callable $schedule): void {
     $company = feedbackCompany();
     $interviewer = feedbackInterviewer($company);
     $job = feedbackJob($company);
     $application = applicationForJob($job);
 
-    // The factory default is a scheduled interview still ahead of us.
     $interview = Interview::factory()->create([
         'company_id' => $company->id,
         'application_id' => $application->id,
+        ...$schedule(),
     ]);
 
     [$criterion] = jobCriteriaOf($job);
 
-    expect(fn () => recordFeedback()->handle($interview, $interviewer, [
-        ['job_criterion_id' => $criterion->id, 'result' => InterviewFeedbackResult::Confirmed, 'evidence_note' => null],
-    ]))->toThrow(
-        InterviewFeedbackException::class,
-        InterviewFeedbackException::interviewNotHeldYet()->getMessage(),
-    );
+    $feedback = recordFeedback()->handle($interview, $interviewer, [
+        [
+            'job_criterion_id' => $criterion->id,
+            'result' => InterviewFeedbackResult::Confirmed,
+            'evidence_note' => 'Noted while the conversation was still fresh.',
+        ],
+    ]);
 
-    expect(InterviewFeedback::query()->count())->toBe(0);
-});
+    expect(InterviewFeedback::query()->count())->toBe(1)
+        ->and($feedback->interview_id)->toBe($interview->id)
+        ->and($feedback->submitted_by_id)->toBe($interviewer->id)
+        ->and($feedback->criteria()->count())->toBe(1);
+
+    $recorded = $feedback->criteria()->first();
+
+    expect($recorded->job_criterion_id)->toBe($criterion->id)
+        ->and($recorded->result)->toBe(InterviewFeedbackResult::Confirmed)
+        ->and($recorded->evidence_note)->toBe('Noted while the conversation was still fresh.');
+})->with([
+    // Timing is not a gate: an interviewer may record before the slot, while it
+    // is running, or after it ended.
+    'upcoming' => ['upcoming', fn (): array => [
+        'scheduled_at' => now()->addDays(2)->startOfHour(),
+        'ends_at' => now()->addDays(2)->startOfHour()->addHour(),
+    ]],
+    'running right now' => ['running right now', fn (): array => [
+        'scheduled_at' => now()->subMinutes(15),
+        'ends_at' => now()->addMinutes(45),
+    ]],
+    'already ended' => ['already ended', fn (): array => [
+        'scheduled_at' => now()->subDays(2)->startOfHour(),
+        'ends_at' => now()->subDays(2)->startOfHour()->addHour(),
+    ]],
+]);
 
 test('a criterion from another job or another workspace is refused and nothing is written', function (): void {
     $company = feedbackCompany();

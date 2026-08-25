@@ -51,7 +51,6 @@ return [
     'errors' => [
         'interview_feedback' => [
             'interview_cancelled' => 'This interview was cancelled and cannot receive interview feedback.',
-            'interview_not_held_yet' => 'Interview feedback can only be recorded after the interview has taken place.',
             'criterion_outside_interviewed_job' => 'Interview feedback must be recorded against criteria of the job the candidate was interviewed for.',
             'no_criteria_submitted' => 'Interview feedback must include at least one criterion result.',
             'duplicate_criterion' => 'Each job criterion may be assessed only once in a single interview feedback submission.',
@@ -285,9 +284,9 @@ return [
             ],
             'evidence' => [
                 'heading' => 'Interview evidence',
-                'description' => 'What interviewers observed after an interview, in their own words. Human-authored and attributed to the person who wrote it — never generated, verified or scored by AI, and never a hiring recommendation.',
+                'description' => 'What interviewers observed, in their own words. Human-authored and attributed to the person who wrote it — never generated, verified or scored by AI, and never a hiring recommendation.',
                 'empty' => 'No interview feedback has been recorded yet',
-                'empty_description' => 'Once an interview has taken place, whoever conducted it can record what it established for each job criterion.',
+                'empty_description' => 'Whoever conducts an interview can record what it established for each job criterion, at any point — before, during or after it.',
                 'card_heading' => 'Recorded interview feedback',
                 'human_authored' => 'Recorded by a person',
                 'submitted_at' => 'submitted :date',
@@ -311,7 +310,7 @@ return [
                 'unknown_author' => 'Author unavailable',
                 'interview_states' => [
                     'cancelled' => 'This interview was cancelled after the feedback was recorded. The observation stands as what the interviewer saw; the interview itself no longer appears as a kept commitment.',
-                    'rescheduled' => 'This interview has since been moved to a future date. The observation below was recorded for the earlier session.',
+                    'not_yet_held' => 'This interview has not taken place yet, so the note below was written before it finished. It records what the interviewer expected or had seen so far, not what the interview established.',
                 ],
             ],
             'brief' => [

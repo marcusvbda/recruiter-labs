@@ -51,7 +51,6 @@ return [
     'errors' => [
         'interview_feedback' => [
             'interview_cancelled' => 'Esta entrevista fue cancelada y no puede recibir devolución de entrevista.',
-            'interview_not_held_yet' => 'La devolución de entrevista solo puede registrarse después de que la entrevista haya ocurrido.',
             'criterion_outside_interviewed_job' => 'La devolución de entrevista debe registrarse sobre criterios de la vacante para la que se entrevistó al candidato.',
             'no_criteria_submitted' => 'La devolución de entrevista debe incluir al menos un resultado de criterio.',
             'duplicate_criterion' => 'Cada criterio de la vacante solo puede evaluarse una vez en un mismo envío de devolución de entrevista.',
@@ -285,9 +284,9 @@ return [
             ],
             'evidence' => [
                 'heading' => 'Evidencia de entrevista',
-                'description' => 'Lo que los entrevistadores observaron después de una entrevista, con sus propias palabras. Es contenido humano, atribuido a quien lo escribió: nunca es generado, verificado ni puntuado por IA, y nunca es una recomendación de contratación.',
+                'description' => 'Lo que los entrevistadores observaron, con sus propias palabras. Es contenido humano, atribuido a quien lo escribió: nunca es generado, verificado ni puntuado por IA, y nunca es una recomendación de contratación.',
                 'empty' => 'Todavía no se registró ninguna devolución de entrevista',
-                'empty_description' => 'Una vez que la entrevista haya ocurrido, quien la condujo puede registrar lo que estableció para cada criterio del puesto.',
+                'empty_description' => 'Quien conduce una entrevista puede registrar lo que ella estableció para cada criterio del puesto, en cualquier momento: antes, durante o después.',
                 'card_heading' => 'Devolución registrada de esta entrevista',
                 'human_authored' => 'Registrado por una persona',
                 'submitted_at' => 'enviado el :date',
@@ -311,7 +310,7 @@ return [
                 'unknown_author' => 'Autor no disponible',
                 'interview_states' => [
                     'cancelled' => 'Esta entrevista se canceló después de registrar la devolución. La observación sigue siendo lo que vio quien entrevistó; la entrevista ya no figura como un compromiso cumplido.',
-                    'rescheduled' => 'Esta entrevista se movió luego a una fecha futura. La observación de abajo se registró para la sesión anterior.',
+                    'not_yet_held' => 'Esta entrevista todavía no ocurrió, así que la nota de abajo se escribió antes de que terminara. Registra lo que quien entrevista esperaba o había visto hasta ese momento, no lo que la entrevista estableció.',
                 ],
             ],
             'brief' => [

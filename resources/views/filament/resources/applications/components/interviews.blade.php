@@ -88,7 +88,7 @@
 
                         @if ($interview['meeting_url'] || $interview['can_reschedule'] || $interview['can_cancel'] || $interview['can_refresh'] || $interview['can_record_feedback'])
                             <div class="mt-4 flex flex-wrap gap-2">
-                                {{-- Only on an interview that already took place and was not cancelled: feedback is evidence from an interview, never a pre-interview judgement. --}}
+                                {{-- Offered whatever the slot's timing, on every interview that was not cancelled. A note written before the interview ends is labelled as such where it is reviewed, rather than being prevented here. --}}
                                 @if ($interview['can_record_feedback'])
                                     <x-filament::button size="sm" color="primary" outlined wire:click="mountAction('recordInterviewFeedback', { interview: {{ $interview['id'] }} })">
                                         {{ __($interview['has_own_feedback']

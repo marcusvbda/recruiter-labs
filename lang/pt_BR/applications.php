@@ -51,7 +51,6 @@ return [
     'errors' => [
         'interview_feedback' => [
             'interview_cancelled' => 'Esta entrevista foi cancelada e não pode receber devolutiva de entrevista.',
-            'interview_not_held_yet' => 'A devolutiva de entrevista só pode ser registrada depois que a entrevista acontecer.',
             'criterion_outside_interviewed_job' => 'A devolutiva de entrevista deve ser registrada sobre critérios da vaga para a qual o candidato foi entrevistado.',
             'no_criteria_submitted' => 'A devolutiva de entrevista deve incluir ao menos um resultado de critério.',
             'duplicate_criterion' => 'Cada critério da vaga só pode ser avaliado uma vez em um mesmo envio de devolutiva de entrevista.',
@@ -285,9 +284,9 @@ return [
             ],
             'evidence' => [
                 'heading' => 'Evidência da entrevista',
-                'description' => 'O que os entrevistadores observaram depois de uma entrevista, com as próprias palavras. É conteúdo humano, atribuído a quem escreveu: nunca é gerado, verificado ou pontuado por IA, e nunca é uma recomendação de contratação.',
+                'description' => 'O que os entrevistadores observaram, com as próprias palavras. É conteúdo humano, atribuído a quem escreveu: nunca é gerado, verificado ou pontuado por IA, e nunca é uma recomendação de contratação.',
                 'empty' => 'Nenhuma devolutiva de entrevista foi registrada ainda',
-                'empty_description' => 'Depois que a entrevista acontecer, quem a conduziu pode registrar o que ela estabeleceu para cada critério da vaga.',
+                'empty_description' => 'Quem conduz uma entrevista pode registrar o que ela estabeleceu para cada critério da vaga, a qualquer momento: antes, durante ou depois dela.',
                 'card_heading' => 'Devolutiva registrada desta entrevista',
                 'human_authored' => 'Registrado por uma pessoa',
                 'submitted_at' => 'enviado em :date',
@@ -311,7 +310,7 @@ return [
                 'unknown_author' => 'Autor indisponível',
                 'interview_states' => [
                     'cancelled' => 'Esta entrevista foi cancelada depois que a devolutiva foi registrada. A observação continua sendo o que quem entrevistou viu; a entrevista já não aparece como um compromisso cumprido.',
-                    'rescheduled' => 'Esta entrevista foi remarcada para uma data futura. A observação abaixo foi registrada para a sessão anterior.',
+                    'not_yet_held' => 'Esta entrevista ainda não aconteceu, então a nota abaixo foi escrita antes de ela terminar. Ela registra o que quem entrevista esperava ou tinha visto até ali, não o que a entrevista estabeleceu.',
                 ],
             ],
             'brief' => [

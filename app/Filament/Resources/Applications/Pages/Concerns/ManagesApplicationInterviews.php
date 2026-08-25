@@ -312,12 +312,13 @@ trait ManagesApplicationInterviews
         foreach ($application->interviews->sortBy('scheduled_at') as $interview) {
             $section = match (true) {
                 $interview->status === InterviewStatus::Cancelled => 'cancelled',
-                // "Past" and "can receive feedback" are the same fact, so the
-                // bucket composes the domain rule instead of restating it. Left
-                // as two copies, the card's affordance and the action's guard
-                // would eventually disagree about what "the interview happened"
-                // means.
-                $interview->canReceiveFeedback() => 'past',
+                // This bucket is purely about time — has the slot ended? —
+                // while feedback eligibility no longer cares about time at
+                // all (only cancellation gates it). The two used to be the
+                // same fact and could share one test; now they deliberately
+                // no longer compose, so this restates the time test on its
+                // own rather than reading it off `canReceiveFeedback()`.
+                $interview->ends_at->isPast() => 'past',
                 default => 'upcoming',
             };
 

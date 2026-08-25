@@ -397,23 +397,28 @@ trait PresentsInterviewEvidence
     }
 
     /**
-     * Feedback can only be recorded on an interview that took place, but the
-     * interview can be cancelled or moved afterwards. The observation stays —
-     * it was really made — while the card says so, so it cannot be read as
-     * evidence from a commitment that never happened.
+     * Feedback can now be recorded at any point relative to the interview, so
+     * this state is no longer about eligibility — it is about how the note
+     * should read. Deciding it from `canReceiveFeedback()` would report
+     * "held" for an interview that has not happened yet, exactly what a
+     * reader must never be allowed to mistake for an observation the
+     * interview produced.
      *
-     * Whether it still reads as "held" is decided by
-     * {@see Interview::canReceiveFeedback()}, the single domain definition of
-     * "the interview happened"; the remaining branches only name the reason it
-     * no longer holds, so they can never drift from that definition.
+     * So this is decided purely by time and cancellation:
+     *
+     * - cancelled interviews say so;
+     * - an interview whose slot has not ended yet is `not_yet_held`, whether
+     *   it was always upcoming or was moved there — the product cannot tell
+     *   those two apart anyway, since the original slot is not stored;
+     * - otherwise the slot has passed and the note reads as `held`.
      */
     private function interviewEvidenceState(?Interview $interview): string
     {
         return match (true) {
             ! $interview instanceof Interview => 'held',
-            $interview->canReceiveFeedback() => 'held',
             $interview->status === InterviewStatus::Cancelled => 'cancelled',
-            default => 'rescheduled',
+            $interview->ends_at->isFuture() => 'not_yet_held',
+            default => 'held',
         };
     }
 

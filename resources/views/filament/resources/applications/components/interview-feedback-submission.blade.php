@@ -21,10 +21,10 @@
         @endif
     </div>
 
-    {{-- Feedback can only be recorded on an interview that has taken place, but
-         the interview can be cancelled or moved afterwards. The observation was
-         really made, so it stays — said plainly, so it is not read as evidence
-         from a commitment that never happened. --}}
+    {{-- Feedback can be recorded at any point, and the interview can be
+         cancelled afterwards. Either way the observation was really made, so it
+         stays — with its context stated, so a note written before the interview
+         finished is never read as something the interview established. --}}
     @if ($submission['interview_state'] !== 'held')
         <p class="mt-2 text-xs text-warning-700 dark:text-warning-400">
             {{ __('applications.admin.interviews.evidence.interview_states.'.$submission['interview_state']) }}

@@ -22,15 +22,6 @@ class InterviewFeedbackException extends RuntimeException implements ShouldntRep
     }
 
     /**
-     * Feedback records what an interview established. Allowing it before the
-     * interview ends would turn it into a speculative pre-interview judgement.
-     */
-    public static function interviewNotHeldYet(): self
-    {
-        return new self(__('applications.errors.interview_feedback.interview_not_held_yet'));
-    }
-
-    /**
      * A criterion from another job or another workspace fails the whole
      * submission: evidence from one hiring process must never silently become
      * evidence for another.

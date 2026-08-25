@@ -30,7 +30,12 @@ use Illuminate\Validation\ValidationException;
 use Throwable;
 
 /**
- * Recording structured human evidence after an interview has taken place.
+ * Recording structured human evidence against an interview's job criteria.
+ *
+ * Timing does not gate it — before, during or after the slot — because an
+ * interviewer taking notes live should not have to wait for it to end. Only
+ * cancellation gates it, and {@see PresentsInterviewEvidence} is what marks a
+ * note written before the interview finished as exactly that.
  *
  * The counterpart of the AI evaluation surface, and deliberately not part of
  * it: everything here is written by a named person, is attributed to them, and
@@ -41,8 +46,9 @@ use Throwable;
 trait ManagesInterviewFeedback
 {
     /**
-     * Mounted from a past interview's card, never shown in the page header —
-     * feedback belongs to one specific interview, so the interview has to be
+     * Mounted from an interview's card — upcoming, running or finished, any of
+     * them that was not cancelled — and never shown in the page header.
+     * Feedback belongs to one specific interview, so the interview has to be
      * named by the button that opens the form.
      *
      * Two details are load-bearing and easy to undo by accident:

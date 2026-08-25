@@ -41,9 +41,9 @@ class InterviewFactory extends Factory
             },
             'calendar_integration_id' => null,
             'schedule_request_key' => null,
-            // The default interview is still ahead: nothing an interview has
-            // not run yet can have established, so it is deliberately not
-            // eligible for feedback until a state says otherwise.
+            // The default interview is still ahead of us: scheduled, not yet
+            // run. Feedback eligibility does not depend on this — only
+            // {@see cancelled()} takes it away.
             'status' => InterviewStatus::Scheduled,
             'scheduled_at' => $scheduledAt,
             'ends_at' => $scheduledAt->copy()->addHour(),
@@ -60,8 +60,7 @@ class InterviewFactory extends Factory
     }
 
     /**
-     * An interview that has already taken place — the only shape that can
-     * receive feedback ({@see Interview::canReceiveFeedback()}).
+     * An interview whose slot has already passed.
      */
     public function held(): static
     {

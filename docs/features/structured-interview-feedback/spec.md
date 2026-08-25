@@ -42,8 +42,9 @@ The interview should close that gap.
 Turn interviews into structured, attributable human evidence against the job
 criteria.
 
-After an interview, an authorized workspace user should be able to record what
-the interview established about the candidate for the criteria that mattered.
+An authorized workspace user should be able to record what an interview
+established about the candidate for the criteria that mattered — during the
+interview or after it, whichever fits how they work.
 
 Recruiter Labs must preserve a clear distinction between:
 
@@ -82,10 +83,14 @@ because the application contains:
 
 This context remains available when preparing for the interview.
 
-### After the interview
+### Recording the feedback
 
-Once an interview has taken place, an authorized workspace user can record
-structured interview feedback.
+An authorized workspace user can record structured interview feedback for any
+interview that has not been cancelled, at any point: before it starts, while it
+is running, or after it has ended.
+
+Recording as the interview happens is the common case — an interviewer taking
+notes live should not have to wait for the slot to end before saving them.
 
 For each relevant job criterion, the interviewer can choose one result:
 
@@ -260,13 +265,23 @@ evaluated.
 
 A cancelled interview cannot receive normal completed-interview feedback.
 
-### Feedback follows the interview
+### Feedback belongs to an interview, and says when it was written
 
-Structured interview feedback represents evidence from an interview that has
-actually taken place.
+Structured interview feedback is always attached to a specific interview, and
+the product never hides when it was written relative to that interview.
 
-It must not be used as a mechanism for entering speculative pre-interview
-judgements.
+Timing does not gate recording. An interviewer may save what they observed
+before the slot ends, and a note taken live is worth more than one reconstructed
+from memory hours later.
+
+Timing does change how the feedback reads. Feedback recorded while the interview
+has not yet ended is shown as what it is — written before the interview
+finished — so a reader can never mistake a pre-interview expectation for an
+observation the interview actually produced. The same applies when an interview
+is later cancelled or moved: the observation stands, and its context is stated.
+
+The product does not police what an interviewer writes and when. It does refuse
+to present a note as something it is not.
 
 ### No automatic recruitment decision
 
@@ -315,8 +330,12 @@ this feature.
 
 ### 3. Interview becomes eligible for feedback
 
-After the interview has taken place, Recruiter Labs provides a clear action to
-record interview feedback.
+Recruiter Labs provides a clear action to record interview feedback on any
+interview that has not been cancelled, whether it is upcoming, running or
+finished.
+
+Feedback saved before the interview has ended is labelled as such wherever it is
+later reviewed.
 
 ### 4. Interviewer records criterion evidence
 
@@ -386,8 +405,9 @@ Reconciling disagreement remains a human hiring-team responsibility.
 
 ## Acceptance criteria
 
-- **AC01** — An authorized workspace user can record structured feedback after
-  an interview has taken place.
+- **AC01** — An authorized workspace user can record structured feedback for an
+  interview that has not been cancelled, whether it is upcoming, running or
+  finished.
 
 - **AC02** — Interview feedback can record `Confirmed`, `Partially confirmed`,
   `Not confirmed`, or `Not assessed` for a relevant job criterion.
@@ -409,8 +429,9 @@ Reconciling disagreement remains a human hiring-team responsibility.
 - **AC08** — A cancelled interview cannot receive normal completed-interview
   feedback.
 
-- **AC09** — Feedback is recorded only as interview evidence after the interview
-  has taken place, not as speculative pre-interview assessment.
+- **AC09** — Recording is never gated on timing, and feedback recorded before the
+  interview has ended is visibly marked as written before the interview
+  finished, so it cannot be read as an observation the interview produced.
 
 - **AC10** — Application evidence and human interview evidence are visibly and
   semantically separate when reviewing a candidate.
