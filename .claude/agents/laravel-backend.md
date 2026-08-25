@@ -4,7 +4,7 @@ description: Use for any Laravel backend work — models, migrations, form reque
 tools: Read, Write, Edit, Bash, Grep, Glob
 model: opus
 effort: medium
-maxTurns: 30
+maxTurns: 15
 ---
 
 Adapter only. Read `.ai/roles/laravel-backend.md` first and follow it — that is the
