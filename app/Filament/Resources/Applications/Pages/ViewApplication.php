@@ -12,6 +12,8 @@ use App\Enums\SocialNetwork;
 use App\Filament\Clusters\Settings\Pages\AiSettings;
 use App\Filament\Resources\Applications\ApplicationResource;
 use App\Filament\Resources\Applications\Pages\Concerns\ManagesApplicationInterviews;
+use App\Filament\Resources\Applications\Pages\Concerns\ManagesInterviewFeedback;
+use App\Filament\Resources\Applications\Pages\Concerns\PresentsInterviewEvidence;
 use App\Filament\Resources\Candidates\CandidateResource;
 use App\Filament\Resources\Jobs\JobResource;
 use App\Models\Application;
@@ -48,6 +50,8 @@ use LogicException;
 class ViewApplication extends ViewRecord
 {
     use ManagesApplicationInterviews;
+    use ManagesInterviewFeedback;
+    use PresentsInterviewEvidence;
 
     protected static string $resource = ApplicationResource::class;
 
@@ -154,10 +158,21 @@ class ViewApplication extends ViewRecord
                     ->url(route('job.show', ['key' => $application->job->key]))
                     ->openUrlInNewTab(),
             ]),
-            // Mounted from the interview cards, never shown in the header itself.
+            // Registered here and `hidden()` so they stay out of the header, and
+            // mounted from the interview cards — except that they currently
+            // cannot mount at all: `Action::isDisabled()` reports a hidden action
+            // as disabled and `mountAction()` refuses to mount one, so clicking
+            // these three card buttons is a silent no-op. Pre-existing, out of
+            // this feature's scope, and the reason for the note below.
             $this->rescheduleInterviewAction(),
             $this->cancelInterviewAction(),
             $this->refreshInterviewAction(),
+            // `recordInterviewFeedback` is therefore deliberately absent rather
+            // than inconsistent: Filament resolves a card-mounted action by
+            // looking for a `<name>Action()` method on this page, so listing it
+            // here is not what makes it mountable — while listing it here *and*
+            // hiding it is exactly what would break it. Do not "tidy" it into
+            // the list above. See ManagesInterviewFeedback for the detail.
         ];
     }
 
@@ -773,6 +788,14 @@ class ViewApplication extends ViewRecord
         }
 
         $application->loadMissing(['criterionScores', 'interviewBriefItems']);
+
+        // The two evidence layers live on two tabs. This one shows only what the
+        // submitted application supported, and points at the human interview
+        // evidence instead of repeating it.
+        $data['interview_evidence_url'] = ApplicationResource::getUrl('view', [
+            'record' => $application,
+            'section' => 'interviews',
+        ], tenant: $application->company);
 
         $data['score'] = $application->analysis_score !== null
             ? (int) round((float) $application->analysis_score)

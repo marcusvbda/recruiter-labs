@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property int $company_id
@@ -87,6 +88,22 @@ class Interview extends Model
         return $query->notCancelled()->where('ends_at', '>=', CarbonImmutable::now());
     }
 
+    /**
+     * Whether this interview can receive structured feedback: it was not
+     * cancelled, and it has already ended. The exact complement of
+     * {@see scopeUpcoming()} — a commitment that has been kept — so the
+     * eligibility rule is stated once and every surface composes it instead of
+     * restating "not cancelled and in the past".
+     *
+     * There is deliberately no "completed" interview status behind this: the
+     * schedule already knows when the interview ended.
+     */
+    public function canReceiveFeedback(): bool
+    {
+        return $this->status !== InterviewStatus::Cancelled
+            && $this->ends_at->isPast();
+    }
+
     /** @return BelongsTo<Company, $this> */
     public function company(): BelongsTo
     {
@@ -109,5 +126,17 @@ class Interview extends Model
     public function calendarIntegration(): BelongsTo
     {
         return $this->belongsTo(ConnectedIntegration::class, 'calendar_integration_id');
+    }
+
+    /**
+     * Structured human evidence recorded after this interview, one record per
+     * interviewer. Several interviewers on the same interview coexist; none of
+     * them replaces another.
+     *
+     * @return HasMany<InterviewFeedback, $this>
+     */
+    public function feedback(): HasMany
+    {
+        return $this->hasMany(InterviewFeedback::class);
     }
 }

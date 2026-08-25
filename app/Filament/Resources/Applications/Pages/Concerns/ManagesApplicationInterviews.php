@@ -19,6 +19,7 @@ use App\Models\ApplicationInterviewBriefItem;
 use App\Models\Company;
 use App\Models\ConnectedIntegration;
 use App\Models\Interview;
+use App\Models\InterviewFeedback;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use DateTimeInterface;
@@ -39,6 +40,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use LogicException;
@@ -296,23 +298,39 @@ trait ManagesApplicationInterviews
     }
 
     /**
-     * @return array{connection: array{is_connected: bool, needs_reauthorization: bool, settings_url: string}, upcoming: list<array<string, bool|int|string|null>>, past: list<array<string, bool|int|string|null>>, cancelled: list<array<string, bool|int|string|null>>, brief_items: array<int, array<string, string>>}
+     * @return array{connection: array{is_connected: bool, needs_reauthorization: bool, settings_url: string}, upcoming: list<array<string, mixed>>, past: list<array<string, mixed>>, cancelled: list<array<string, mixed>>, evidence: array{shows_application_evidence: bool, unresolved_count: int, criteria: list<array<string, mixed>>}, brief_items: array<int, array<string, string>>}
      */
     private function interviewsData(Application $application): array
     {
-        $application->loadMissing('interviews', 'interviewBriefItems');
+        $application->loadMissing('interviews', 'interviewBriefItems', 'job');
         $user = $this->getCurrentUser();
-        $now = CarbonImmutable::now();
+        $canUpdateApplication = Gate::forUser($user)->allows('update', $application);
         $interviews = ['upcoming' => [], 'past' => [], 'cancelled' => []];
+        // Loaded once for the whole tab: the cards and the aggregated section
+        // read the same submissions, so neither issues a query per interview,
+        // per submission or per criterion.
+        $feedback = $this->interviewFeedbackByInterview($application);
+        $criteriaGeneration = (int) $application->job->criteria_generation;
 
         foreach ($application->interviews->sortBy('scheduled_at') as $interview) {
             $section = match (true) {
                 $interview->status === InterviewStatus::Cancelled => 'cancelled',
-                $interview->ends_at->isBefore($now) => 'past',
+                // "Past" and "can receive feedback" are the same fact, so the
+                // bucket composes the domain rule instead of restating it. Left
+                // as two copies, the card's affordance and the action's guard
+                // would eventually disagree about what "the interview happened"
+                // means.
+                $interview->canReceiveFeedback() => 'past',
                 default => 'upcoming',
             };
 
-            $interviews[$section][] = $this->interviewCardData($interview, $user);
+            $interviews[$section][] = $this->interviewCardData(
+                $interview,
+                $user,
+                $canUpdateApplication,
+                $feedback->get((int) $interview->getKey()) ?? collect(),
+                $criteriaGeneration,
+            );
         }
 
         return [
@@ -320,6 +338,7 @@ trait ManagesApplicationInterviews
             'upcoming' => $interviews['upcoming'],
             'past' => $interviews['past'],
             'cancelled' => $interviews['cancelled'],
+            'evidence' => $this->interviewEvidenceData($application),
             'brief_items' => $application->interviewBriefItems
                 ->map(fn (ApplicationInterviewBriefItem $item): array => [
                     'criterion' => $item->criterion,
@@ -332,9 +351,17 @@ trait ManagesApplicationInterviews
         ];
     }
 
-    /** @return array<string, bool|int|string|null> */
-    private function interviewCardData(Interview $interview, User $user): array
-    {
+    /**
+     * @param  Collection<int, InterviewFeedback>  $feedback
+     * @return array<string, mixed>
+     */
+    private function interviewCardData(
+        Interview $interview,
+        User $user,
+        bool $canUpdateApplication,
+        Collection $feedback,
+        int $criteriaGeneration,
+    ): array {
         $status = $this->enumValue($interview->status);
         $syncStatus = $this->enumValue($interview->calendar_sync_status);
         $isCancelled = $status === InterviewStatus::Cancelled->value;
@@ -375,6 +402,16 @@ trait ManagesApplicationInterviews
             'can_reschedule' => $isCalendarOwner && ($status === InterviewStatus::Scheduled->value || $hasRecoverablePendingCalendarFailure),
             'can_cancel' => $isCalendarOwner && ! $isCancelled,
             'can_refresh' => $isCalendarOwner && ! $isCancelled,
+            // Unlike rescheduling, cancelling and refreshing, this is not the
+            // calendar owner's privilege: two people may interview the same
+            // candidate together, and each of them records their own evidence.
+            'can_record_feedback' => $canUpdateApplication && $interview->canReceiveFeedback(),
+            'has_own_feedback' => $feedback
+                ->contains(fn (InterviewFeedback $submission): bool => (int) $submission->submitted_by_id === (int) $user->getKey()),
+            // Every submission this interview received, each attributed to its
+            // author. They are listed side by side and never merged: two
+            // interviewers reaching different observations both stand.
+            'feedback' => $this->interviewFeedbackCardData($feedback, $criteriaGeneration),
         ];
     }
 

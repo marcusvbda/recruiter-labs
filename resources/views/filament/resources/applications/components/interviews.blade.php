@@ -70,8 +70,32 @@
                             @endif
                         </dl>
 
-                        @if ($interview['meeting_url'] || $interview['can_reschedule'] || $interview['can_cancel'] || $interview['can_refresh'])
+                        {{-- The feedback this interview received, on the interview
+                             it belongs to: human evidence stays attached to the
+                             interview and author that produced it. --}}
+                        @if ($interview['feedback'] !== [])
+                            <div class="mt-4 space-y-3">
+                                <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
+                                    {{ __('applications.admin.interviews.evidence.card_heading') }}
+                                </p>
+                                @foreach ($interview['feedback'] as $submission)
+                                    @include('filament.resources.applications.components.interview-feedback-submission', [
+                                        'submission' => $submission,
+                                    ])
+                                @endforeach
+                            </div>
+                        @endif
+
+                        @if ($interview['meeting_url'] || $interview['can_reschedule'] || $interview['can_cancel'] || $interview['can_refresh'] || $interview['can_record_feedback'])
                             <div class="mt-4 flex flex-wrap gap-2">
+                                {{-- Only on an interview that already took place and was not cancelled: feedback is evidence from an interview, never a pre-interview judgement. --}}
+                                @if ($interview['can_record_feedback'])
+                                    <x-filament::button size="sm" color="primary" outlined wire:click="mountAction('recordInterviewFeedback', { interview: {{ $interview['id'] }} })">
+                                        {{ __($interview['has_own_feedback']
+                                            ? 'applications.admin.actions.edit_interview_feedback'
+                                            : 'applications.admin.actions.record_interview_feedback') }}
+                                    </x-filament::button>
+                                @endif
                                 @if ($interview['meeting_url'])
                                     <x-filament::button tag="a" size="sm" :href="$interview['meeting_url']" target="_blank" rel="noopener noreferrer">
                                         {{ __('applications.admin.actions.join_meet') }}
@@ -106,6 +130,19 @@
             </div>
         </x-filament::section>
     @endforeach
+
+    {{-- Human evidence, aggregated by criterion. It sits beside the brief, not
+         inside it: the brief is what to ask before the interview, this is what
+         an interviewer observed after one. --}}
+    <x-filament::section
+        :heading="__('applications.admin.interviews.evidence.heading')"
+        :description="__('applications.admin.interviews.evidence.description')"
+        icon="heroicon-o-chat-bubble-left-right"
+    >
+        @include('filament.resources.applications.components.interview-evidence', [
+            'evidence' => $interviews['evidence'],
+        ])
+    </x-filament::section>
 
     <x-filament::section
         :heading="__('applications.admin.interviews.brief.heading')"

@@ -317,4 +317,19 @@ class Application extends Model
     {
         return $this->interviews()->upcoming()->orderBy('scheduled_at');
     }
+
+    /**
+     * Human evidence recorded after this candidate's interviews, newest
+     * submission first so every caller reads the same chronology. It is
+     * deliberately separate from {@see criterionScores()}: what the application
+     * showed and what an interviewer observed are two different claims.
+     *
+     * @return HasMany<InterviewFeedback, $this>
+     */
+    public function interviewFeedback(): HasMany
+    {
+        return $this->hasMany(InterviewFeedback::class)
+            ->orderByDesc('submitted_at')
+            ->orderByDesc('id');
+    }
 }

@@ -51,6 +51,15 @@
         <div>
             <h3 class="text-sm font-semibold text-gray-950 dark:text-white">
                 {{ __('applications.admin.ai.criteria_heading') }}</h3>
+            {{-- This tab is one of the two evidence layers and says so. What an
+                 interviewer observed is human evidence, lives on the Interviews
+                 tab, and is linked to rather than repeated here. --}}
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                {{ __('applications.admin.ai.criteria.application_only_note') }}
+                <a href="{{ $analysis['interview_evidence_url'] }}" class="font-medium text-primary-600 underline decoration-primary-600/30 underline-offset-2 hover:decoration-primary-600 dark:text-primary-400 dark:decoration-primary-400/30 dark:hover:decoration-primary-400">
+                    {{ __('applications.admin.ai.criteria.interview_evidence_link') }}
+                </a>
+            </p>
             <div class="mt-2 flex flex-wrap gap-2 text-xs font-medium text-gray-600 dark:text-gray-300">
                 <span class="rounded-full bg-warning-50 px-2.5 py-1 dark:bg-warning-950/30">
                     {{ trans_choice('applications.admin.ai.criteria.needs_validation_count', $analysis['criteria']['needs_validation_count'], ['count' => $analysis['criteria']['needs_validation_count']]) }}
