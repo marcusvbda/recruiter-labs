@@ -34,8 +34,12 @@ use Illuminate\Support\Collection;
  *   finding and its note never renders under a heading that reads as evidence
  *   about the candidate.
  *
- * The host page must provide `getApplication()`, `criterionKey()`,
- * `needsValidation()` and `importanceForWeight()`.
+ * Composition requirements, which are not all satisfied by the host page:
+ * `getApplication()`, `needsValidation()` and `importanceForWeight()` come from
+ * the page itself, but `criterionKey()` comes from the sibling trait
+ * {@see ManagesInterviewFeedback}. This trait therefore cannot be composed
+ * alone — a page that takes the read side without the write side fatals at
+ * runtime rather than failing analysis.
  */
 trait PresentsInterviewEvidence
 {
@@ -144,8 +148,10 @@ trait PresentsInterviewEvidence
      * @param  Collection<int, InterviewFeedback>  $submissions
      * @return list<array<string, mixed>>
      */
-    private function interviewFeedbackCardData(Collection $submissions, int $currentCriteriaGeneration): array
+    private function interviewFeedbackCardData(Interview $interview, Collection $submissions, int $currentCriteriaGeneration): array
     {
+        $state = $this->interviewEvidenceState($interview);
+
         return array_values($submissions
             ->sortBy([['submitted_at', 'asc'], ['id', 'asc']])
             ->map(fn (InterviewFeedback $feedback): array => [
@@ -154,6 +160,7 @@ trait PresentsInterviewEvidence
                 'is_historical' => (int) $feedback->criteria_generation !== $currentCriteriaGeneration,
                 'general_note' => $feedback->general_note,
                 'criteria' => $this->interviewFeedbackCriteriaData($feedback),
+                'interview_state' => $state,
             ])
             ->all());
     }
@@ -394,14 +401,19 @@ trait PresentsInterviewEvidence
      * interview can be cancelled or moved afterwards. The observation stays —
      * it was really made — while the card says so, so it cannot be read as
      * evidence from a commitment that never happened.
+     *
+     * Whether it still reads as "held" is decided by
+     * {@see Interview::canReceiveFeedback()}, the single domain definition of
+     * "the interview happened"; the remaining branches only name the reason it
+     * no longer holds, so they can never drift from that definition.
      */
     private function interviewEvidenceState(?Interview $interview): string
     {
         return match (true) {
             ! $interview instanceof Interview => 'held',
+            $interview->canReceiveFeedback() => 'held',
             $interview->status === InterviewStatus::Cancelled => 'cancelled',
-            $interview->ends_at->isFuture() => 'rescheduled',
-            default => 'held',
+            default => 'rescheduled',
         };
     }
 

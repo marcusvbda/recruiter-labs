@@ -386,8 +386,8 @@ return [
                 ],
             ],
             'interview_brief' => [
-                'heading' => 'Resumo para entrevista',
-                'description' => 'O que validar com este candidato, começando pela incerteza mais importante. A prioridade segue o quanto precisa de verificação humana, não a nota mais baixa.',
+                'heading' => 'Resumo para entrevista · antes da entrevista',
+                'description' => 'Preparação assistida por IA construída a partir da candidatura enviada, antes de qualquer entrevista acontecer. Ela sugere o que validar — não é devolutiva de entrevista. A prioridade segue o quanto precisa de verificação humana, não a nota mais baixa.',
                 'priority_label' => 'Prioridade:',
                 'reason_label' => 'Por que perguntar',
                 'question_label' => 'Pergunta sugerida',

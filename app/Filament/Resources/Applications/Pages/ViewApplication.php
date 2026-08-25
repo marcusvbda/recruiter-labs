@@ -158,21 +158,16 @@ class ViewApplication extends ViewRecord
                     ->url(route('job.show', ['key' => $application->job->key]))
                     ->openUrlInNewTab(),
             ]),
-            // Registered here and `hidden()` so they stay out of the header, and
-            // mounted from the interview cards — except that they currently
-            // cannot mount at all: `Action::isDisabled()` reports a hidden action
-            // as disabled and `mountAction()` refuses to mount one, so clicking
-            // these three card buttons is a silent no-op. Pre-existing, out of
-            // this feature's scope, and the reason for the note below.
-            $this->rescheduleInterviewAction(),
-            $this->cancelInterviewAction(),
-            $this->refreshInterviewAction(),
-            // `recordInterviewFeedback` is therefore deliberately absent rather
-            // than inconsistent: Filament resolves a card-mounted action by
-            // looking for a `<name>Action()` method on this page, so listing it
-            // here is not what makes it mountable — while listing it here *and*
-            // hiding it is exactly what would break it. Do not "tidy" it into
-            // the list above. See ManagesInterviewFeedback for the detail.
+            // Every action mounted from an interview card — reschedule, cancel,
+            // refresh response, record feedback — is deliberately absent from
+            // this list. Filament resolves a card-mounted action by looking for
+            // a `<name>Action()` method on the page, so listing it here is not
+            // what makes it mountable; listing it here and hiding it is what
+            // *breaks* it, because `Action::isDisabled()` reports a hidden
+            // action as disabled and `mountAction()` refuses to mount a
+            // disabled one. Those builders are `protected` rather than
+            // `private` for the same reason: the resolver calls them from an
+            // ancestor class. Do not "tidy" them back into this list.
         ];
     }
 

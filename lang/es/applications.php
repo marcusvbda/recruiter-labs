@@ -386,8 +386,8 @@ return [
                 ],
             ],
             'interview_brief' => [
-                'heading' => 'Guía de entrevista',
-                'description' => 'Qué validar con este candidato, empezando por la incertidumbre más importante. La prioridad sigue cuánto necesita verificación humana, no la nota más baja.',
+                'heading' => 'Guía de entrevista · antes de la entrevista',
+                'description' => 'Preparación asistida por IA construida a partir de la postulación enviada, antes de que ocurriera cualquier entrevista. Sugiere qué validar: no es una devolución de entrevista. La prioridad sigue cuánto necesita verificación humana, no la nota más baja.',
                 'priority_label' => 'Prioridad:',
                 'reason_label' => 'Por qué preguntar',
                 'question_label' => 'Pregunta sugerida',

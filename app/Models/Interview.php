@@ -7,8 +7,10 @@ use App\Enums\InterviewCalendarSyncStatus;
 use App\Enums\InterviewRsvpStatus;
 use App\Enums\InterviewStatus;
 use Carbon\CarbonImmutable;
+use Database\Factories\InterviewFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -40,6 +42,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable(['company_id', 'application_id', 'calendar_user_id', 'calendar_integration_id', 'schedule_request_key', 'status', 'scheduled_at', 'ends_at', 'timezone', 'calendar_event_id', 'calendar_conference_id', 'meeting_url', 'rsvp_status', 'rsvp_responded_at', 'notification_sequence', 'pending_notification_type', 'calendar_sync_status', 'calendar_sync_terminal', 'calendar_sync_error', 'last_calendar_synced_at', 'cancelled_at', 'cancellation_reason'])]
 class Interview extends Model
 {
+    /** @use HasFactory<InterviewFactory> */
+    use HasFactory;
+
     protected $attributes = [
         'status' => InterviewStatus::Pending->value,
         'rsvp_status' => InterviewRsvpStatus::NeedsAction->value,

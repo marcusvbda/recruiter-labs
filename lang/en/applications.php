@@ -386,8 +386,8 @@ return [
                 ],
             ],
             'interview_brief' => [
-                'heading' => 'Interview brief',
-                'description' => 'What to validate with this candidate, most important uncertainty first. Priority follows how much a human needs to check, not how low a criterion scored.',
+                'heading' => 'Interview brief · before the interview',
+                'description' => 'AI-assisted preparation built from the submitted application, before any interview took place — it is not interview feedback. Most important uncertainty first: priority follows how much a human needs to check, not how low a criterion scored.',
                 'priority_label' => 'Priority:',
                 'reason_label' => 'Why ask',
                 'question_label' => 'Suggested question',

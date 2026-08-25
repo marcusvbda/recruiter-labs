@@ -109,12 +109,11 @@ trait ManagesApplicationInterviews
             });
     }
 
-    private function rescheduleInterviewAction(): Action
+    protected function rescheduleInterviewAction(): Action
     {
         return Action::make('rescheduleInterview')
             ->label(__('applications.admin.actions.reschedule_interview'))
             ->icon(Heroicon::OutlinedCalendarDays)
-            ->hidden()
             ->schema($this->interviewSchedulingSchema())
             ->fillForm(function (array $arguments): array {
                 $interview = $this->resolveInterview($arguments);
@@ -153,13 +152,12 @@ trait ManagesApplicationInterviews
             });
     }
 
-    private function cancelInterviewAction(): Action
+    protected function cancelInterviewAction(): Action
     {
         return Action::make('cancelInterview')
             ->label(__('applications.admin.actions.cancel_interview'))
             ->icon(Heroicon::OutlinedXCircle)
             ->color('danger')
-            ->hidden()
             ->requiresConfirmation()
             ->schema([
                 Textarea::make('reason')
@@ -192,12 +190,11 @@ trait ManagesApplicationInterviews
             });
     }
 
-    private function refreshInterviewAction(): Action
+    protected function refreshInterviewAction(): Action
     {
         return Action::make('refreshInterview')
             ->label(__('applications.admin.actions.refresh_interview'))
             ->icon(Heroicon::OutlinedArrowPath)
-            ->hidden()
             ->action(function (array $arguments, SyncInterviewResponse $syncInterviewResponse): void {
                 $application = $this->getApplication();
                 $user = $this->getCurrentUser();
@@ -411,7 +408,7 @@ trait ManagesApplicationInterviews
             // Every submission this interview received, each attributed to its
             // author. They are listed side by side and never merged: two
             // interviewers reaching different observations both stand.
-            'feedback' => $this->interviewFeedbackCardData($feedback, $criteriaGeneration),
+            'feedback' => $this->interviewFeedbackCardData($interview, $feedback, $criteriaGeneration),
         ];
     }
 
