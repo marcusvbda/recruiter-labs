@@ -86,8 +86,9 @@ Nothing in `.ai/**` or `docs/features/**` may assume a tool-specific capability.
 ## Token discipline
 
 - Load a skill only when its domain is relevant; never preload all of `.ai/skills`.
-- Read the sections of `spec.md`/`plan.md` a task needs, not the whole document
-  on every task.
+- After the initial full read, revisit only the sections of `spec.md` and
+  any present `tech-design.md` that a task needs rather than re-reading source
+  documents on every task.
 - Review the task diff, not the repository.
 - Run deterministic checks first; use AI review for judgement, not for running
   commands.

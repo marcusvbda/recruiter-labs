@@ -60,16 +60,30 @@ Running existing tests is always allowed and encouraged.
 Approved feature documentation lives under:
 
 ```text
+# Existing / as-built feature
 docs/features/<feature>/
-├── spec.md    # product source of truth — problem, rules, acceptance criteria (WHAT/WHY)
-├── plan.md    # technical design — architecture, modules, verification strategy (HOW)
-└── tasks.md   # ordered, executable implementation units
+└── spec.md    # product source of truth — current observable behaviour (WHAT/WHY)
+
+# New / planned feature
+docs/features/<feature>/
+├── spec.md          # required product source of truth (WHAT/WHY)
+└── tech-design.md?  # optional, binding technical source of truth (HOW)
 ```
 
 It is versioned project documentation shared by every AI tool and by humans. It
 is **never** deleted automatically, never deleted as part of "finishing" a
 feature, and is updated when reality diverges from it. See
 `docs/features/README.md` for the document contract.
+
+Implementation task decomposition is runtime execution state, not persistent
+feature documentation. The `execute-feature` orchestrator derives and maintains
+it only in `.ai/state/<feature>.md`; it never creates `tasks.md`.
+
+For planned features, `spec.md` is sufficient for execution. When
+`tech-design.md` is absent, the orchestrator chooses the best technical approach
+from the current repository context and history. When it exists, it is binding
+and must be implemented exactly; any required deviation is a blocker to
+surface, not an automatic documentation correction.
 
 ### Temporary plans
 

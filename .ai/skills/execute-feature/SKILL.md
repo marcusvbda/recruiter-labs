@@ -1,6 +1,6 @@
 ---
 name: execute-feature
-description: Orchestration workflow for implementing a feature whose spec.md, plan.md and tasks.md already exist under docs/features/<feature>/ — it refuses to run and never writes those documents if any is missing. Drives task-by-task delegation, deterministic verification, independent code review against acceptance criteria, bounded correction loops, resumable state in .ai/state/, and a final integrated feature review. Load when asked to execute, implement or continue a documented feature.
+description: Use when asked to execute, implement or continue a planned feature documented under docs/features/<feature>/.
 ---
 
 # Execute feature
@@ -8,75 +8,90 @@ description: Orchestration workflow for implementing a feature whose spec.md, pl
 ## Execution boundary
 
 ```text
-PRODUCT / DESIGN PHASE
-
+PRODUCT
 spec.md
     ↓
-plan.md
+OPTIONAL TECHNICAL DESIGN
+tech-design.md present: binding exactly
+tech-design.md absent: approach derived after boundary
     ↓
-tasks.md
-
 -----------------------------
 EXECUTION BOUNDARY
 -----------------------------
-
-execute-feature
+audit current repository and history
     ↓
-implementation
+follow binding design or derive best approach
     ↓
-verification
+derive AI-optimized task graph
     ↓
-review
+.ai/state/<feature>.md
+    ↓
+implement → verify → review → correct
+    ↓
+integrated feature review
 ```
 
-This skill starts **below** the boundary. It never brainstorms product
-requirements, never designs the feature, and never makes a major design
-decision on the user's behalf. Everything above the boundary is produced by the
-product/planning workflow, by a human, before execution begins.
+This skill starts **below** the execution boundary. It never invents product
+requirements or makes a product decision on the user's behalf. Product
+behaviour comes from `spec.md`. When `tech-design.md` exists, its implementation
+direction is binding exactly. When it is absent, the orchestrator derives the
+best technical approach from the repository, its history and loaded domain
+skills.
 
 ## Entry gate
 
-A feature is executable only when **all three** files already exist:
+A new / planned feature is executable when this required file exists and
+satisfies the document contract in `docs/features/README.md`:
 
 ```text
 docs/features/<feature>/spec.md
-docs/features/<feature>/plan.md
-docs/features/<feature>/tasks.md
 ```
 
-If any one of them is missing:
+Missing acceptance criteria, an empty file, placeholders or obviously
+unfinished sections make `spec.md` incomplete. If it is missing or incomplete:
 
 ```text
 STOP.
-Report exactly which artifact is missing.
-Do not create it.
-Do not infer it.
+Report exactly which artifact is missing or incomplete.
+Do not create or infer it.
 Do not start implementation.
 ```
 
-The missing artifact is produced first through the product/planning workflow
-(see `docs/features/README.md` for what each document must contain). An empty,
-placeholder or obviously unfinished document counts as missing — say so and
-stop. Never satisfy the gate by writing the document yourself.
+`tech-design.md` is optional. Do not create it to satisfy the entry gate or
+retrospectively document an as-built feature. If it exists, it must itself be
+complete and grounded in the current repository; an incomplete design is a
+blocker because exact execution is not possible.
+
+The presence of `tech-design.md` means the user requires that design to be
+implemented exactly. Repository inspection validates feasibility but never
+authorizes replacing, improving, reinterpreting or silently correcting it. If
+any deviation is required, stop and surface the blocker before implementation.
+
+The orchestrator never creates `tasks.md`. Task decomposition is an execution
+decision recorded only in `.ai/state/<feature>.md`.
 
 ## Your role
 
-You are the **orchestrator**. You do not implement the whole feature yourself.
-You scope one task at a time, delegate it, verify it deterministically, have it
-reviewed against its acceptance criteria, and move on.
+You are the **orchestrator**. You inspect the current repository, derive the
+implementation task graph, scope and delegate one task at a time, verify it
+deterministically, have it reviewed against its acceptance criteria, and move
+on.
 
-Global rules in `AGENTS.md` always win: English only, no branches/commits/pushes
-unless explicitly asked in that message, no new or modified tests unless
-explicitly asked in that message.
+Global rules in `AGENTS.md` always win: English only, no branches, commits or
+pushes unless explicitly asked in that message, and no new or modified tests
+unless explicitly asked in that message.
 
 ### Decisions you may make, and decisions you may not
 
-Decide freely while executing, when spec, plan and task are clear and several
-equivalent implementations exist:
+When `tech-design.md` is absent, decide the technical approach from repository
+context and history while preserving `spec.md`. When it exists, make only
+implementation-level choices it does not prescribe and that cannot alter or
+deviate from it. In either case, decide freely about:
 
+- task boundaries, dependencies and execution order;
 - method, variable and class naming;
 - small internal extraction or inlining;
-- exact placement of a helper within the agreed structure;
+- exact placement of a helper within the approved structure;
 - minor sequencing inside a task.
 
 Never decide silently — stop and surface it instead:
@@ -84,50 +99,145 @@ Never decide silently — stop and surface it instead:
 - a new business rule or changed user-visible behaviour;
 - anything that expands or reduces the feature's scope;
 - a new product requirement the spec does not state;
-- a major architectural change the plan does not describe.
-
-Those belong above the execution boundary.
+- a product ambiguity that implementation cannot resolve;
+- any required deviation from an existing `tech-design.md`, including a stale
+  path, unavailable component, internal conflict or preferred alternative.
 
 ## 0. Start or resume
 
-Only once the entry gate above has passed:
+Only once the entry gate has passed:
 
-1. Read `tasks.md` in full (it is the shortest document and the task list).
-2. Read the *table of contents / headings* of `spec.md` and `plan.md` — not the
-   whole text — so you know where to look later.
-3. Read `.ai/state/<feature>.md`. If it does not exist, create it (create
-   `.ai/state/` if missing; it is git-ignored):
+1. Read `spec.md` in full. If `tech-design.md` exists, read it in full.
+2. Load the domain skill(s) the feature touches:
+   - recruiter surfaces → `.ai/skills/recruitment-workflow/SKILL.md`;
+   - AI / candidate evaluation →
+     `.ai/skills/evaluation-integrity/SKILL.md`.
+3. Inspect the actual current repository and its relevant history:
+   implementation, data model, established patterns, dependencies and
+   verification commands. With a design, use inspection to validate exact
+   feasibility. Without one, use it to choose the best technical approach.
+4. Compute a deterministic SHA-256 identity for `spec.md`. Record either the
+   SHA-256 identity of `tech-design.md` or the literal `ABSENT`, then read
+   `.ai/state/<feature>.md` if it exists. Repository inspection also checks
+   whether code relevant to recorded completed work has drifted since its
+   completion evidence was captured.
 
-   ```text
-   Feature: <feature>
-   Source: docs/features/<feature>/
+### New execution state
 
-   T01 PENDING
-   T02 PENDING
-   T03 PENDING
-   ```
+If no state exists and `tech-design.md` is absent, first derive the best
+technical approach from the inspected repository and history. If the design is
+present, adopt it exactly. Then derive the task graph most appropriate for AI
+execution within that technical basis. Tasks may have dependencies and may
+cross domains when that is the smallest coherent unit. Every task must state
+what it does, its domain, dependencies, acceptance criteria, completion
+evidence and status.
 
-4. Resume at the first task that is not `DONE`. Never redo a `DONE` task.
-5. Load the domain skill(s) the feature touches, once, at the start:
-   - recruiter surfaces → `.ai/skills/recruitment-workflow/SKILL.md`
-   - AI / candidate evaluation → `.ai/skills/evaluation-integrity/SKILL.md`
+Before implementation starts, enumerate every acceptance criterion from
+`spec.md`, map each one to one or more tasks, and verify that none is uncovered.
+If a criterion cannot be implemented from the approved documents, stop and
+surface the blocker.
+
+Create `.ai/state/<feature>.md` (and `.ai/state/` if needed) with this minimum
+shape:
+
+```markdown
+# Execution state: <feature>
+
+Source: docs/features/<feature>/
+spec.md SHA-256: <hash>
+tech-design.md: <SHA-256 hash | ABSENT>
+Technical basis: <BINDING_DESIGN | REPOSITORY_DERIVED>
+
+## Derived technical approach
+
+<Required only when Technical basis is REPOSITORY_DERIVED; summarize the
+repository/history evidence and chosen approach.>
+
+## Acceptance-criteria coverage
+
+- AC01: T01
+- AC02: T01, T03
+
+## Tasks
+
+### T01 — <outcome>
+
+Status: PENDING
+Domain: <role/domain>
+Depends on: none
+Covers: AC01, AC02
+Completion evidence: <observable result and deterministic checks>
+Correction round: 0
+
+<implementation scope derived from the selected technical basis>
+```
+
+Product decisions and any binding technical design stay in persistent source
+documents. When no design exists, the repository-derived technical approach is
+an execution decision stored with task decomposition, progress and evidence in
+state.
+
+### Existing execution state
+
+- An unresolved `BLOCKED` status takes precedence over matching identities and
+  pending tasks. Resume only after the user decision or source-document change
+  that resolves the blocker has been reconciled.
+- First return any interrupted `IN_PROGRESS` task to `PENDING`, whether or not
+  the source identities match, so reconciliation starts from an explicit safe
+  state.
+- If both recorded identities match, reconcile relevant repository drift with
+  recorded completion evidence and resume at the next dependency-ready
+  `PENDING` task. Do not redo a `DONE` task that remains valid.
+- If `spec.md` changed, or `tech-design.md` was created, changed or removed, do
+  not blindly resume the old pending graph. Re-read every changed or newly
+  present document, inspect its impact on the repository and tasks, then
+  reconcile or rebuild the technical basis, pending graph and
+  acceptance-criteria map. A newly present design becomes binding; a removed
+  design requires a fresh repository-derived approach.
+- Preserve completed work that remains valid. Revalidate any `DONE` task whose
+  contract, technical assumptions or relevant implementation changed by
+  re-running its recorded deterministic completion evidence. Update that
+  evidence with the result, returning the task to `PENDING` only when further
+  work is actually required.
+- Record the new identities and a reconciliation note listing changed inputs,
+  impacted criteria/tasks, revalidated completed tasks and task-graph changes
+  before continuing.
+
+If reconciliation exposes a product or binding-design blocker, record the
+current identities, partial reconciliation findings and `BLOCKED` status before
+stopping. The blocker suspends implementation and unrelated technical changes
+until the user resolves it.
+
+When a new or changed `tech-design.md` affects `DONE` work, deterministic checks
+alone are insufficient: run `code-reviewer` against that work and the binding
+design. Work that is product-correct but technically different from the design
+is no longer validly `DONE`; reopen or supersede it before any implementation
+continues. When a design is removed, derive the new approach using valid
+completed work as repository context and preserve it unless a concrete
+correctness or coherence issue requires change.
+
+Pending tasks may be split, merged, reordered or refined whenever repository
+discovery reveals a better execution strategy. Product scope must not change;
+when `tech-design.md` exists, every revision must continue to follow it exactly.
+Keep task IDs and coverage mappings traceable when revising the graph.
 
 ## 1. Per-task loop
 
-For each pending task, in order:
+For each pending task in dependency order:
 
 ### 1.1 Scope
 
-- Read the task and its linked acceptance criteria.
-- Read **only** the sections of `spec.md` and `plan.md` the task references or
-  clearly depends on.
-- Identify the implementation domain(s) from the files the task will touch.
+- Read the task and its mapped acceptance criteria.
+- Revisit only the sections of `spec.md` and any present `tech-design.md` it
+  depends on, plus the derived technical approach when no design exists.
+- Identify the implementation domain(s) from the files it will touch.
+- Mark the task `IN_PROGRESS` before delegation so interrupted work is explicit
+  on resume.
 
 ### 1.2 Delegate
 
 Choose the implementation role by scope. A tool with native subagents delegates
-to it (Claude Code: the `Agent` tool, whose agents load these same role files);
-a tool without them reads the role file and adopts it in-thread.
+to it; a tool without them reads the role file and adopts it in-thread.
 
 | Task scope | Role (`.ai/roles/`) |
 | --- | --- |
@@ -138,61 +248,59 @@ a tool without them reads the role file and adopts it in-thread.
 Rules:
 
 - Reuse these existing roles. Do not create a generic implementer role.
-- A task that crosses domains runs the roles **sequentially inside one task
-  boundary** — it stays one task, one review, one state entry.
-- Give the worker: the task text, its acceptance criteria, the relevant
-  spec/plan excerpts, the invariants from the loaded domain skill that apply,
-  and the explicit instruction to implement **only this task's scope**.
-- No scope creep: unrelated improvements spotted along the way are reported,
-  not implemented.
+- A task that crosses domains runs the roles sequentially inside one task
+  boundary — it stays one task, one review and one state entry.
+- Give the worker the task, its acceptance criteria, relevant source-document
+  excerpts, applicable domain-skill invariants, and an explicit instruction to
+  implement only that scope.
+- Unrelated improvements spotted along the way are reported, not implemented.
 
 ### 1.3 Deterministic verification
 
-Run the checks that match the files actually changed, using the real commands
-listed in `.ai/guidelines/project-core.md`:
+Run the checks matching the files actually changed, using the real commands in
+`.ai/guidelines/project-core.md`:
 
-- PHP changed → `vendor/bin/pint --dirty --format agent`, `composer types:check`,
-  and the relevant existing tests (`php artisan test --compact --filter=…`).
+- PHP changed → `vendor/bin/pint --dirty --format agent`,
+  `composer types:check`, and relevant existing tests
+  (`php artisan test --compact --filter=…`).
 - Frontend changed → `npm run types:check`, `npm run lint:check`, and
-  `npm run format:check`; `npm run build` only when the bundle is genuinely at
-  risk.
+  `npm run format:check`; use `npm run build` only when the bundle is genuinely
+  at risk.
 
-If a check fails, return the failure to the implementing role and fix it
-**before** invoking the reviewer — an LLM is not needed to run a command that
-already reported the problem. The one exception: the failure is genuinely
-puzzling and reviewer/`qa-tester` judgement is the fastest way to diagnose it.
+If a check fails, return the failure to the implementing role and fix it before
+invoking the reviewer. The exception is a genuinely puzzling failure where
+reviewer or `qa-tester` judgement is the fastest diagnosis.
 
 Do not create or modify tests to make a check pass. If existing tests fail
-because the spec deliberately changed behaviour, that is a blocker to surface,
-not a test to rewrite (unless the user explicitly authorised test changes).
+because the spec deliberately changed behaviour, surface the blocker rather
+than rewriting tests unless the user explicitly authorised test changes.
 
 ### 1.4 Review
 
 Collect the diff for this task only (`git diff` / `git diff --stat`, scoped to
-the touched paths — never a whole-repository review) and hand it to the
-`code-reviewer` role with:
+the touched paths) and give the `code-reviewer` role:
 
 - the current task and its acceptance criteria;
-- the relevant spec requirements and plan constraints;
+- the relevant product requirements and either binding technical-design
+  constraints or the repository-derived approach from state;
 - the diff;
-- the deterministic verification results.
+- deterministic verification results.
 
-Expect the reviewer's verdict format (see `.ai/roles/code-reviewer.md`):
-per-criterion PASS/FAIL, blocking findings, non-blocking findings, and
-`Verdict: APPROVED` or `Verdict: CHANGES_REQUIRED`.
+Expect the reviewer format from `.ai/roles/code-reviewer.md`: per-criterion
+PASS/FAIL, blocking findings, non-blocking findings, and `Verdict: APPROVED` or
+`Verdict: CHANGES_REQUIRED`.
 
-A task is done only when the behaviour is right — not because the diff looks
+A task is done only when its behaviour is right, not merely when the diff is
 clean.
 
 ### 1.5 Close or correct
 
-- **APPROVED** → mark `T## DONE` in `.ai/state/<feature>.md`, clear the
-  correction counter, continue to the next task automatically. Do not ask
-  "should I continue?" after a successful task.
+- **APPROVED** → mark the task `DONE` in `.ai/state/<feature>.md`, record its
+  completion evidence, reset the correction counter and continue automatically.
 - **CHANGES_REQUIRED** → run the bounded correction loop below.
 
-Non-blocking findings are recorded in the final report; they do not stop the
-task and are not silently implemented as extra scope.
+Record non-blocking findings for the final report; do not silently implement
+them as extra scope.
 
 ## 2. Correction loop (circuit breaker)
 
@@ -207,75 +315,76 @@ review FAIL
   → STOP patching
 ```
 
-Each fix round addresses only the blocking findings, handled by the same
-domain role, and records `Correction round: N` in the state file.
+Each round addresses only blocking findings, uses the same domain role, and
+updates `Correction round: N` in the state file.
 
-After the second failed re-review, stop applying patches and re-evaluate the
-task against `spec.md` and `plan.md`. What you may do next depends on whether
-the fix stays below the execution boundary.
+After the second failed re-review, stop patching and re-evaluate against
+`spec.md` and the selected technical basis.
 
-**Continue automatically** — implementation-level corrections that keep the
-approved behaviour and scope:
+**Continue automatically** when `tech-design.md` is absent and the correction
+remains below the execution boundary:
 
-- the implementation strategy is wrong → change the approach, reset the task
-  (still one task), and record the technical change in `plan.md`;
-- a plan detail is technically incorrect and the spec clearly dictates the right
-  answer → correct that detail in `plan.md` and re-derive the affected tasks;
-- the task is oversized or unclear in its steps → rewrite or split it in
-  `tasks.md` **without changing scope**, then restart it.
+- change a faulty repository-derived implementation strategy while preserving
+  approved product behaviour, and update the derived approach in state;
+- split, merge, reorder or refine pending tasks in the state file without
+  changing product scope.
 
-**Stop and surface to the user** — anything that would redefine the feature:
+When `tech-design.md` exists, continue automatically only by correcting the
+implementation to match it exactly or by adjusting task decomposition without
+deviating from it. Never edit the design during execution.
 
-- the spec is ambiguous, or the desired product behaviour is unclear;
-- acceptance criteria conflict with each other or with the plan;
-- fixing the issue changes the feature's scope;
-- a major architectural decision is missing from the plan.
+**Stop and surface to the user** when the feature itself needs a decision:
 
-When you stop, report the blocker, the options you see and your recommendation,
-mark the task blocked in `.ai/state/<feature>.md`, and wait. Do not resolve
-product ambiguity yourself, do not rewrite `spec.md`, and never edit acceptance
-criteria to match what the code does.
+- `spec.md` is ambiguous or desired product behaviour is unclear;
+- acceptance criteria conflict with each other or an existing technical design;
+- the correction changes feature scope;
+- an existing `tech-design.md` is stale, incorrect, internally inconsistent,
+  infeasible or would need any deviation;
+- a major technical decision is missing from an existing `tech-design.md` and
+  exact implementation therefore cannot be determined.
 
-Never keep patching blindly, and never mark a task `DONE` to escape the loop.
+For a blocker found before state exists, stop without creating state. Otherwise
+report the blocker, options and recommendation; mark the task `BLOCKED` in the
+state file and wait. Never edit acceptance criteria to match the code, invent
+product behaviour, or alter `tech-design.md` without prior user approval.
 
 ## 3. Final feature review
 
 Every task being `DONE` is not the feature being done. When the last task
-closes, run one integrated review before declaring completion:
+closes, run one integrated review:
 
-1. Read `spec.md` and `plan.md` in full (now, not per task).
-2. Produce the full feature diff (all tasks combined).
-3. Run the broader deterministic gate for what the feature touched —
-   `composer test` and/or the `npm` checks, or `composer ci:check` when the
-   feature spans both sides.
-4. Run `code-reviewer` once with the complete spec acceptance criteria, the
-   plan's constraints and verification strategy, and the full diff.
+1. Re-read `spec.md` and any present `tech-design.md` in full and confirm the
+   recorded hash/`ABSENT` identities still match state.
+2. Produce the full feature diff across all tasks.
+3. Run the broader deterministic gate for the domains touched — `composer test`
+   and/or the npm checks, or `composer ci:check` when the feature spans both.
+4. Run `code-reviewer` with all acceptance criteria, the binding design or
+   repository-derived approach, verification results and the full diff.
 
-The final review specifically looks for what task-by-task review cannot see:
+The integrated review checks for:
 
-- acceptance criteria that no single task fully owns;
-- requirements satisfied in one task and broken by a later one;
+- acceptance criteria that no task fully owns;
+- requirements satisfied in one task and broken later;
 - inconsistent naming, duplicated logic or dead scaffolding across tasks;
-- product invariants from the loaded domain skills violated by the integration;
-- flows that only work when the tasks are read in isolation.
+- applicable product invariants violated by integration;
+- flows that work only when tasks are considered in isolation.
 
-If the final review fails, the same bounded correction rules apply, at feature
+If the final review fails, the same bounded correction rules apply at feature
 scope.
 
 ## 4. Report
 
-When the feature passes the final review, report concisely:
+When the feature passes final review, report concisely:
 
 - tasks completed;
-- acceptance criteria and their status;
-- deterministic checks run and their results;
+- acceptance criteria and status;
+- deterministic checks and results;
 - non-blocking findings left open;
 - anything intentionally out of scope or blocked.
 
-Then bring `plan.md` and `tasks.md` back in line with what was actually built —
-that documentation is persistent and must reflect reality. `spec.md` is product
-truth: propose changes to it, never edit it to match the implementation. Delete
-`.ai/state/<feature>.md` only if the user asks; it is git-ignored either way.
-**Never** delete anything under `docs/features/**`.
+Treat `spec.md` as product truth and an existing `tech-design.md` as binding:
+surface proposed changes instead of editing either to match implementation.
+Retain `.ai/state/<feature>.md` unless the user asks to delete it; it is
+git-ignored. Never delete anything under `docs/features/**`.
 
 Do not commit, branch or push unless the user explicitly asks in that message.

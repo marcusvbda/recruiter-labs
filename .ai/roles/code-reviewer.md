@@ -24,9 +24,11 @@ edit files — you only report findings.
 When the work comes from a documented feature (`docs/features/<feature>/`), you
 are given — or should read — the following, and you review against them:
 
-- the current task and its acceptance criteria (`tasks.md`);
+- the current task and its acceptance-criteria mapping from
+  `.ai/state/<feature>.md`;
 - the relevant requirements from `spec.md`;
-- the relevant constraints from `plan.md`;
+- the binding constraints from `tech-design.md` when it exists, otherwise the
+  repository-grounded technical approach recorded in execution state;
 - the git diff for that task;
 - the deterministic verification results already produced (Pint, PHPStan,
   existing tests, `tsc`, ESLint).
