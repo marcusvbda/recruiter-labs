@@ -8,6 +8,7 @@ return [
         'name' => 'Nome',
         'email' => 'E-mail',
         'role' => 'Função',
+        'access' => 'Acesso',
         'invited_email' => 'E-mail convidado',
         'status' => 'Status',
         'invited_at' => 'Convidado em',
@@ -21,11 +22,18 @@ return [
         'heading' => 'Convites pendentes',
         'description' => 'Convites que ainda não foram aceitos. Um convite não é acesso — só se torna associação quando aceito.',
     ],
+    'access' => [
+        'enabled' => 'Acesso ativado',
+        'disabled' => 'Acesso desativado',
+        'owner' => 'Sempre tem acesso',
+    ],
     'actions' => [
         'invite' => 'Convidar membro',
         'remove' => 'Remover',
         'resend' => 'Reenviar',
         'revoke' => 'Revogar',
+        'disable_access' => 'Desativar acesso',
+        'enable_access' => 'Ativar acesso',
     ],
     'invite' => [
         'heading' => 'Convidar um membro',
@@ -35,8 +43,13 @@ return [
     ],
     'remove' => [
         'heading' => 'Remover :name deste workspace?',
-        'description' => 'Esta pessoa perderá o acesso a este workspace imediatamente. Ela mantém sua conta e qualquer outro workspace ao qual pertença.',
-        'confirm' => 'Remover acesso',
+        'description' => 'Isso encerra a associação dela: ela sai da equipe e perde o acesso a este workspace imediatamente. Ela precisaria de um novo convite para voltar a participar. Ela mantém sua conta e qualquer outro workspace ao qual pertença.',
+        'confirm' => 'Remover da equipe',
+    ],
+    'disable_access' => [
+        'heading' => 'Desativar o acesso de :name a este workspace?',
+        'description' => 'Ela continua na equipe e mantém sua função — só não poderá entrar neste workspace até você reativar o acesso. Isso é diferente de remover: nada do que ela fez é afetado, e você pode reativar o acesso dela a qualquer momento.',
+        'confirm' => 'Desativar acesso',
     ],
     'revoke' => [
         'heading' => 'Revogar o convite para :email?',
@@ -49,6 +62,8 @@ return [
         'invitation_revoked' => 'Convite para :email revogado',
         'invitation_email_failed' => 'O convite para :email foi criado, mas o e-mail não pôde ser enviado. Use Reenviar para tentar novamente.',
         'member_removed' => ':name foi removido deste workspace',
+        'access_disabled' => 'O acesso de :name ao workspace foi desativado',
+        'access_enabled' => 'O acesso de :name ao workspace foi ativado',
     ],
     'invitation_email' => [
         'subject' => 'Você foi convidado para entrar em :workspace no Recruiter Labs',
@@ -61,6 +76,7 @@ return [
     ],
     'errors' => [
         'already_member' => ':email já tem acesso a este workspace como :role.',
+        'already_member_access_disabled' => ':email já faz parte desta equipe, mas o acesso dela ao workspace está desativado no momento. Ative o acesso novamente em vez de convidá-la outra vez.',
         'invitation_already_pending' => ':email já tem um convite pendente para este workspace. Reenvie esse convite em vez de criar um novo.',
         'invitation_revoked_cannot_resend' => 'Este convite foi revogado. Convide esta pessoa novamente para conceder acesso.',
         'invitation_already_accepted' => ':email já aceitou este convite e é um membro ativo deste workspace.',
@@ -70,5 +86,7 @@ return [
         'invitation_email_mismatch' => 'Este convite foi enviado para outro endereço de e-mail. Você está conectado como :email. Entre com o endereço convidado para aceitá-lo.',
         'invitation_email_not_verified' => 'Confirme :email antes de entrar neste workspace. Assim que seu e-mail for verificado, abra este convite novamente.',
         'owner_cannot_be_removed' => 'O proprietário do workspace não pode ser removido. Todo workspace precisa manter um proprietário.',
+        'owner_access_cannot_be_changed' => 'O proprietário do workspace sempre tem acesso a este workspace, portanto o acesso dele não pode ser desativado.',
+        'not_a_member' => ':name não é mais membro deste workspace.',
     ],
 ];

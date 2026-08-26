@@ -36,6 +36,10 @@ return [
             'title' => 'You already have access',
             'description' => 'You are already part of :workspace, so there is nothing left to accept. Go straight to the workspace.',
         ],
+        'access_disabled' => [
+            'title' => 'Your access is turned off',
+            'description' => 'You are still part of :workspace, but your access to it is currently turned off, so this invitation has nothing to add. Ask the workspace owner to turn your access back on.',
+        ],
         'guest' => [
             'title' => 'You have been invited to :workspace',
             'description' => 'Sign in with the invited email address to accept, or create your account if you do not have one yet.',

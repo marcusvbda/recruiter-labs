@@ -8,12 +8,14 @@ use App\Enums\Feature;
 use App\Enums\Limit;
 use Database\Factories\CompanyFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 #[Fillable(['name', 'slug', 'plan_id'])]
@@ -34,18 +36,38 @@ class Company extends Model
     /** @return BelongsToMany<User, $this> */
     public function users(): BelongsToMany
     {
-        return $this->belongsToMany(User::class)->withPivot('role')->withTimestamps();
+        return $this->belongsToMany(User::class)
+            ->withPivot('role', 'access_disabled_at')
+            ->withTimestamps();
     }
 
     /**
      * A membership row exists only while the person is part of the workspace —
-     * removal deletes it — so every membership is an active one.
+     * removal deletes it — so every membership is an active one. A member whose
+     * workspace access is disabled is still one of them: they belong to the team
+     * and stay listed there, they simply may not enter right now.
      *
      * @return BelongsToMany<User, $this>
      */
     public function activeMembers(): BelongsToMany
     {
         return $this->users();
+    }
+
+    /**
+     * The memberships that may enter this workspace right now. Being on the team
+     * and being allowed in are different questions: {@see activeMembers()}
+     * answers the first, this answers the second.
+     *
+     * @return BelongsToMany<User, $this>
+     */
+    public function membersWithWorkspaceAccess(): BelongsToMany
+    {
+        return $this->users()->where(function (Builder $query): void {
+            $query
+                ->whereNull('company_user.access_disabled_at')
+                ->orWhere('company_user.role', CompanyRole::Owner->value);
+        });
     }
 
     public function owner(): ?User
@@ -70,6 +92,49 @@ class Company extends Model
     public function isOwner(User $user): bool
     {
         return $this->roleFor($user) === CompanyRole::Owner;
+    }
+
+    /**
+     * Whether this person may enter the workspace right now: they must have a
+     * membership row, and that membership must either be the Owner's or have
+     * access enabled. The Owner arm is enforced here rather than trusted from
+     * the column, so no data state can lock a workspace's own Owner out.
+     *
+     * Read straight from the pivot table, like {@see roleFor()}, because callers
+     * run this right after an access change.
+     */
+    public function hasWorkspaceAccess(User $user): bool
+    {
+        $membership = DB::table('company_user')
+            ->where('company_id', $this->getKey())
+            ->where('user_id', $user->getKey())
+            ->first(['role', 'access_disabled_at']);
+
+        if ($membership === null) {
+            return false;
+        }
+
+        return $membership->role === CompanyRole::Owner->value
+            || $membership->access_disabled_at === null;
+    }
+
+    /**
+     * When this member's workspace access was disabled, or null while it is
+     * enabled. The Team area reads this to state the member's access in plain
+     * language; authorization reads {@see hasWorkspaceAccess()}.
+     */
+    public function workspaceAccessDisabledAt(User $user): ?Carbon
+    {
+        if ($this->hasWorkspaceAccess($user)) {
+            return null;
+        }
+
+        $disabledAt = DB::table('company_user')
+            ->where('company_id', $this->getKey())
+            ->where('user_id', $user->getKey())
+            ->value('access_disabled_at');
+
+        return is_string($disabledAt) ? Carbon::parse($disabledAt) : null;
     }
 
     /** @return HasMany<CompanyInvitation, $this> */

@@ -7,6 +7,7 @@ type InvitationState =
     | 'revoked'
     | 'accepted'
     | 'already_member'
+    | 'access_disabled'
     | 'guest'
     | 'email_mismatch'
     | 'email_unverified'
@@ -60,11 +61,15 @@ interface InvitationPageProps {
     translations: InvitationTranslations;
 }
 
+// States that explain a situation the visitor cannot act on from here. Access
+// being turned off is one of them: they are still on the team, but only the
+// workspace owner can turn their access back on.
 const terminalStates: InvitationState[] = [
     'invalid',
     'expired',
     'revoked',
     'accepted',
+    'access_disabled',
 ];
 
 /**

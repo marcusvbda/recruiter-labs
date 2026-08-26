@@ -36,6 +36,10 @@ return [
             'title' => 'Você já tem acesso',
             'description' => 'Você já faz parte do :workspace, então não há nada a aceitar. Vá direto para o workspace.',
         ],
+        'access_disabled' => [
+            'title' => 'Seu acesso está desativado',
+            'description' => 'Você continua fazendo parte do :workspace, mas seu acesso está desativado no momento, então este convite não muda nada. Peça ao proprietário do workspace para reativar seu acesso.',
+        ],
         'guest' => [
             'title' => 'Você foi convidado para o :workspace',
             'description' => 'Entre com o e-mail convidado para aceitar ou crie sua conta, caso ainda não tenha uma.',

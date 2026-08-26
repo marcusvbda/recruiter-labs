@@ -1,5 +1,5 @@
 ---
-status: planned
+status: implemented
 type: feature
 ---
 
@@ -38,8 +38,9 @@ The feature introduces a minimal workspace membership model:
 
 - **Owner**
 - **Member**
+- **workspace access**: enabled or disabled, for Members
 
-The Owner manages workspace membership.
+The Owner manages workspace membership and workspace access.
 
 Members collaborate through the existing recruitment workflow.
 
@@ -50,10 +51,15 @@ The feature must make it possible to:
 3. see active workspace members;
 4. manage pending invitations;
 5. remove a Member;
-6. immediately revoke workspace authorization when membership ends;
-7. preserve historical authorship and recruitment records after removal.
+6. disable and re-enable a Member's workspace access without ending their
+   membership;
+7. immediately revoke workspace authorization when membership ends or access is
+   disabled;
+8. preserve historical authorship and recruitment records after removal or after
+   access is disabled.
 
-This feature is intentionally not a general-purpose RBAC system.
+This feature is intentionally not a general-purpose RBAC system. Workspace
+access is the **only** additional permission it introduces.
 
 ---
 
@@ -72,8 +78,8 @@ hiding interface controls.
 
 ## Collaboration stays simple
 
-An active Member receives the same normal recruitment workspace access that an
-existing workspace user has today.
+A Member with workspace access enabled receives the same normal recruitment
+workspace access that an existing workspace user has today.
 
 This feature does not introduce:
 
@@ -83,6 +89,20 @@ This feature does not introduce:
 - per-feature permissions.
 
 The workspace itself remains the collaboration boundary.
+
+## Team membership and workspace access are different questions
+
+Being listed on the Team answers *who belongs to this workspace*.
+
+Workspace access answers *who may enter it right now*.
+
+A person may remain a Member of the Team while their workspace access is
+disabled. Their membership, their role and their historical authorship all
+survive; only their current authorization stops.
+
+This is the single additional permission the feature introduces. It is not the
+first step of a permission system, and no other permission dimension may be
+added alongside it.
 
 ## Owner is an administrative distinction
 
@@ -118,14 +138,23 @@ Every workspace has exactly one Owner.
 The Owner:
 
 - is an active workspace member;
+- always has workspace access;
 - can view active workspace members;
+- can view the workspace-access state of every Member;
 - can view pending invitations;
 - can invite Members;
 - can resend invitations;
 - can revoke invitations;
-- can remove Members.
+- can remove Members;
+- can disable a Member's workspace access;
+- can re-enable a Member's workspace access.
 
 The Owner cannot remove themselves in this version.
+
+The Owner's own workspace access cannot be disabled, by themselves or by anyone
+else.
+
+Only the Owner may manage workspace access.
 
 Ownership transfer is not part of this feature.
 
@@ -133,15 +162,35 @@ Ownership transfer is not part of this feature.
 
 A Member:
 
-- can access the workspace while membership is active;
+- can access the workspace while membership is active **and** workspace access
+  is enabled;
 - can use the existing recruitment workflow;
 - can see the active workspace team;
 - cannot invite Members;
 - cannot resend or revoke invitations;
 - cannot remove Members;
-- cannot remove or replace the Owner.
+- cannot remove or replace the Owner;
+- cannot change anyone's workspace access, including their own.
 
 There are no additional workspace roles in this feature.
+
+## Member with workspace access disabled
+
+A Member whose workspace access is disabled:
+
+- remains a Member and remains listed in Settings → Team;
+- keeps all historical authorship and attribution;
+- does not need to be invited again for access to be restored;
+- cannot enter the workspace;
+- must not see that workspace as an available workspace to switch into;
+- cannot reach the workspace through a remembered URL or a direct request;
+- cannot read workspace recruitment data;
+- cannot perform workspace actions;
+- cannot use workspace-scoped credentials or integrations for new actions in
+  that workspace.
+
+Their Recruiter Labs account remains active, and their membership and access in
+every other workspace are unaffected.
 
 ---
 
@@ -196,13 +245,25 @@ Workspace Settings contains a Team area.
 
 ## Active members
 
-Any active workspace member can see:
+Any workspace member with access can see:
 
 - member name;
 - member email;
-- role: Owner or Member.
+- role: Owner or Member;
+- whether that person's workspace access is currently enabled or disabled.
 
-The Owner additionally receives management controls for removable Members.
+The Owner additionally receives management controls for removable Members and
+controls for enabling or disabling a Member's workspace access.
+
+The Owner's own access is presented as not editable.
+
+Access state is stated in plain product language. The Team area must not become
+a permissions matrix, and it must not expose internal authorization
+terminology.
+
+Members whose access is disabled still appear here — they are still part of the
+team. Disabling access and removing someone are visibly different actions, and
+the copy must never blur them.
 
 No member belonging exclusively to another workspace may appear.
 
@@ -450,7 +511,77 @@ Opening an invalid invitation must never expose:
 
 ---
 
+# Workspace access
+
+Every Member's workspace access is either enabled or disabled.
+
+A successfully accepted invitation creates a Member with workspace access
+**enabled**.
+
+The Owner's access is always enabled and cannot be disabled.
+
+## Disabling a Member's workspace access
+
+Only the Owner can disable a Member's workspace access. This must be enforced by
+the application, not merely by hiding the control.
+
+Once disabled, the person keeps their membership and their Member role but loses
+current workspace authorization, exactly as described under *Member with
+workspace access disabled*.
+
+Disabling access must not:
+
+- end membership;
+- remove the person from the Team area;
+- delete or reassign any recruitment record;
+- change historical authorship;
+- affect any other workspace;
+- delete or disable their Recruiter Labs account;
+- delete historical integration records or previously created external events.
+
+## Restoring a Member's workspace access
+
+Only the Owner can re-enable a Member's workspace access.
+
+Restoring access:
+
+- does not create another membership;
+- does not require another invitation;
+- immediately restores normal Member workspace authorization;
+- preserves historical identity and attribution.
+
+## Access changes take effect immediately
+
+Disabling access must take effect from the product's perspective immediately.
+
+If the Member still has an authenticated browser session:
+
+- their Recruiter Labs authentication may remain valid;
+- their authorization to that workspace does not.
+
+On subsequent requests they must no longer be able to enter the workspace, view
+its recruitment data, perform workspace actions, use remembered workspace
+navigation, or use a direct URL to bypass the restriction. The workspace must
+also stop appearing among the workspaces they can switch into.
+
+---
+
 # Removing a Member
+
+Removing a Member and disabling a Member's workspace access are separate
+actions, and must remain separate in both behaviour and interface copy.
+
+Disabling access:
+
+- keeps the person on the Team;
+- keeps the membership;
+- can be reversed directly by the Owner.
+
+Removing:
+
+- ends workspace membership;
+- removes the person from the active Team;
+- requires a new invitation if they later need to rejoin.
 
 The Owner can remove an active Member.
 
@@ -527,7 +658,12 @@ Removing a Member must not automatically:
 - change AI evidence;
 - change candidate scores.
 
-Workspace membership controls authorization, not historical recruitment state.
+Workspace membership and workspace access control authorization, not historical
+recruitment state.
+
+The same guarantees apply when a Member's workspace access is disabled rather
+than their membership ended: nothing in the list above may happen as a
+consequence of disabling access.
 
 ---
 
@@ -536,11 +672,12 @@ Workspace membership controls authorization, not historical recruitment state.
 A Member may have external credentials connected specifically for their activity
 inside a workspace.
 
-Once that Member loses workspace access, Recruiter Labs must not use those
-workspace-scoped credentials for new actions in that workspace on behalf of the
-removed Member.
+Once that person no longer has workspace authorization — whether because their
+membership ended or because their workspace access was disabled — Recruiter Labs
+must not use those workspace-scoped credentials for new actions in that
+workspace on their behalf.
 
-Removal does not automatically undo valid historical actions.
+Losing authorization does not automatically undo valid historical actions.
 
 For example:
 
@@ -548,7 +685,8 @@ For example:
 - previously created external calendar events are not automatically deleted;
 - historical integration records remain understandable.
 
-The removal rule concerns future authorization, not retroactive deletion.
+The rule concerns future authorization, not retroactive deletion. It is the same
+rule in both cases; disabling access is not a weaker form of it.
 
 ---
 
@@ -567,7 +705,8 @@ duplicated or reassigned.
 
 # Authorization rules
 
-Membership-management permissions must be enforced by the application.
+Membership-management and workspace-access permissions must be enforced by the
+application.
 
 A Member must not gain Owner capabilities by:
 
@@ -575,7 +714,19 @@ A Member must not gain Owner capabilities by:
 - sending an action directly;
 - manipulating a request;
 - changing workspace identifiers;
-- accessing an invitation belonging to another workspace.
+- accessing an invitation belonging to another workspace;
+- attempting to change their own or anyone else's workspace access.
+
+Workspace authorization must be decided from **both** of:
+
+1. active Team membership;
+2. the workspace-access state of that membership.
+
+A Member whose workspace access is disabled must fail authorization even though
+their membership row still exists. Every tenant entry point and authorization
+path must agree on this — the list of workspaces a person may enter, the
+resolution of a workspace from a URL, and every workspace action. Hiding
+navigation is not an authorization mechanism.
 
 Interface visibility is not authorization.
 
@@ -595,13 +746,15 @@ A user in Workspace A must not be able to use Team functionality to:
 - invite into Workspace B without authorization there;
 - revoke Workspace B invitations;
 - remove Workspace B members;
+- change workspace access in Workspace B;
 - accept another person's invitation;
 - retrieve Workspace B recruitment information.
 
 Invitation tokens themselves must never act as unrestricted workspace access
 tokens.
 
-Membership must exist before normal workspace data becomes accessible.
+Membership must exist, **and its workspace access must be enabled**, before
+normal workspace data becomes accessible.
 
 ---
 
@@ -609,8 +762,12 @@ Membership must exist before normal workspace data becomes accessible.
 
 This feature introduces no granular recruiter permissions.
 
-Once a user becomes an active Member, they receive the same normal recruitment
-workspace access currently provided to workspace users.
+Workspace access is a single on/off gate on entering a workspace at all. It is
+not a permission dimension inside the workspace: it never grants or withholds
+anything more specific than the workspace itself.
+
+Once a user becomes a Member with workspace access enabled, they receive the
+same normal recruitment workspace access currently provided to workspace users.
 
 Existing feature-specific business rules continue to apply.
 
@@ -623,7 +780,8 @@ Owner and Member do not have different authority over:
 - candidate movement;
 - hiring decisions.
 
-The Owner distinction exists only for workspace membership administration.
+The Owner distinction exists only for workspace membership and workspace-access
+administration.
 
 ---
 
@@ -721,6 +879,29 @@ The product should fail safely rather than create ambiguous authorization.
 6. Removed user loses workspace authorization.
 7. Historical recruitment records remain intact.
 
+## Owner disables a Member's workspace access
+
+1. Owner opens Settings → Team.
+2. Owner sees that the Member's access is currently enabled.
+3. Owner chooses to disable that Member's access.
+4. Product explains that the person stays on the team but cannot enter the
+   workspace.
+5. Owner confirms.
+6. Membership and role are unchanged; the Member remains listed.
+7. The Member's access shows as disabled.
+8. On their next request the Member can no longer enter the workspace, and the
+   workspace no longer appears among the workspaces they can switch into.
+9. Historical recruitment records and authorship remain intact.
+
+## Owner restores a Member's workspace access
+
+1. Owner opens Settings → Team.
+2. Owner sees that the Member's access is currently disabled.
+3. Owner chooses to enable that Member's access.
+4. The Member immediately regains normal workspace authorization.
+5. No new invitation is sent and no second membership is created.
+6. Historical authorship remains attributed to the same person.
+
 ---
 
 # Acceptance criteria
@@ -740,23 +921,26 @@ members remain Members.
 
 ## AC03 — Active members can view the Team area
 
-An active workspace member can view the workspace's Team area and see active
+A workspace member with access can view the workspace's Team area and see active
 members with:
 
 - name;
 - email;
-- Owner or Member role.
+- Owner or Member role;
+- whether their workspace access is enabled or disabled.
 
 Users belonging only to other workspaces are never included.
 
-## AC04 — Only Owner manages membership
+## AC04 — Only Owner manages membership and access
 
 Only Owner can:
 
 - invite;
 - resend invitations;
 - revoke invitations;
-- remove Members.
+- remove Members;
+- disable a Member's workspace access;
+- re-enable a Member's workspace access.
 
 A Member cannot perform those actions through either the UI or direct requests.
 
@@ -900,10 +1084,15 @@ read or modify another workspace's team state without proper authorization.
 
 ## AC29 — No granular RBAC is introduced
 
-An active Member receives the existing normal recruiter workspace access.
+A Member with workspace access enabled receives the existing normal recruiter
+workspace access.
 
 This feature does not introduce job-, candidate-, pipeline- or feature-level
 permissions.
+
+Workspace access — enabled or disabled, for Members — is the only additional
+permission introduced, and it gates entering the workspace as a whole rather
+than anything inside it.
 
 ## AC30 — No billing seat rule is introduced
 
@@ -920,6 +1109,69 @@ active invitations, duplicate membership or ambiguous workspace authorization.
 Pending, expired, revoked, malformed or otherwise invalid invitations never
 provide partial access to workspace recruitment data.
 
+## AC33 — Accepted invitation grants access by default
+
+A successfully accepted invitation produces a Member whose workspace access is
+enabled, without granting Owner.
+
+## AC34 — Only Owner changes workspace access
+
+Only the Owner can disable or re-enable a Member's workspace access, enforced
+server-side and not merely by hiding the control.
+
+A Member cannot change anyone's workspace access — their own included — through
+the UI or a direct request, and cannot do so across workspaces.
+
+## AC35 — Owner access cannot be disabled
+
+The Owner's workspace access can never be disabled, by themselves or by anyone
+else. No path may leave a workspace whose Owner cannot enter it.
+
+## AC36 — Disabled access blocks workspace authorization
+
+A Member whose workspace access is disabled cannot enter the workspace, read its
+recruitment data, or perform workspace actions — through normal navigation,
+workspace switching, remembered workspace state, a direct URL, or a direct
+action.
+
+The workspace must not appear among the workspaces they can switch into.
+
+Their Recruiter Labs authentication may remain valid; their workspace
+authorization does not.
+
+## AC37 — Disabling access keeps membership and history
+
+A Member whose access is disabled remains a Member, remains listed in the Team
+area, keeps their role, and keeps all historical authorship and attribution.
+
+Disabling access does not delete, cancel, move, recalculate or reassign any
+recruitment record, does not affect other workspaces, and does not delete or
+disable their Recruiter Labs account.
+
+## AC38 — Access can be restored without a new invitation
+
+The Owner can re-enable a disabled Member's workspace access, which immediately
+restores normal Member authorization without creating another membership,
+without sending another invitation, and without rewriting historical
+attribution.
+
+## AC39 — Disabled access blocks workspace-scoped credentials
+
+External credentials associated with a Member's access to a workspace cannot be
+used for new workspace actions while that Member's workspace access is disabled.
+
+Historical external actions and integration records remain intact.
+
+## AC40 — Disabling access and removing a Member stay distinct
+
+Disabling access keeps the person on the Team with their membership intact and is
+directly reversible by the Owner.
+
+Removing ends membership, takes the person off the active Team, and requires a
+new invitation to rejoin.
+
+Neither action may be implemented or described as the other.
+
 ---
 
 # Product edge cases
@@ -929,6 +1181,14 @@ provide partial access to workspace recruitment data.
 Do not invite again.
 
 Explain that the person already has access.
+
+## Email belongs to a Member whose access is disabled
+
+Do not invite again, and do not create an invitation.
+
+That person is already on the team. Explain that their workspace access is
+currently disabled and that the Owner can restore it directly, rather than
+implying they need a new invitation.
 
 ## Email already has pending invitation
 
@@ -997,6 +1257,37 @@ Reject the action.
 
 Ownership transfer is out of scope.
 
+## Owner attempts to disable their own access
+
+Reject the action. The Owner always has workspace access.
+
+## Member whose access is disabled is still logged in
+
+Keep general authentication if appropriate but deny further access to that
+workspace, and stop offering it as a workspace they can switch into.
+
+## Member whose access is disabled authored interview feedback
+
+Preserve the feedback and original author attribution.
+
+## Member whose access is disabled has scheduled interviews
+
+Do not automatically cancel or delete the interview.
+
+Their disabled workspace authorization cannot be used for new actions.
+
+## Access is disabled and then restored
+
+Restore normal Member authorization directly. Do not create a second
+membership, and do not require a new invitation.
+
+## Member whose access is disabled opens their old invitation link
+
+Do not tell them they already have access, and do not offer them a way into the
+workspace — they would be refused. Explain that they are still part of the
+workspace but that their access is currently turned off, and that the Owner can
+turn it back on.
+
 ## Member calls an Owner action directly
 
 Reject the action even when normal UI controls are bypassed.
@@ -1048,13 +1339,17 @@ This feature deliberately does not include:
 - Member self-service departure;
 - enterprise authorization management;
 - general audit-log redesign;
-- automatic interview reassignment after member removal;
-- automatic cancellation of scheduled interviews after member removal;
+- automatic interview reassignment after member removal or access disablement;
+- automatic cancellation of scheduled interviews after member removal or access
+  disablement;
 - changes to AI evaluation;
 - changes to candidate fit;
 - changes to candidate scoring;
 - changes to interview-feedback semantics;
-- automatic hiring decisions.
+- automatic hiring decisions;
+- any permission dimension other than workspace access;
+- scheduled, time-boxed or automatically expiring workspace access;
+- a Member disabling or restoring their own access.
 
 ---
 
@@ -1062,15 +1357,17 @@ This feature deliberately does not include:
 
 This feature answers:
 
-> Who is currently allowed to collaborate inside this Recruiter Labs workspace?
+> Who belongs to this Recruiter Labs workspace, and who is currently allowed to
+> enter it?
 
 It deliberately does not answer:
 
 > What individual recruitment objects or operations is each workspace member
 > allowed to access?
 
-For the current Recruiter Labs product, workspace membership is the
-collaboration boundary.
+For the current Recruiter Labs product, workspace membership plus workspace
+access is the collaboration boundary. Access is a single gate on the workspace
+as a whole, not the beginning of a permission model.
 
 Granular authorization should only be introduced later when concrete customer
 requirements justify the additional complexity.

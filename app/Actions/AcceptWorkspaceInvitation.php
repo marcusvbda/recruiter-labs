@@ -84,10 +84,11 @@ class AcceptWorkspaceInvitation
     }
 
     /**
-     * Membership is created at most once. Someone who already belongs to the
-     * workspace keeps the role they have — an Owner accepting an old invitation
-     * must not be demoted to Member — and the acceptance still succeeds, because
-     * the outcome the invitation promised is already true.
+     * Membership is created at most once, as a Member with workspace access
+     * enabled — the outcome the invitation promised. Someone who already belongs
+     * to the workspace keeps the role they have — an Owner accepting an old
+     * invitation must not be demoted to Member — and the acceptance still
+     * succeeds, because that outcome is already true.
      */
     private function ensureMembership(Company $company, User $user): void
     {
@@ -99,7 +100,13 @@ class AcceptWorkspaceInvitation
             // A savepoint, so losing the unique(company_id, user_id) race does not
             // poison the transaction that still has to close the invitation.
             DB::transaction(function () use ($company, $user): void {
-                $company->users()->attach($user, ['role' => CompanyRole::Member->value]);
+                // Access is stated on the insert rather than left to the
+                // column default, so joining a workspace grants access as a
+                // property of this action and not of the schema.
+                $company->users()->attach($user, [
+                    'role' => CompanyRole::Member->value,
+                    'access_disabled_at' => null,
+                ]);
             });
         } catch (QueryException $exception) {
             if (! $this->isUniqueViolation($exception)) {

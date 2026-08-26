@@ -61,7 +61,7 @@ class TeamSettings extends Page
             Action::make('invite')
                 ->label(__('team.actions.invite'))
                 ->icon(Heroicon::OutlinedUserPlus)
-                ->visible(fn(): bool => Gate::forUser($this->getUser())->allows('manageTeam', $this->getCompany()))
+                ->visible(fn (): bool => Gate::forUser($this->getUser())->allows('manageTeam', $this->getCompany()))
                 ->modalHeading(__('team.invite.heading'))
                 ->modalDescription(__('team.invite.description'))
                 ->modalSubmitActionLabel(__('team.invite.confirm'))

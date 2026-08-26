@@ -15,6 +15,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 /**
  * The public landing page of an invitation. It is opened by whoever holds the
@@ -58,7 +59,14 @@ class WorkspaceInvitationController extends Controller
         return Inertia::render('invitation/show', $this->props($state, $invitation, $company, $user, $token));
     }
 
-    public function accept(Request $request, string $token): mixed
+    /**
+     * On success the destination is Filament, outside the Inertia app, so it is
+     * returned as an Inertia location visit — a plain redirect would be followed
+     * by the XHR and rendered inside the Inertia overlay instead of replacing
+     * the page. Every failure path stays a normal redirect back to the landing
+     * page, which explains the state.
+     */
+    public function accept(Request $request, string $token): RedirectResponse|SymfonyResponse
     {
         $invitation = CompanyInvitation::findByToken($token);
         $user = $request->user();
@@ -75,7 +83,7 @@ class WorkspaceInvitationController extends Controller
             if (! $company instanceof Company) {
                 return $this->backToInvitation($token, $exception->getMessage());
             }
-        } catch (WorkspaceInvitationEmailMismatch | WorkspaceInvitationEmailNotVerified $exception) {
+        } catch (WorkspaceInvitationEmailMismatch|WorkspaceInvitationEmailNotVerified $exception) {
             return $this->backToInvitation($token, $exception->getMessage());
         }
 
@@ -180,6 +188,14 @@ class WorkspaceInvitationController extends Controller
 
         if ($invitation->isExpired()) {
             return 'expired';
+        }
+
+        // Being on the team and being allowed in are different questions, and an
+        // invitation cannot answer the second one: a member whose access was
+        // disabled must not be told they already have it, nor handed a link into
+        // a workspace that will refuse them. Only the owner can restore it.
+        if ($isMember && ! $company->hasWorkspaceAccess($user)) {
+            return 'access_disabled';
         }
 
         if ($isMember) {

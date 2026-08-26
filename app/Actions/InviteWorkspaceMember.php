@@ -55,6 +55,14 @@ class InviteWorkspaceMember
             return;
         }
 
+        // They are already on this team either way, so no invitation is created.
+        // A member whose access is disabled does not need one: the owner restores
+        // their access directly, and telling the owner this person "already has
+        // access" would point them at the wrong action entirely.
+        if (! $company->hasWorkspaceAccess($member)) {
+            throw WorkspaceMemberAlreadyExists::withAccessDisabled($normalizedEmail);
+        }
+
         throw WorkspaceMemberAlreadyExists::for(
             $normalizedEmail,
             $company->roleFor($member) ?? CompanyRole::Member,

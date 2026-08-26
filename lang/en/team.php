@@ -8,6 +8,7 @@ return [
         'name' => 'Name',
         'email' => 'Email',
         'role' => 'Role',
+        'access' => 'Access',
         'invited_email' => 'Invited email',
         'status' => 'Status',
         'invited_at' => 'Invited on',
@@ -21,11 +22,18 @@ return [
         'heading' => 'Pending invitations',
         'description' => 'Invitations that have not been accepted yet. An invitation is not access — it becomes membership only once accepted.',
     ],
+    'access' => [
+        'enabled' => 'Access enabled',
+        'disabled' => 'Access disabled',
+        'owner' => 'Always has access',
+    ],
     'actions' => [
         'invite' => 'Invite member',
         'remove' => 'Remove',
         'resend' => 'Resend',
         'revoke' => 'Revoke',
+        'disable_access' => 'Disable access',
+        'enable_access' => 'Enable access',
     ],
     'invite' => [
         'heading' => 'Invite a member',
@@ -35,8 +43,13 @@ return [
     ],
     'remove' => [
         'heading' => 'Remove :name from this workspace?',
-        'description' => 'This person will immediately lose access to this workspace. They keep their account and any other workspace they belong to.',
-        'confirm' => 'Remove access',
+        'description' => 'This ends their membership: they are taken off the team and immediately lose access to this workspace. They would need a new invitation to rejoin. They keep their account and any other workspace they belong to.',
+        'confirm' => 'Remove from team',
+    ],
+    'disable_access' => [
+        'heading' => 'Disable :name\'s workspace access?',
+        'description' => 'They stay on the team and keep their role — they just will not be able to enter this workspace until you turn their access back on. This is different from removing them: nothing they have done is affected, and you can re-enable their access at any time.',
+        'confirm' => 'Disable access',
     ],
     'revoke' => [
         'heading' => 'Revoke the invitation to :email?',
@@ -49,6 +62,8 @@ return [
         'invitation_revoked' => 'Invitation to :email revoked',
         'invitation_email_failed' => 'The invitation for :email was created, but the email could not be sent. Use Resend to try again.',
         'member_removed' => ':name was removed from this workspace',
+        'access_disabled' => ":name's workspace access was disabled",
+        'access_enabled' => ":name's workspace access was enabled",
     ],
     'invitation_email' => [
         'subject' => 'You have been invited to join :workspace on Recruiter Labs',
@@ -61,6 +76,7 @@ return [
     ],
     'errors' => [
         'already_member' => ':email already has access to this workspace as :role.',
+        'already_member_access_disabled' => ':email is already on this team, but their workspace access is turned off right now. Turn their access back on instead of inviting them again.',
         'invitation_already_pending' => ':email already has a pending invitation to this workspace. Resend that invitation instead of creating a new one.',
         'invitation_revoked_cannot_resend' => 'This invitation was revoked. Invite this person again to give them access.',
         'invitation_already_accepted' => ':email already accepted this invitation and is an active member of this workspace.',
@@ -70,5 +86,7 @@ return [
         'invitation_email_mismatch' => 'This invitation was sent to a different email address. You are signed in as :email. Sign in with the invited address to accept it.',
         'invitation_email_not_verified' => 'Verify :email before joining this workspace. Once your email is confirmed, open this invitation again.',
         'owner_cannot_be_removed' => 'The workspace owner cannot be removed. Every workspace must keep an owner.',
+        'owner_access_cannot_be_changed' => 'The workspace owner always has access to this workspace, so their access cannot be turned off.',
+        'not_a_member' => ':name is no longer a member of this workspace.',
     ],
 ];

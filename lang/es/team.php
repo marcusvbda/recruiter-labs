@@ -8,6 +8,7 @@ return [
         'name' => 'Nombre',
         'email' => 'Correo electrónico',
         'role' => 'Rol',
+        'access' => 'Acceso',
         'invited_email' => 'Correo invitado',
         'status' => 'Estado',
         'invited_at' => 'Invitado el',
@@ -21,11 +22,18 @@ return [
         'heading' => 'Invitaciones pendientes',
         'description' => 'Invitaciones que aún no han sido aceptadas. Una invitación no es acceso: solo se convierte en membresía cuando se acepta.',
     ],
+    'access' => [
+        'enabled' => 'Acceso activado',
+        'disabled' => 'Acceso desactivado',
+        'owner' => 'Siempre tiene acceso',
+    ],
     'actions' => [
         'invite' => 'Invitar miembro',
         'remove' => 'Eliminar',
         'resend' => 'Reenviar',
         'revoke' => 'Revocar',
+        'disable_access' => 'Desactivar acceso',
+        'enable_access' => 'Activar acceso',
     ],
     'invite' => [
         'heading' => 'Invitar a un miembro',
@@ -35,8 +43,13 @@ return [
     ],
     'remove' => [
         'heading' => '¿Eliminar a :name de este espacio de trabajo?',
-        'description' => 'Esta persona perderá el acceso a este espacio de trabajo de inmediato. Conserva su cuenta y cualquier otro espacio de trabajo al que pertenezca.',
-        'confirm' => 'Eliminar acceso',
+        'description' => 'Esto termina su membresía: se le quita del equipo y pierde el acceso a este espacio de trabajo de inmediato. Necesitaría una nueva invitación para volver a unirse. Conserva su cuenta y cualquier otro espacio de trabajo al que pertenezca.',
+        'confirm' => 'Eliminar del equipo',
+    ],
+    'disable_access' => [
+        'heading' => '¿Desactivar el acceso de :name a este espacio de trabajo?',
+        'description' => 'Sigue formando parte del equipo y conserva su rol; simplemente no podrá entrar a este espacio de trabajo hasta que vuelvas a activar su acceso. Esto es distinto de eliminarlo: nada de lo que hizo se ve afectado y puedes reactivar su acceso en cualquier momento.',
+        'confirm' => 'Desactivar acceso',
     ],
     'revoke' => [
         'heading' => '¿Revocar la invitación a :email?',
@@ -49,6 +62,8 @@ return [
         'invitation_revoked' => 'Invitación a :email revocada',
         'invitation_email_failed' => 'La invitación para :email fue creada, pero el correo no pudo enviarse. Usa Reenviar para intentarlo de nuevo.',
         'member_removed' => ':name fue eliminado de este espacio de trabajo',
+        'access_disabled' => 'El acceso de :name al espacio de trabajo fue desactivado',
+        'access_enabled' => 'El acceso de :name al espacio de trabajo fue activado',
     ],
     'invitation_email' => [
         'subject' => 'Te han invitado a unirte a :workspace en Recruiter Labs',
@@ -61,6 +76,7 @@ return [
     ],
     'errors' => [
         'already_member' => ':email ya tiene acceso a este espacio de trabajo como :role.',
+        'already_member_access_disabled' => ':email ya forma parte de este equipo, pero su acceso al espacio de trabajo está desactivado en este momento. Vuelve a activar su acceso en lugar de invitarle de nuevo.',
         'invitation_already_pending' => ':email ya tiene una invitación pendiente a este espacio de trabajo. Reenvía esa invitación en lugar de crear una nueva.',
         'invitation_revoked_cannot_resend' => 'Esta invitación fue revocada. Invita de nuevo a esta persona para darle acceso.',
         'invitation_already_accepted' => ':email ya aceptó esta invitación y es un miembro activo de este espacio de trabajo.',
@@ -70,5 +86,7 @@ return [
         'invitation_email_mismatch' => 'Esta invitación fue enviada a otra dirección de correo. Has iniciado sesión como :email. Inicia sesión con la dirección invitada para aceptarla.',
         'invitation_email_not_verified' => 'Verifica :email antes de unirte a este espacio de trabajo. Cuando confirmes tu correo, abre esta invitación de nuevo.',
         'owner_cannot_be_removed' => 'El propietario del espacio de trabajo no puede ser eliminado. Todo espacio de trabajo debe conservar un propietario.',
+        'owner_access_cannot_be_changed' => 'El propietario del espacio de trabajo siempre tiene acceso a este espacio de trabajo, por lo que su acceso no se puede desactivar.',
+        'not_a_member' => ':name ya no es miembro de este espacio de trabajo.',
     ],
 ];
