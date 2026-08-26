@@ -3,6 +3,16 @@
 return [
     'register_label' => 'Registrar empresa',
     'edit_label' => 'Editar empresa',
+    'roles' => [
+        'owner' => 'Propietario',
+        'member' => 'Miembro',
+    ],
+    'invitation_statuses' => [
+        'pending' => 'Pendiente',
+        'expired' => 'Expirada',
+        'revoked' => 'Revocada',
+        'accepted' => 'Aceptada',
+    ],
     'fields' => [
         'name' => 'Nombre de la empresa',
         'slug' => 'Slug',

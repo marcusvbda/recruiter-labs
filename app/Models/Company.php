@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Actions\ProvisionDefaultPipeline;
+use App\Enums\CompanyRole;
 use App\Enums\Feature;
 use App\Enums\Limit;
 use Database\Factories\CompanyFactory;
@@ -13,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\DB;
 
 #[Fillable(['name', 'slug', 'plan_id'])]
 class Company extends Model
@@ -32,7 +34,48 @@ class Company extends Model
     /** @return BelongsToMany<User, $this> */
     public function users(): BelongsToMany
     {
-        return $this->belongsToMany(User::class)->withTimestamps();
+        return $this->belongsToMany(User::class)->withPivot('role')->withTimestamps();
+    }
+
+    /**
+     * A membership row exists only while the person is part of the workspace —
+     * removal deletes it — so every membership is an active one.
+     *
+     * @return BelongsToMany<User, $this>
+     */
+    public function activeMembers(): BelongsToMany
+    {
+        return $this->users();
+    }
+
+    public function owner(): ?User
+    {
+        return $this->users()->wherePivot('role', CompanyRole::Owner->value)->first();
+    }
+
+    /**
+     * Read straight from the pivot table: callers run this right after a
+     * membership changes, when a loaded `users` relation would still be stale.
+     */
+    public function roleFor(User $user): ?CompanyRole
+    {
+        $role = DB::table('company_user')
+            ->where('company_id', $this->getKey())
+            ->where('user_id', $user->getKey())
+            ->value('role');
+
+        return is_string($role) ? CompanyRole::from($role) : null;
+    }
+
+    public function isOwner(User $user): bool
+    {
+        return $this->roleFor($user) === CompanyRole::Owner;
+    }
+
+    /** @return HasMany<CompanyInvitation, $this> */
+    public function invitations(): HasMany
+    {
+        return $this->hasMany(CompanyInvitation::class);
     }
 
     /** @return HasMany<Candidate, $this> */

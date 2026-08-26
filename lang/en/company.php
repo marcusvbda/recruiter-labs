@@ -3,6 +3,16 @@
 return [
     'register_label' => 'Register company',
     'edit_label' => 'Edit company',
+    'roles' => [
+        'owner' => 'Owner',
+        'member' => 'Member',
+    ],
+    'invitation_statuses' => [
+        'pending' => 'Pending',
+        'expired' => 'Expired',
+        'revoked' => 'Revoked',
+        'accepted' => 'Accepted',
+    ],
     'fields' => [
         'name' => 'Company name',
         'slug' => 'Slug',

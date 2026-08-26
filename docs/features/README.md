@@ -102,6 +102,19 @@ the actual current repository, its history, existing patterns and relevant
 domain skills to choose the best technical approach. That derived approach is
 runtime execution state, not a missing persistent artifact.
 
+## Filament implementation discovery
+
+For any planned feature that touches the Filament application, existing
+solutions must be checked on https://filamentphp.com/plugins before the
+technical approach is finalized.
+
+Relevant plugins are implementation candidates only. They must be evaluated
+against the approved `spec.md`, the current Laravel/Filament versions and the
+existing repository architecture.
+
+Plugin discovery must not introduce product requirements or alter the approved
+feature scope.
+
 ## Runtime execution state
 
 Humans do not pre-decompose planned features into persistent implementation

@@ -4,6 +4,7 @@ namespace App\Providers\Filament;
 
 use App\Data\CompanyTopbarSummaryData;
 use App\Enums\UsageWarningState;
+use App\Filament\Auth\Register;
 use App\Filament\Clusters\Settings\Pages\AccountSettings;
 use App\Filament\Clusters\Settings\Pages\AiSettings;
 use App\Filament\Pages\Dashboard;
@@ -47,7 +48,7 @@ class AdminPanelProvider extends PanelProvider
             ->maxContentWidth(Width::Full)
             ->globalSearchResourceOptIn()
             ->login()
-            ->registration()
+            ->registration(Register::class)
             ->passwordReset()
             ->emailVerification()
             ->tenant(Company::class, slugAttribute: 'slug')

@@ -6,6 +6,7 @@ use App\Http\Controllers\JobApplicationController;
 use App\Http\Controllers\JobController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\ReferralController;
+use App\Http\Controllers\WorkspaceInvitationController;
 use App\Http\Middleware\SetLocale;
 use Filament\Http\Middleware\Authenticate;
 use Illuminate\Support\Facades\Route;
@@ -24,6 +25,18 @@ Route::get('/job/{key}/preview', [JobController::class, 'preview'])
     ->name('job.preview');
 
 Route::get('/referal/{key}', [ReferralController::class, 'show'])->name('referral.show');
+
+// Reachable by guests and by signed-in but unverified accounts: opening an
+// invitation is how those two states are explained in the first place.
+Route::get('/invitations/{token}', [WorkspaceInvitationController::class, 'show'])
+    ->where('token', '[A-Za-z0-9]{64}')
+    ->middleware(['throttle:30,1', SetLocale::class])
+    ->name('workspace-invitations.show');
+
+Route::post('/invitations/{token}', [WorkspaceInvitationController::class, 'accept'])
+    ->where('token', '[A-Za-z0-9]{64}')
+    ->middleware([Authenticate::class, 'throttle:30,1', SetLocale::class])
+    ->name('workspace-invitations.accept');
 
 Route::get('/locale/{locale}', LocaleController::class)
     ->middleware(['web', 'auth'])

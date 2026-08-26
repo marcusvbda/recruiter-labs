@@ -32,24 +32,24 @@ an AI reviewer to look at anything.
 
 ### PHP changed
 
-| Purpose | Command |
-| --- | --- |
-| Format changed files | `vendor/bin/pint --dirty --format agent` |
-| Format whole project | `composer lint` (`pint --parallel`) |
-| Format check only | `composer lint:check` |
-| Static analysis | `composer types:check` (`phpstan analyse`) |
-| Focused tests | `php artisan test --compact --filter=<name>` or with a path |
-| Full PHP gate | `composer test` (clears config, lint:check, types:check, tests) |
+| Purpose              | Command                                                         |
+| -------------------- | --------------------------------------------------------------- |
+| Format changed files | `vendor/bin/pint --dirty --format agent`                        |
+| Format whole project | `composer lint` (`pint --parallel`)                             |
+| Format check only    | `composer lint:check`                                           |
+| Static analysis      | `composer types:check` (`phpstan analyse`)                      |
+| Focused tests        | `php artisan test --compact --filter=<name>` or with a path     |
+| Full PHP gate        | `composer test` (clears config, lint:check, types:check, tests) |
 
 ### Frontend changed (`resources/js/**`, styles, Vite config)
 
-| Purpose | Command |
-| --- | --- |
-| Types | `npm run types:check` (`tsc --noEmit`) |
-| Lint (check) | `npm run lint:check` |
-| Lint (fix) | `npm run lint` |
-| Formatting | `npm run format:check` / `npm run format` |
-| Build (only when the bundle is genuinely at risk) | `npm run build` |
+| Purpose                                           | Command                                   |
+| ------------------------------------------------- | ----------------------------------------- |
+| Types                                             | `npm run types:check` (`tsc --noEmit`)    |
+| Lint (check)                                      | `npm run lint:check`                      |
+| Lint (fix)                                        | `npm run lint`                            |
+| Formatting                                        | `npm run format:check` / `npm run format` |
+| Build (only when the bundle is genuinely at risk) | `npm run build`                           |
 
 ### Everything changed / final gate
 
@@ -95,3 +95,30 @@ Nothing in `.ai/**` or `docs/features/**` may assume a tool-specific capability.
 - Do not invoke `qa-tester` for trivial tasks; run the relevant tests directly.
 - One comprehensive review at the end of a feature, not a full-repository review
   per task.
+
+## Filament plugin discovery
+
+Before designing or implementing a feature that touches the Filament
+application, search https://filamentphp.com/plugins for existing plugins that
+may fully or partially solve the problem.
+
+For each relevant plugin:
+
+- inspect its current documentation;
+- inspect its source code when integration details matter;
+- verify compatibility with the repository's current Laravel and Filament
+  versions;
+- evaluate compatibility with the existing domain, tenancy model and product
+  requirements;
+- identify useful capabilities and unwanted behavior;
+- decide whether to use it directly, adapt it, use it only as a reference, or
+  reject it.
+
+A plugin is an implementation candidate, not a product requirement.
+
+Do not change approved product behavior or distort the existing architecture
+merely to fit a plugin.
+
+When a relevant plugin materially changes implementation cost, complexity or
+technical direction, record that finding before choosing the implementation
+approach.

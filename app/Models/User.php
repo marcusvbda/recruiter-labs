@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CompanyRole;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Models\Contracts\HasTenants;
@@ -59,7 +60,17 @@ class User extends Authenticatable implements FilamentUser, HasLocalePreference,
 
     public function companies(): BelongsToMany
     {
-        return $this->belongsToMany(Company::class)->withTimestamps();
+        return $this->belongsToMany(Company::class)->withPivot('role')->withTimestamps();
+    }
+
+    public function roleIn(Company $company): ?CompanyRole
+    {
+        return $company->roleFor($this);
+    }
+
+    public function isOwnerOf(Company $company): bool
+    {
+        return $company->isOwner($this);
     }
 
     public function canAccessPanel(Panel $panel): bool

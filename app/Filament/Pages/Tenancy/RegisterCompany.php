@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages\Tenancy;
 
+use App\Enums\CompanyRole;
 use App\Models\Company;
 use App\Models\Plan;
 use Filament\Forms\Components\TextInput;
@@ -49,7 +50,7 @@ class RegisterCompany extends RegisterTenant
             'plan_id' => Plan::default()->id,
         ]);
 
-        $company->users()->attach(auth()->user());
+        $company->users()->attach(auth()->user(), ['role' => CompanyRole::Owner->value]);
 
         return $company;
     }
