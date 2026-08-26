@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\CompanyRole;
 use App\Models\Company;
 use App\Models\Plan;
 use App\Models\User;
@@ -23,6 +24,10 @@ class CompanySeeder extends Seeder
             ->where('email', 'admin@user.com')
             ->firstOrFail()
             ->companies()
-            ->syncWithoutDetaching([$company->getKey()]);
+            ->syncWithoutDetaching([
+                $company->getKey() => [
+                    'role' => CompanyRole::Owner->value,
+                ],
+            ]);
     }
 }

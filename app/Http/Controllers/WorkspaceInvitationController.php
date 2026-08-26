@@ -58,7 +58,7 @@ class WorkspaceInvitationController extends Controller
         return Inertia::render('invitation/show', $this->props($state, $invitation, $company, $user, $token));
     }
 
-    public function accept(Request $request, string $token): RedirectResponse
+    public function accept(Request $request, string $token): mixed
     {
         $invitation = CompanyInvitation::findByToken($token);
         $user = $request->user();
@@ -75,7 +75,7 @@ class WorkspaceInvitationController extends Controller
             if (! $company instanceof Company) {
                 return $this->backToInvitation($token, $exception->getMessage());
             }
-        } catch (WorkspaceInvitationEmailMismatch|WorkspaceInvitationEmailNotVerified $exception) {
+        } catch (WorkspaceInvitationEmailMismatch | WorkspaceInvitationEmailNotVerified $exception) {
             return $this->backToInvitation($token, $exception->getMessage());
         }
 
@@ -86,7 +86,7 @@ class WorkspaceInvitationController extends Controller
             ->success()
             ->send();
 
-        return redirect()->to($this->workspaceUrl($company));
+        return Inertia::location($this->workspaceUrl($company));
     }
 
     /**
