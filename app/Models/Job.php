@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Actions\CaptureCompanyMilestone;
 use App\Enums\ApplicationLocale;
+use App\Enums\CompanyMilestone as CompanyMilestoneEnum;
 use App\Enums\CoverLetterType;
 use App\Enums\JobCriteriaProcessingStatus;
 use App\Exceptions\RecruitmentWorkflowException;
@@ -61,6 +63,13 @@ class Job extends Model
 
     protected static function booted(): void
     {
+        // Publishing, criteria and applications all come later: the workspace has
+        // opened a hiring process the moment a job row exists, so the milestone is
+        // captured here and covers every creation path, including duplication.
+        static::created(function (Job $job): void {
+            app(CaptureCompanyMilestone::class)->handle((int) $job->company_id, CompanyMilestoneEnum::FirstJobCreated);
+        });
+
         // Changing the pipeline of a job that already has applications would leave
         // every one of them pointing at a status from a different workflow. Pipeline
         // migration/mapping is deliberately not supported, so the change is refused.

@@ -3,6 +3,7 @@
 namespace App\Actions;
 
 use App\Enums\ApplicationAnalysisStatus;
+use App\Enums\CompanyMilestone;
 use App\Enums\JobCriteriaProcessingStatus;
 use App\Models\Application;
 use App\Models\Job;
@@ -33,7 +34,10 @@ use Illuminate\Support\Facades\DB;
  */
 class ConfirmJobCriteria
 {
-    public function __construct(private readonly ScheduleApplicationFitAnalysis $scheduleApplicationFitAnalysis) {}
+    public function __construct(
+        private readonly ScheduleApplicationFitAnalysis $scheduleApplicationFitAnalysis,
+        private readonly CaptureCompanyMilestone $captureCompanyMilestone,
+    ) {}
 
     /**
      * @param  User  $user  The human confirming these criteria. Recorded as
@@ -70,6 +74,12 @@ class ConfirmJobCriteria
         });
 
         if ($confirmed) {
+            // Only the path that actually recorded a confirmation counts: a call
+            // that found nothing to confirm left the criteria awaiting review, and
+            // claiming the milestone for it would mark setup complete while the
+            // human gate is still open.
+            $this->captureCompanyMilestone->handle((int) $job->company_id, CompanyMilestone::FirstCriteriaConfirmed);
+
             $this->scheduleEligibleApplications($job, (int) $user->getKey());
         }
 

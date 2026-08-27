@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use App\Actions\CaptureCompanyMilestone;
 use App\Actions\MoveApplicationToStatus;
 use App\Enums\ApplicationAnalysisStatus;
 use App\Enums\ApplicationCoverLetterType;
 use App\Enums\ApplicationSource;
+use App\Enums\CompanyMilestone as CompanyMilestoneEnum;
 use App\Events\ApplicationEnteredStatus;
 use Carbon\CarbonImmutable;
 use Database\Factories\ApplicationFactory;
@@ -65,6 +67,11 @@ class Application extends Model
                 (int) $application->status_id,
                 null,
             );
+
+            // A candidate reaching the workspace is the milestone, whatever the
+            // source — public page, referral or manual entry — so it is captured
+            // where the application is created rather than per intake surface.
+            app(CaptureCompanyMilestone::class)->handle((int) $application->company_id, CompanyMilestoneEnum::FirstApplicationCreated);
         });
     }
 

@@ -3,12 +3,14 @@
 namespace App\Filament\Pages;
 
 use App\Data\RecruiterAgendaPreview;
+use App\Data\WorkspaceActivationProgress;
 use App\Filament\Resources\Jobs\JobResource;
 use App\Models\Company;
 use App\Models\Job;
 use App\Models\User;
 use App\Services\RecruitmentAttentionService;
 use App\Services\RecruitmentProgressService;
+use App\Services\WorkspaceActivationJourney;
 use BackedEnum;
 use DateTimeZone;
 use Filament\Facades\Filament;
@@ -76,6 +78,8 @@ class Dashboard extends BaseDashboard
      *     summary: list<array{key: string, value: int, url: string}>,
      *     jobs_url: string,
      *     calendar_url: string,
+     *     activation: WorkspaceActivationProgress|null,
+     *     show_welcome: bool,
      * }
      */
     protected function getViewData(): array
@@ -93,6 +97,8 @@ class Dashboard extends BaseDashboard
             'summary' => [],
             'jobs_url' => JobResource::getUrl(),
             'calendar_url' => Calendar::getUrl(),
+            'activation' => null,
+            'show_welcome' => false,
         ];
 
         if (! $company instanceof Company || ! $recruiter instanceof User) {
@@ -103,6 +109,10 @@ class Dashboard extends BaseDashboard
         $summary = $progress->workspaceSummary($company, $recruiter);
         $queue = app(RecruitmentAttentionService::class)->for($company, $recruiter);
         $listedAttention = array_slice($queue->toArray(), 0, self::AttentionLimit);
+        // Read once here so the view only ever composes; while the
+        // workspace is activated this stays unused and the Overview
+        // renders exactly as it did before the journey existed (AC27).
+        $activation = app(WorkspaceActivationJourney::class)->for($company, $recruiter);
 
         return [
             ...$data,
@@ -113,7 +123,54 @@ class Dashboard extends BaseDashboard
             'processes' => $this->processes($company, $progress),
             'processes_hidden' => max(0, $summary['active_jobs'] - self::ProcessLimit),
             'summary' => $this->summaryFigures($summary),
+            'activation' => $activation,
+            // Eligible only while there is a journey left to introduce and
+            // this member has not already said "later" for this workspace
+            // (T04's per-user pivot timestamp) — never a milestone check.
+            'show_welcome' => ! $activation->isActivated() && ! $company->hasDismissedOnboardingWelcome($recruiter),
         ];
+    }
+
+    /**
+     * "Get started" takes the user straight to the one useful next action and
+     * also records the personal welcome dismissal (T04), so navigating back to
+     * the Overview mid-journey does not resurface the same introduction on
+     * every visit. The persistent way back into the journey after this is the
+     * checklist below, not the welcome modal.
+     */
+    public function startOnboardingWelcome(): void
+    {
+        $company = Filament::getTenant();
+        $recruiter = Filament::auth()->user();
+
+        if (! $company instanceof Company || ! $recruiter instanceof User) {
+            return;
+        }
+
+        $company->dismissOnboardingWelcomeFor($recruiter);
+
+        $nextStepUrl = app(WorkspaceActivationJourney::class)->for($company, $recruiter)->nextStep()['url'] ?? null;
+
+        if (is_string($nextStepUrl)) {
+            $this->redirect($nextStepUrl, navigate: true);
+        }
+    }
+
+    /**
+     * "Continue later" only stamps the personal dismissal timestamp (T04). It
+     * writes no milestone and reads no milestone — activation progress is
+     * completely unaffected (AC20).
+     */
+    public function dismissOnboardingWelcome(): void
+    {
+        $company = Filament::getTenant();
+        $recruiter = Filament::auth()->user();
+
+        if (! $company instanceof Company || ! $recruiter instanceof User) {
+            return;
+        }
+
+        $company->dismissOnboardingWelcomeFor($recruiter);
     }
 
     /**

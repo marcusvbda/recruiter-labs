@@ -4,6 +4,7 @@ namespace App\Actions;
 
 use App\Enums\AnalysisConfidence;
 use App\Enums\ApplicationAnalysisStatus;
+use App\Enums\CompanyMilestone;
 use App\Enums\CriterionEvidenceSource;
 use App\Models\Application;
 use App\Models\ApplicationCriterionScore;
@@ -87,6 +88,12 @@ class ReplaceApplicationFitAnalysis
                 // path. This is an expected concurrency outcome, not a provider
                 // failure, so it does not throw: retrying would only replay the
                 // same stale response.
+                //
+                // For the same reason no evaluation milestone is captured here.
+                // The provider answered, but the recruiter has no evaluation to
+                // read, so counting this as the workspace's first evaluated
+                // candidate would present activation progress the product cannot
+                // show.
                 $lockedApplication->forceFill([
                     'analysis_status' => ApplicationAnalysisStatus::AwaitingCriteria,
                 ])->saveQuietly();
@@ -147,6 +154,12 @@ class ReplaceApplicationFitAnalysis
                 'analysis_coverage' => $this->evidenceCoverage($rows),
                 'analyzed_at' => now(),
             ])->saveQuietly();
+
+            // Captured only here, where a completed evaluation is persisted: this
+            // is the single point in the action where the recruiter actually gains
+            // a fit, coverage and confidence assessment to read. Failed,
+            // quota-held, cancelled and stale-revision executions never reach it.
+            app(CaptureCompanyMilestone::class)->handle((int) $lockedApplication->company_id, CompanyMilestone::FirstApplicationEvaluated);
 
             return true;
         });

@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Actions\CaptureCompanyMilestone;
 use App\Actions\ProvisionDefaultPipeline;
+use App\Enums\CompanyMilestone as CompanyMilestoneEnum;
 use App\Enums\CompanyRole;
 use App\Enums\Feature;
 use App\Enums\Limit;
@@ -30,6 +32,11 @@ class Company extends Model
         // once, here, rather than being repaired lazily from forms and services.
         static::created(function (Company $company): void {
             app(ProvisionDefaultPipeline::class)->handle($company);
+
+            // The workspace existing is itself the first activation milestone, so
+            // it is captured where the workspace is actually created — every
+            // signup path goes through here, and no screen has to claim it.
+            app(CaptureCompanyMilestone::class)->handle($company, CompanyMilestoneEnum::WorkspaceCreated);
         });
     }
 
@@ -37,7 +44,7 @@ class Company extends Model
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class)
-            ->withPivot('role', 'access_disabled_at')
+            ->withPivot('role', 'access_disabled_at', 'onboarding_welcome_dismissed_at', 'onboarding_launcher_hidden_at')
             ->withTimestamps();
     }
 
@@ -135,6 +142,62 @@ class Company extends Model
             ->value('access_disabled_at');
 
         return is_string($disabledAt) ? Carbon::parse($disabledAt) : null;
+    }
+
+    /**
+     * Whether this member has dismissed or postponed the onboarding welcome in
+     * this workspace. Activation progress stays workspace-owned and shared, but
+     * how the onboarding is presented is personal, so it lives on the
+     * membership row: dismissing completes no step and changes no activation
+     * state.
+     *
+     * Read straight from the pivot table, like {@see roleFor()}, because callers
+     * run this right after a dismissal.
+     */
+    public function hasDismissedOnboardingWelcome(User $user): bool
+    {
+        return DB::table('company_user')
+            ->where('company_id', $this->getKey())
+            ->where('user_id', $user->getKey())
+            ->value('onboarding_welcome_dismissed_at') !== null;
+    }
+
+    /**
+     * Whether this member has hidden the floating activation launcher in this
+     * workspace. Personal presentation only, like
+     * {@see hasDismissedOnboardingWelcome()}.
+     */
+    public function hasHiddenOnboardingLauncher(User $user): bool
+    {
+        return DB::table('company_user')
+            ->where('company_id', $this->getKey())
+            ->where('user_id', $user->getKey())
+            ->value('onboarding_launcher_hidden_at') !== null;
+    }
+
+    /**
+     * Stamp this member's welcome dismissal for this workspace only. Updates
+     * nothing but its own column — never `role`, never `access_disabled_at` —
+     * and creates no membership, so it cannot grant access as a side effect.
+     */
+    public function dismissOnboardingWelcomeFor(User $user, ?Carbon $dismissedAt = null): void
+    {
+        DB::table('company_user')
+            ->where('company_id', $this->getKey())
+            ->where('user_id', $user->getKey())
+            ->update(['onboarding_welcome_dismissed_at' => $dismissedAt ?? now()]);
+    }
+
+    /**
+     * Stamp this member's launcher hiding for this workspace only, under the
+     * same constraints as {@see dismissOnboardingWelcomeFor()}.
+     */
+    public function hideOnboardingLauncherFor(User $user, ?Carbon $hiddenAt = null): void
+    {
+        DB::table('company_user')
+            ->where('company_id', $this->getKey())
+            ->where('user_id', $user->getKey())
+            ->update(['onboarding_launcher_hidden_at' => $hiddenAt ?? now()]);
     }
 
     /** @return HasMany<CompanyInvitation, $this> */
@@ -267,6 +330,12 @@ class Company extends Model
     public function auditLogs(): HasMany
     {
         return $this->hasMany(CompanyAuditLog::class);
+    }
+
+    /** @return HasMany<CompanyMilestone, $this> */
+    public function milestones(): HasMany
+    {
+        return $this->hasMany(CompanyMilestone::class);
     }
 
     public function hasFeature(Feature $feature): bool

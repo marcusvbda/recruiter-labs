@@ -13,6 +13,7 @@ use App\Http\Middleware\ApplyTenantScopes;
 use App\Http\Middleware\SetLocale;
 use App\Models\Company;
 use App\Services\CompanyTopbarSummary;
+use App\Services\WorkspaceActivationJourney;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Http\Middleware\Authenticate;
@@ -91,6 +92,10 @@ class AdminPanelProvider extends PanelProvider
                     'current' => auth()->user()?->locale ?? config('app.locale'),
                 ])->render(),
             )
+            ->renderHook(
+                PanelsRenderHook::BODY_END,
+                fn (): string => $this->renderWorkspaceActivationLauncher(),
+            )
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
@@ -132,6 +137,33 @@ class AdminPanelProvider extends PanelProvider
 
         return view('filament.topbar-company-usage', [
             'summary' => $this->topbarViewData($summary),
+        ])->render();
+    }
+
+    /**
+     * Rendered at the very end of the body rather than inside the topbar,
+     * sidebar or a page's own action bar, so a fixed-position floating
+     * launcher never competes with those for space (AC22, AC23).
+     *
+     * This fires on every panel page, including ones with no tenant (login,
+     * registration, tenant registration) and unauthenticated requests, so it
+     * guards exactly like {@see renderCompanyTopbarSummary()}: no tenant, no
+     * authenticated user, no render at all. Whether the workspace is
+     * activated or this user has hidden the launcher is then decided inside
+     * the Livewire component itself, from the same
+     * {@see WorkspaceActivationJourney} and the same per-user
+     * pivot helper every other onboarding surface reads (AC27, AC28, AC29).
+     */
+    private function renderWorkspaceActivationLauncher(): string
+    {
+        $company = Filament::getTenant();
+
+        if (! $company instanceof Company || ! Filament::auth()->check()) {
+            return '';
+        }
+
+        return view('filament.workspace-activation-launcher', [
+            'company' => $company,
         ])->render();
     }
 

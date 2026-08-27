@@ -508,6 +508,106 @@
         @apply text-xs font-medium text-gray-500;
     }
 
+    /*
+     * First-workspace activation checklist. It borrows the same panel, row and
+     * action vocabulary as the rest of the Overview: a hairline-divided list,
+     * not a card of its own cards. The whole section disappears once the
+     * workspace is activated (see the Blade guard), so nothing below needs a
+     * separate "empty" state.
+     */
+
+    .rl-activation-list {
+        @apply divide-y divide-gray-100;
+    }
+
+    .rl-activation-item {
+        @apply flex flex-wrap items-start gap-x-3 gap-y-1.5 px-4 py-3;
+    }
+
+    .rl-activation-item__icon {
+        @apply mt-px size-4 shrink-0 text-gray-300;
+    }
+
+    .rl-activation-item[data-complete='true'] .rl-activation-item__icon {
+        @apply text-success-500;
+    }
+
+    .rl-activation-item__title {
+        @apply block text-sm font-medium text-gray-950;
+    }
+
+    .rl-activation-item[data-complete='true'] .rl-activation-item__title {
+        @apply text-gray-500 line-through decoration-gray-300;
+    }
+
+    .rl-activation-item__hint {
+        @apply mt-0.5 block text-xs leading-5 text-gray-500;
+    }
+
+    .rl-activation-item__action {
+        @apply w-full pl-7 sm:w-auto sm:pl-0;
+    }
+
+    /* The next useful action is the one prominent link in the list; the rest
+       stay light, same as every other row on this page. */
+    .rl-activation-item__action--primary {
+        @apply text-primary-600 hover:text-primary-500 font-semibold;
+    }
+
+    .rl-activation-optional {
+        @apply border-t border-gray-100 px-4 py-2.5;
+    }
+
+    .rl-activation-optional__heading {
+        @apply text-xs font-semibold tracking-wide text-gray-400 uppercase;
+    }
+
+    .rl-activation-optional-list {
+        @apply mt-1.5 flex flex-col gap-1.5;
+    }
+
+    .rl-activation-optional-item {
+        @apply flex items-center justify-between gap-3 text-sm;
+    }
+
+    .rl-activation-optional-item__label {
+        @apply text-gray-700;
+    }
+
+    .rl-activation-optional-item__state {
+        @apply flex shrink-0 items-center gap-1 text-xs text-gray-400;
+    }
+
+    .rl-activation-optional-item__state[data-tone='success'] {
+        @apply text-success-600;
+    }
+
+    /* The welcome modal's own body content. Everything around it — heading,
+       footer buttons — is the standard x-filament::modal chrome. */
+    .rl-welcome {
+        @apply flex flex-col gap-3;
+    }
+
+    .rl-welcome__intro {
+        @apply text-sm text-gray-600;
+    }
+
+    .rl-welcome__progress {
+        @apply text-xs font-medium text-gray-500;
+    }
+
+    .rl-welcome__next {
+        @apply rounded-lg bg-gray-50 px-3 py-2 text-sm;
+    }
+
+    .rl-welcome__next-label {
+        @apply mr-1 text-xs font-semibold tracking-wide text-gray-400 uppercase;
+    }
+
+    .rl-welcome__next-title {
+        @apply font-medium text-gray-950;
+    }
+
     .rl-analysis-state {
         @apply flex min-h-96 flex-col items-center justify-center rounded-2xl border border-gray-200 bg-gray-50/70 p-8 sm:p-12 dark:border-white/10 dark:bg-white/5;
     }
@@ -530,6 +630,89 @@
 
     .rl-analysis-state[data-state='pending_quota'] .rl-analysis-state__icon {
         @apply bg-warning-100 text-warning-600 ring-warning-50 dark:bg-warning-500/15 dark:text-warning-300 dark:ring-warning-500/5;
+    }
+
+    /* Floating activation launcher (T07). Fixed to the corner, deliberately
+       small and quiet — it must read as secondary to recruitment work and
+       never sit on top of the topbar, sidebar or a page's own actions. */
+    .rl-launcher {
+        @apply fixed right-4 bottom-4 z-40 max-w-[calc(100vw-2rem)];
+    }
+
+    .rl-launcher-card {
+        @apply w-72 max-w-full overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg;
+    }
+
+    .rl-launcher-toggle {
+        @apply flex w-full items-center gap-2 px-3 py-2.5 text-left;
+    }
+
+    .rl-launcher-toggle__icon {
+        @apply text-primary-600 size-5 shrink-0;
+    }
+
+    .rl-launcher-toggle__body {
+        @apply flex min-w-0 flex-1 flex-col;
+    }
+
+    .rl-launcher-toggle__label {
+        @apply text-sm font-semibold text-gray-950;
+    }
+
+    .rl-launcher-toggle__count {
+        @apply text-xs text-gray-500;
+    }
+
+    .rl-launcher-toggle__chevron {
+        @apply size-4 shrink-0 text-gray-400;
+    }
+
+    .rl-launcher-panel {
+        @apply border-t border-gray-100 px-3 py-2.5;
+    }
+
+    .rl-launcher-list {
+        @apply flex flex-col gap-2;
+    }
+
+    .rl-launcher-item {
+        @apply flex items-center gap-2 text-sm;
+    }
+
+    .rl-launcher-item__icon {
+        @apply size-4 shrink-0 text-gray-300;
+    }
+
+    .rl-launcher-item[data-complete='true'] .rl-launcher-item__icon {
+        @apply text-success-500;
+    }
+
+    .rl-launcher-item__title {
+        @apply min-w-0 flex-1 truncate text-gray-700;
+    }
+
+    .rl-launcher-item[data-complete='true'] .rl-launcher-item__title {
+        @apply text-gray-500 line-through decoration-gray-300;
+    }
+
+    .rl-launcher-item__action {
+        @apply text-xs font-medium text-gray-500 hover:text-gray-700;
+    }
+
+    .rl-launcher-item__action--primary {
+        @apply text-primary-600 hover:text-primary-500 font-semibold;
+    }
+
+    .rl-launcher-footer {
+        @apply mt-2.5 flex items-center justify-between border-t border-gray-100 pt-2.5;
+    }
+
+    .rl-launcher-footer__link {
+        @apply text-xs font-medium text-gray-600 hover:text-gray-800;
+    }
+
+    .rl-launcher-footer__hide {
+        @apply text-xs font-medium text-gray-400 hover:text-gray-600;
     }
 }
 

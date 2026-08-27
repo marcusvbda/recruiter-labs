@@ -171,6 +171,153 @@
             </section>
         </div>
 
+        {{-- A short, dismissible introduction on an early visit — not a wizard,
+             not a tour. It never blocks the product: closing it away or
+             navigating elsewhere leaves it undismissed and it simply renders
+             again next time, while "Get started" and "Continue later" are the
+             two paths that record it as seen (T04) so it stops repeating. --}}
+        @if ($show_welcome && $activation instanceof \App\Data\WorkspaceActivationProgress)
+            @php
+                $welcomeNextStep = $activation->nextStep();
+            @endphp
+
+            <div x-data x-init="$nextTick(() => $dispatch('open-modal', { id: 'rl-welcome-modal' }))"></div>
+
+            <x-filament::modal id="rl-welcome-modal" width="md" wire:key="rl-welcome-modal">
+                <x-slot name="heading">
+                    {{ __('onboarding.welcome.heading') }}
+                </x-slot>
+
+                <div class="rl-welcome">
+                    <p class="rl-welcome__intro">{{ __('onboarding.welcome.intro') }}</p>
+
+                    <p class="rl-welcome__progress">
+                        {{ __('onboarding.welcome.progress', ['done' => $activation->completedCount(), 'total' => $activation->totalCount()]) }}
+                    </p>
+
+                    @if ($welcomeNextStep)
+                        <p class="rl-welcome__next">
+                            <span class="rl-welcome__next-label">{{ __('onboarding.welcome.next_step_label') }}</span>
+                            <span class="rl-welcome__next-title">
+                                {{ __('onboarding.checklist.steps.' . $welcomeNextStep['key'] . '.title') }}
+                            </span>
+                        </p>
+                    @endif
+                </div>
+
+                <x-slot name="footerActions">
+                    <x-filament::button wire:click="startOnboardingWelcome" wire:loading.attr="disabled">
+                        {{ __('onboarding.welcome.get_started') }}
+                    </x-filament::button>
+
+                    <x-filament::button color="gray" wire:click="dismissOnboardingWelcome" wire:loading.attr="disabled">
+                        {{ __('onboarding.welcome.continue_later') }}
+                    </x-filament::button>
+                </x-slot>
+            </x-filament::modal>
+        @endif
+
+        {{-- Where is a new workspace in reaching its first evaluation? Attention
+             and the recruiter's agenda already led the page above; this stays a
+             single compact panel and disappears entirely once activated, so it
+             never competes with live recruitment work for space. --}}
+        @if ($activation instanceof \App\Data\WorkspaceActivationProgress && ! $activation->isActivated())
+            @php
+                $nextStepKey = $activation->nextStep()['key'] ?? null;
+            @endphp
+
+            <section class="rl-overview-panel" aria-labelledby="rl-overview-activation-heading">
+                <div class="rl-overview-panel__head">
+                    <h2 id="rl-overview-activation-heading" class="rl-overview-panel__title">
+                        {{ __('onboarding.checklist.heading') }}
+
+                        <span class="rl-overview-panel__count" aria-hidden="true">
+                            {{ $activation->completedCount() }}/{{ $activation->totalCount() }}
+                        </span>
+                        <span class="sr-only">
+                            {{ __('onboarding.checklist.progress', ['done' => $activation->completedCount(), 'total' => $activation->totalCount()]) }}
+                        </span>
+                    </h2>
+
+                    @if ($activation->isSetupComplete())
+                        <x-filament::badge color="success" size="sm">
+                            {{ __('onboarding.checklist.setup_complete') }}
+                        </x-filament::badge>
+                    @endif
+                </div>
+
+                <ul class="rl-activation-list">
+                    @foreach ($activation->primarySteps as $step)
+                        <li class="rl-activation-item" data-complete="{{ $step['is_complete'] ? 'true' : 'false' }}">
+                            <x-filament::icon
+                                :icon="$step['is_complete'] ? 'heroicon-m-check-circle' : 'heroicon-o-check-circle'"
+                                class="rl-activation-item__icon"
+                                aria-hidden="true"
+                            />
+
+                            <span class="min-w-0 flex-1">
+                                <span class="rl-activation-item__title">
+                                    {{ __('onboarding.checklist.steps.' . $step['key'] . '.title') }}
+                                </span>
+
+                                @if ($step['key'] === $nextStepKey)
+                                    <span class="rl-activation-item__hint">
+                                        {{ __('onboarding.checklist.steps.' . $step['key'] . '.hint') }}
+                                    </span>
+                                @endif
+                            </span>
+
+                            @if ($step['url'])
+                                <a
+                                    href="{{ $step['url'] }}"
+                                    wire:navigate
+                                    class="rl-overview-action rl-activation-item__action"
+                                    @class(['rl-activation-item__action--primary' => $step['key'] === $nextStepKey])
+                                >
+                                    {{ __('onboarding.checklist.steps.' . $step['key'] . '.action') }}
+                                    <x-filament::icon icon="heroicon-m-arrow-right" class="size-3.5 shrink-0" aria-hidden="true" />
+                                </a>
+                            @endif
+                        </li>
+                    @endforeach
+                </ul>
+
+                {{-- Optional setup stays visually apart from the primary journey and
+                     is never counted in its progress. A step is a link only when
+                     the current user is actually authorized for the underlying
+                     action — never a control that will refuse them. --}}
+                <div class="rl-activation-optional">
+                    <p class="rl-activation-optional__heading">{{ __('onboarding.checklist.optional_heading') }}</p>
+
+                    <ul class="rl-activation-optional-list">
+                        @foreach ($activation->optionalSteps as $optional)
+                            <li class="rl-activation-optional-item">
+                                <span class="rl-activation-optional-item__label">
+                                    {{ __('onboarding.checklist.optional.' . $optional['key'] . '.title') }}
+                                </span>
+
+                                @if ($optional['is_done'])
+                                    <span class="rl-activation-optional-item__state" data-tone="success">
+                                        <x-filament::icon icon="heroicon-m-check-circle" class="size-3.5 shrink-0" aria-hidden="true" />
+                                        {{ __('onboarding.checklist.optional_done') }}
+                                    </span>
+                                @elseif ($optional['is_actionable'])
+                                    <a href="{{ $optional['url'] }}" wire:navigate class="rl-overview-action">
+                                        {{ __('onboarding.checklist.optional.' . $optional['key'] . '.action') }}
+                                        <x-filament::icon icon="heroicon-m-arrow-right" class="size-3.5 shrink-0" aria-hidden="true" />
+                                    </a>
+                                @else
+                                    <span class="rl-activation-optional-item__state">
+                                        {{ __('onboarding.checklist.optional_not_available') }}
+                                    </span>
+                                @endif
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            </section>
+        @endif
+
         {{-- How is hiring progressing? Scannable without opening every job. --}}
         <section class="rl-overview-panel" aria-labelledby="rl-overview-processes-heading">
             <div class="rl-overview-panel__head">
