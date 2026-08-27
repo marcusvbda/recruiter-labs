@@ -1,6 +1,6 @@
 ---
-status: planned
-type: feature
+status: implemented
+type: as-built
 ---
 
 # First workspace activation
@@ -371,8 +371,9 @@ Dismissing the welcome experience:
 - does not change workspace activation state;
 - does not prevent real product actions from completing milestones.
 
-Presentation-level dismissal may be personal to the user even though activation
-progress itself belongs to the workspace.
+Presentation-level dismissal is personal to the user, even though activation
+progress itself belongs to the workspace. One member dismissing the welcome
+leaves it in place for their colleagues and changes no activation progress.
 
 ---
 
@@ -400,15 +401,16 @@ It exists to orient the user, not replace the Dashboard.
 While the workspace is not activated, users should have lightweight access to
 the activation journey while navigating the workspace.
 
-A compact floating launcher/checklist may provide this access.
+A compact floating launcher/checklist provides this access, on every workspace
+page rather than only on the Dashboard.
 
-It should:
+It:
 
-- show progress;
-- expose remaining steps;
-- link to the appropriate existing product actions;
-- remain visually secondary to recruitment work;
-- be hideable or postponable without changing activation state.
+- shows progress;
+- exposes the remaining steps;
+- links to the appropriate existing product actions;
+- remains visually secondary to recruitment work;
+- can be hidden or postponed, per user, without changing activation state.
 
 The launcher must not obscure important product controls.
 
@@ -416,17 +418,15 @@ The launcher must not obscure important product controls.
 
 ## Progress page
 
-A dedicated onboarding progress page may exist as a secondary surface when
-useful.
+No dedicated onboarding progress page exists. The Dashboard checklist and the
+floating checklist proved sufficient for normal onboarding use, and a separate
+page would have added a navigation destination the feature deliberately avoids.
 
-If present:
+If one is ever added:
 
 - it must not become a primary permanent navigation destination;
 - it must show the same workspace progress as all other onboarding surfaces;
 - it must not introduce different completion rules.
-
-The Dashboard checklist and floating checklist should remain sufficient for
-normal onboarding use.
 
 ---
 
@@ -444,8 +444,10 @@ Once the workspace becomes activated:
 The product should not interrupt recruitment work with a mandatory celebration
 screen.
 
-A lightweight success acknowledgement is acceptable if it does not block the
-user.
+No success acknowledgement was added: reaching the first evaluation simply ends
+the guidance and returns the workspace to the regular product experience. A
+lightweight acknowledgement would still be acceptable provided it does not block
+the user.
 
 ---
 
@@ -846,13 +848,14 @@ product requirements.
 
 # Plugin and implementation boundary
 
-The onboarding experience may be implemented with an existing Filament
-onboarding package or with the application's native UI infrastructure.
+The onboarding experience is built on the application's own infrastructure. No
+onboarding package was adopted: the ones available model progress per
+authenticated user and derive completion from live state, which cannot express a
+first-time, workspace-owned milestone that never regresses — the requirement this
+feature is built around.
 
 The product requirements in this spec remain authoritative regardless of the
-implementation mechanism.
-
-An onboarding package must not redefine:
+implementation mechanism, and no onboarding mechanism may redefine:
 
 - activation semantics;
 - tenant ownership of progress;
@@ -860,14 +863,10 @@ An onboarding package must not redefine:
 - recruitment workflows;
 - evaluation behavior.
 
-The implementation must preserve workspace-scoped shared activation progress.
-
-A package whose progress model cannot support this requirement without
-distorting the existing tenant architecture must not be forced into the
-product.
-
-Dependency changes require explicit user approval according to the repository's
-existing dependency rules.
+Workspace-scoped shared activation progress must be preserved. A package whose
+progress model cannot support that without distorting the existing tenant
+architecture must not be forced into the product, and dependency changes require
+explicit user approval according to the repository's existing dependency rules.
 
 ---
 
