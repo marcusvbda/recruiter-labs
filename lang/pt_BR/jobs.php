@@ -155,6 +155,7 @@ return [
     ],
     'view_tabs' => [
         'overview' => 'Visão geral',
+        'sourcing' => 'Sourcing',
         'pipeline' => 'Pipeline',
         'analytics' => 'Analytics',
     ],

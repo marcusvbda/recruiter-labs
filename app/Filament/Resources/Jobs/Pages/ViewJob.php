@@ -2,23 +2,23 @@
 
 namespace App\Filament\Resources\Jobs\Pages;
 
+use App\Actions\AddCandidateToJob;
 use App\Data\RecruitmentAttentionQueue;
 use App\Exceptions\PlanLimitExceededException;
+use App\Exceptions\RecruitmentWorkflowException;
 use App\Filament\Clusters\Settings\Pages\PlanSettings;
 use App\Filament\Resources\Jobs\Actions\JobStateActions;
 use App\Filament\Resources\Jobs\JobResource;
 use App\Filament\Resources\Jobs\Widgets\JobApplicationStatusChart;
 use App\Filament\Resources\Jobs\Widgets\JobPipelineKanban;
+use App\Filament\Resources\Jobs\Widgets\JobSourcingPanel;
 use App\Filament\Resources\Jobs\Widgets\JobTrafficStats;
 use App\Filament\Resources\Pipelines\PipelineResource;
-use App\Models\Application;
 use App\Models\Candidate;
 use App\Models\Company;
 use App\Models\Job;
 use App\Models\User;
-use App\Services\ApplicationAvailabilityService;
 use App\Services\JobDashboardService;
-use App\Services\LimitManager;
 use App\Services\RecruitmentAttentionService;
 use App\Services\RecruitmentProgressService;
 use Filament\Actions\Action;
@@ -40,7 +40,6 @@ use Filament\Support\Exceptions\Halt;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\QueryException;
 use Illuminate\Validation\ValidationException;
 use LogicException;
 
@@ -50,9 +49,7 @@ class ViewJob extends ViewRecord
 
     protected JobDashboardService $jobDashboardService;
 
-    protected ApplicationAvailabilityService $applicationAvailabilityService;
-
-    protected LimitManager $limitManager;
+    protected AddCandidateToJob $addCandidateToJob;
 
     protected RecruitmentProgressService $recruitmentProgressService;
 
@@ -60,14 +57,12 @@ class ViewJob extends ViewRecord
 
     public function boot(
         JobDashboardService $jobDashboardService,
-        ApplicationAvailabilityService $applicationAvailabilityService,
-        LimitManager $limitManager,
+        AddCandidateToJob $addCandidateToJob,
         RecruitmentProgressService $recruitmentProgressService,
         RecruitmentAttentionService $recruitmentAttentionService,
     ): void {
         $this->jobDashboardService = $jobDashboardService;
-        $this->applicationAvailabilityService = $applicationAvailabilityService;
-        $this->limitManager = $limitManager;
+        $this->addCandidateToJob = $addCandidateToJob;
         $this->recruitmentProgressService = $recruitmentProgressService;
         $this->recruitmentAttentionService = $recruitmentAttentionService;
     }
@@ -137,6 +132,23 @@ class ViewJob extends ViewRecord
                                         ]),
                                 ]),
                             ]),
+                        Tab::make(__('jobs.view_tabs.sourcing'))
+                            ->id('sourcing')
+                            ->key('sourcing')
+                            ->icon(Heroicon::OutlinedMagnifyingGlass)
+                            ->schema(
+                                $job->hasConfirmedCriteria()
+                                    ? [
+                                        Livewire::make(JobSourcingPanel::class, ['record' => $job])
+                                            ->key("job-sourcing-{$job->getKey()}"),
+                                    ]
+                                    : [
+                                        View::make('filament.resources.jobs.components.sourcing-not-confirmed')
+                                            ->viewData([
+                                                'confirmCriteriaUrl' => static::getResource()::getUrl('edit', ['record' => $job]),
+                                            ]),
+                                    ],
+                            ),
                         Tab::make(__('jobs.view_tabs.pipeline'))
                             ->id('pipeline')
                             ->key('pipeline')
@@ -274,18 +286,13 @@ class ViewJob extends ViewRecord
             ])
             ->action(function (array $data): void {
                 $job = $this->getJob();
-                $this->ensureCanAddApplication($job);
 
                 $candidate = Candidate::query()
                     ->where('company_id', $job->company_id)
                     ->whereKey($data['candidate_id'])
-                    ->whereDoesntHave(
-                        'applications',
-                        fn (Builder $query): Builder => $query->where('job_id', $job->id),
-                    )
                     ->first();
 
-                if (! $candidate) {
+                if (! $candidate instanceof Candidate) {
                     Notification::make()
                         ->title(__('applications.pipeline.already_added'))
                         ->danger()
@@ -295,26 +302,21 @@ class ViewJob extends ViewRecord
                 }
 
                 try {
-                    $firstStatus = $this->applicationAvailabilityService->initialStatus($job);
+                    $this->addCandidateToJob->handle($job, $candidate);
+                } catch (PlanLimitExceededException $exception) {
+                    $this->notifyPlanLimitReached($job, $exception);
+
+                    throw new Halt;
+                } catch (RecruitmentWorkflowException) {
+                    Notification::make()
+                        ->title(__('applications.pipeline.already_added'))
+                        ->danger()
+                        ->send();
+
+                    return;
                 } catch (ValidationException) {
                     Notification::make()
                         ->title(__('applications.pipeline.no_statuses'))
-                        ->danger()
-                        ->send();
-
-                    return;
-                }
-
-                try {
-                    Application::query()->create([
-                        'company_id' => $job->company_id,
-                        'job_id' => $job->id,
-                        'candidate_id' => $candidate->id,
-                        'status_id' => $firstStatus->id,
-                    ]);
-                } catch (QueryException) {
-                    Notification::make()
-                        ->title(__('applications.pipeline.already_added'))
                         ->danger()
                         ->send();
 
@@ -330,29 +332,23 @@ class ViewJob extends ViewRecord
             });
     }
 
-    private function ensureCanAddApplication(Job $job): void
+    private function notifyPlanLimitReached(Job $job, PlanLimitExceededException $exception): void
     {
         $company = $job->company;
 
         abort_unless($company instanceof Company, 404);
 
-        try {
-            $this->limitManager->ensureCanReceiveApplication($company);
-        } catch (PlanLimitExceededException $exception) {
-            Notification::make()
-                ->title(__('settings.plan.limit_reached'))
-                ->body($exception->getMessage())
-                ->warning()
-                ->actions([
-                    Action::make('managePlan')
-                        ->label(__('settings.topbar.manage_plan'))
-                        ->url(PlanSettings::getUrl(tenant: $company))
-                        ->button(),
-                ])
-                ->send();
-
-            throw new Halt;
-        }
+        Notification::make()
+            ->title(__('settings.plan.limit_reached'))
+            ->body($exception->getMessage())
+            ->warning()
+            ->actions([
+                Action::make('managePlan')
+                    ->label(__('settings.topbar.manage_plan'))
+                    ->url(PlanSettings::getUrl(tenant: $company))
+                    ->button(),
+            ])
+            ->send();
     }
 
     private function getJob(): Job

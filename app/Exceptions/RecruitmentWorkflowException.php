@@ -36,6 +36,11 @@ class RecruitmentWorkflowException extends RuntimeException implements ShouldntR
         return new self(__('pipelines.errors.cross_pipeline_status'));
     }
 
+    public static function candidateAlreadyInJob(): self
+    {
+        return new self(__('applications.pipeline.already_added'));
+    }
+
     public static function missingInitialStatus(): self
     {
         return new self(__('pipelines.errors.missing_initial_status'));

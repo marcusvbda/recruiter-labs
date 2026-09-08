@@ -40,4 +40,16 @@ class Candidate extends Model
     {
         return $this->hasMany(Application::class);
     }
+
+    /**
+     * Jobs this candidate has been suggested for by sourcing. A suggestion is
+     * not a hiring-process position: it says nothing about whether the candidate
+     * ever applied, and carries none of an {@see Application}'s workflow state.
+     *
+     * @return HasMany<SourcingMatch, $this>
+     */
+    public function sourcingMatches(): HasMany
+    {
+        return $this->hasMany(SourcingMatch::class);
+    }
 }

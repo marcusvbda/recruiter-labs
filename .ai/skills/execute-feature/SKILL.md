@@ -103,6 +103,16 @@ Never decide silently — stop and surface it instead:
 - any required deviation from an existing `tech-design.md`, including a stale
   path, unavailable component, internal conflict or preferred alternative.
 
+### Progress visibility
+
+While executing, keep the user oriented without being asked. At every task
+boundary — a task starts, moves to `DONE`, returns to `PENDING` after a
+failed review, or becomes `BLOCKED` — report a one-line progress estimate:
+completed tasks out of the total in the graph (e.g. "5/8 tasks done, ~65%"),
+plus whether the integrated review and spec delivery check (Section 3) are
+still pending. This is a lightweight running status, not a formal report;
+do not pad it with detail already covered elsewhere.
+
 ## 0. Start or resume
 
 Only once the entry gate has passed:

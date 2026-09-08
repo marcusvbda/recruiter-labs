@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * @property int $id
@@ -248,6 +249,29 @@ class Job extends Model
     public function overdueApplications(): HasMany
     {
         return $this->applications()->overdueInStage();
+    }
+
+    /**
+     * The state of active candidate sourcing for this job. One row per job: a
+     * rerun refreshes it rather than adding a competing result.
+     *
+     * @return HasOne<SourcingSearch, $this>
+     */
+    public function sourcingSearch(): HasOne
+    {
+        return $this->hasOne(SourcingSearch::class);
+    }
+
+    /**
+     * Workspace candidates suggested for this job. Deliberately separate from
+     * {@see applications()}: a match is a suggestion and never a position in the
+     * hiring process.
+     *
+     * @return HasMany<SourcingMatch, $this>
+     */
+    public function sourcingMatches(): HasMany
+    {
+        return $this->hasMany(SourcingMatch::class);
     }
 
     /** @return HasMany<JobClick, $this> */

@@ -3,12 +3,27 @@
 namespace App\Models;
 
 use App\Enums\ApplicationDocumentType;
+use Carbon\CarbonImmutable;
 use Database\Factories\ApplicationDocumentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $id
+ * @property int $company_id
+ * @property int $application_id
+ * @property ApplicationDocumentType $type
+ * @property string $disk
+ * @property string $path
+ * @property string $original_name
+ * @property string $mime_type
+ * @property string $extension
+ * @property int $size
+ * @property string $checksum
+ * @property CarbonImmutable $uploaded_at
+ */
 #[Fillable(['company_id', 'application_id', 'type', 'disk', 'path', 'original_name', 'mime_type', 'extension', 'size', 'checksum', 'uploaded_at'])]
 class ApplicationDocument extends Model
 {

@@ -155,6 +155,7 @@ return [
     ],
     'view_tabs' => [
         'overview' => 'Resumen',
+        'sourcing' => 'Búsqueda de candidatos',
         'pipeline' => 'Pipeline',
         'analytics' => 'Analítica',
     ],
