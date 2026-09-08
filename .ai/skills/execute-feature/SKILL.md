@@ -351,7 +351,10 @@ product behaviour, or alter `tech-design.md` without prior user approval.
 ## 3. Final feature review
 
 Every task being `DONE` is not the feature being done. When the last task
-closes, run one integrated review:
+closes, run one integrated review, then a full spec delivery check; only move
+to Section 4 once both pass with nothing left undelivered.
+
+### 3.1 Integrated review
 
 1. Re-read `spec.md` and any present `tech-design.md` in full and confirm the
    recorded hash/`ABSENT` identities still match state.
@@ -369,12 +372,48 @@ The integrated review checks for:
 - applicable product invariants violated by integration;
 - flows that work only when tasks are considered in isolation.
 
-If the final review fails, the same bounded correction rules apply at feature
-scope.
+If the integrated review fails on code quality or a criterion mapping, the
+bounded correction rules from Section 2 apply at feature scope.
+
+### 3.2 Spec delivery check (gap loop)
+
+Once the integrated review passes, re-read `spec.md` end to end as if reading
+it for the first time — independent of the acceptance-criteria map and task
+statuses already recorded. For every requirement, user-facing behaviour and
+acceptance criterion it states, confirm it is actually observable in the
+current implementation, not merely that some task claims to cover it.
+
+```text
+re-read spec.md in full
+    │
+    ▼
+every requirement observably delivered? ──no──▶ create task(s) for the gap
+    │                                                    │
+   yes                                                   ▼
+    │                                          run per-task loop (1.1-1.5)
+    ▼                                                    │
+proceed to Section 4                                     ▼
+                                            re-run integrated review (3.1),
+                                            then this spec delivery check (3.2)
+```
+
+A gap found here is missing scope, not a code-quality defect — it does not
+consume a correction round from Section 2. Create the task(s) needed to close
+it, run them through the full per-task loop, then re-run both the integrated
+review and this spec delivery check from the top. Repeat until a fresh,
+independent read of `spec.md` finds nothing left undelivered.
+
+The only way to stop short of 100% delivery is a genuine blocker under Section
+2's stop conditions (spec ambiguity, conflicting criteria, a stale or
+infeasible binding design, a missing major decision). In that case mark the
+feature `BLOCKED` as described there — the feature is not finalized and
+Section 4 does not run.
 
 ## 4. Report
 
-When the feature passes final review, report concisely:
+Report only once the spec delivery check in 3.2 confirms 100% of `spec.md` is
+implemented, or the feature is `BLOCKED` per Section 2. When the feature
+passes, report concisely:
 
 - tasks completed;
 - acceptance criteria and status;
