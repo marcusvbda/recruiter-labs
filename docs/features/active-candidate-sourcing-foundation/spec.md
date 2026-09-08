@@ -1,3 +1,8 @@
+---
+status: implemented
+type: as-built
+---
+
 # Active Candidate Sourcing Foundation
 
 ## Problem
