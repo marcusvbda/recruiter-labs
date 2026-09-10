@@ -62,11 +62,15 @@ class ReplaceSourcingMatchAnalysis
      * @param  int  $expectedCriteriaGeneration  The confirmed job criteria
      *                                           revision the request was built
      *                                           from.
+     * @param  int  $expectedMaterialsRevision  The candidate's material revision
+     *                                          read before their material was
+     *                                          gathered.
      * @return SourcingMatch|null The persisted match, or null when the response
      *                            no longer describes the current state: a newer
-     *                            search run has started, or the criteria
-     *                            revision it measured is no longer the confirmed
-     *                            one.
+     *                            search run has started, the criteria revision it
+     *                            measured is no longer the confirmed one, or the
+     *                            candidate's material changed while it was being
+     *                            produced.
      */
     public function handle(
         SourcingSearch $search,
@@ -75,8 +79,9 @@ class ReplaceSourcingMatchAnalysis
         array $materials,
         int $expectedGeneration,
         int $expectedCriteriaGeneration,
+        int $expectedMaterialsRevision,
     ): ?SourcingMatch {
-        return DB::transaction(function () use ($search, $candidate, $scores, $materials, $expectedGeneration, $expectedCriteriaGeneration): ?SourcingMatch {
+        return DB::transaction(function () use ($search, $candidate, $scores, $materials, $expectedGeneration, $expectedCriteriaGeneration, $expectedMaterialsRevision): ?SourcingMatch {
             $lockedSearch = SourcingSearch::query()->whereKey($search->getKey())->lockForUpdate()->first();
 
             if ($lockedSearch === null || $lockedSearch->generation !== $expectedGeneration) {
@@ -107,6 +112,24 @@ class ReplaceSourcingMatchAnalysis
 
             $companyId = (int) $lockedSearch->company_id;
 
+            $lockedCandidate = Candidate::query()
+                ->whereKey($candidate->getKey())
+                ->lockForUpdate()
+                ->first();
+
+            if (! $lockedCandidate instanceof Candidate
+                || (int) $lockedCandidate->materials_revision !== $expectedMaterialsRevision) {
+                // The candidate's material changed — or the candidate went away —
+                // while the provider was working: a CV became readable, was
+                // archived, deleted, or had its declared date corrected. This
+                // answer describes evidence the workspace no longer holds in that
+                // form, so nothing is persisted. Writing it with the new revision
+                // would present an in-flight analysis as if it had read the
+                // current material, and writing it with the old one would store a
+                // row that is outdated the instant it is created.
+                return null;
+            }
+
             if ((int) $candidate->company_id !== $companyId || (int) $job->company_id !== $companyId) {
                 throw ValidationException::withMessages([
                     'scores' => 'A sourcing match can only be stored for a candidate and job in the search\'s own workspace.',
@@ -134,6 +157,12 @@ class ReplaceSourcingMatchAnalysis
                 // built from, verified above to still be the confirmed one, never
                 // "whatever revision the job happens to carry now".
                 'criteria_generation' => $expectedCriteriaGeneration,
+                // The material revision this assessment read, verified above to
+                // still be the candidate's current one. Recorded for the same
+                // reason as the criteria revision: it is what lets a later
+                // material change mark exactly this candidate's match as
+                // outdated, and nobody else's.
+                'materials_revision' => $expectedMaterialsRevision,
                 'potential_match' => $this->potentialMatch($rows),
                 'evidence_coverage' => $this->evidenceCoverage($rows),
                 'confidence' => $this->matchConfidence($rows),

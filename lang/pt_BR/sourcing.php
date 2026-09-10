@@ -20,6 +20,7 @@ return [
         'failed' => 'A pesquisa falhou',
         'blocked' => 'Bloqueada — cota de IA indisponível',
         'outdated' => 'Desatualizada — os critérios mudaram',
+        'predates_pool' => 'Novos candidatos ou currículos adicionados — atualize para incluí-los',
     ],
 
     'panel' => [

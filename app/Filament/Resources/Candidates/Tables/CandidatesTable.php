@@ -5,11 +5,16 @@ namespace App\Filament\Resources\Candidates\Tables;
 use App\Enums\PhoneCountry;
 use App\Models\Application;
 use App\Models\Candidate;
+use App\Models\CandidateImportBatch;
+use App\Models\CandidateImportRow;
+use App\Models\Company;
+use App\Services\CandidateImportLimits;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
@@ -26,7 +31,21 @@ class CandidatesTable
         return $table
             ->modifyQueryUsing(fn (Builder $query): Builder => $query
                 ->with(['applications.job', 'applications.status'])
-                ->withCount('applications'))
+                ->withCount('applications')
+                // Counted once here, in the same query as every other row, so
+                // the availability signal and its two filters never issue a
+                // query per candidate.
+                ->withCount(['materials as available_materials_count' => fn (Builder $query): Builder => $query
+                    ->whereNull('deleted_at')
+                    ->whereNull('archived_at')])
+                ->withCount(['materials as materials_needing_attention_count' => fn (Builder $query): Builder => $query
+                    ->whereNull('deleted_at')
+                    ->whereNull('archived_at')
+                    ->where(fn (Builder $query): Builder => $query
+                        ->whereIn('preparation_status', ['failed', 'no_readable_text', 'file_unavailable'])
+                        ->orWhere(fn (Builder $query): Builder => $query
+                            ->where('preparation_status', 'preparing')
+                            ->where('preparation_started_at', '<=', now()->subMinutes(CandidateImportLimits::STALLED_MINUTES))))]))
             ->defaultSort('created_at', 'desc')
             ->columns([
                 TextColumn::make('name')
@@ -45,6 +64,16 @@ class CandidatesTable
                     ->state(fn (Candidate $record): Htmlable => self::processes($record))
                     ->html()
                     ->wrap(),
+                TextColumn::make('available_materials_count')
+                    ->label(__('candidates.fields.materials'))
+                    ->badge()
+                    ->state(fn (Candidate $record): string => self::materialsState($record))
+                    ->color(fn (Candidate $record): string => match (true) {
+                        (int) $record->getAttribute('materials_needing_attention_count') > 0 => 'danger',
+                        (int) $record->getAttribute('available_materials_count') > 0 => 'success',
+                        default => 'gray',
+                    })
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('phone')
                     ->label(__('candidates.fields.phone'))
                     ->formatStateUsing(fn (?string $state): ?string => PhoneCountry::formatInternational($state))
@@ -72,6 +101,34 @@ class CandidatesTable
                             ->when($data['from'] ?? null, fn (Builder $query, string $date) => $query->whereDate('created_at', '>=', $date))
                             ->when($data['until'] ?? null, fn (Builder $query, string $date) => $query->whereDate('created_at', '<=', $date));
                     }),
+                Filter::make('has_materials')
+                    ->label(__('candidates.filters.has_materials'))
+                    ->query(fn (Builder $query): Builder => $query->whereHas('materials', fn (Builder $query): Builder => $query
+                        ->whereNull('deleted_at')
+                        ->whereNull('archived_at'))),
+                Filter::make('materials_need_attention')
+                    ->label(__('candidates.filters.materials_need_attention'))
+                    ->query(fn (Builder $query): Builder => $query->whereHas('materials', fn (Builder $query): Builder => $query
+                        ->whereNull('deleted_at')
+                        ->whereNull('archived_at')
+                        ->where(fn (Builder $query): Builder => $query
+                            ->whereIn('preparation_status', ['failed', 'no_readable_text', 'file_unavailable'])
+                            ->orWhere(fn (Builder $query): Builder => $query
+                                ->where('preparation_status', 'preparing')
+                                ->where('preparation_started_at', '<=', now()->subMinutes(CandidateImportLimits::STALLED_MINUTES)))))),
+                SelectFilter::make('import_batch')
+                    ->label(__('candidates.filters.imported_from'))
+                    ->options(fn (): array => self::importBatchOptions())
+                    ->query(fn (Builder $query, array $data): Builder => $query->when(
+                        $data['value'] ?? null,
+                        fn (Builder $query, string $batchId): Builder => $query->whereIn(
+                            'id',
+                            CandidateImportRow::query()
+                                ->where('batch_id', $batchId)
+                                ->whereNotNull('candidate_id')
+                                ->select('candidate_id'),
+                        ),
+                    )),
             ])
             ->recordActions([
                 ActionGroup::make([
@@ -84,6 +141,33 @@ class CandidatesTable
                     DeleteBulkAction::make(),
                 ]),
             ]);
+    }
+
+    /**
+     * Every import batch the workspace has run, labeled by source and date so
+     * multiple batches from the same source stay distinguishable. Listed by
+     * the batch record itself, which always survives, regardless of whether
+     * its row-level detail has since been cleared by retention.
+     *
+     * @return array<int, string>
+     */
+    private static function importBatchOptions(): array
+    {
+        $tenant = Filament::getTenant();
+
+        if (! $tenant instanceof Company) {
+            return [];
+        }
+
+        return CandidateImportBatch::query()
+            ->whereBelongsTo($tenant, 'company')
+            ->whereNotNull('confirmed_at')
+            ->orderByDesc('created_at')
+            ->get(['id', 'source_label', 'created_at'])
+            ->mapWithKeys(fn (CandidateImportBatch $batch): array => [
+                $batch->getKey() => $batch->source_label.' — '.$batch->created_at->toDateString(),
+            ])
+            ->all();
     }
 
     /**
@@ -119,5 +203,26 @@ class CandidatesTable
         }
 
         return new HtmlString('<span class="flex flex-col gap-1 text-sm">'.$entries.'</span>');
+    }
+
+    /**
+     * A concise, words-only signal of independent-material availability for
+     * this row. It never becomes a candidate score or quality badge — only
+     * whether material is on file and whether any of it needs attention.
+     */
+    private static function materialsState(Candidate $candidate): string
+    {
+        $available = (int) $candidate->getAttribute('available_materials_count');
+        $needingAttention = (int) $candidate->getAttribute('materials_needing_attention_count');
+
+        if ($needingAttention > 0) {
+            return __('candidates.materials.list.needs_attention', ['count' => $needingAttention]);
+        }
+
+        if ($available > 0) {
+            return __('candidates.materials.list.available', ['count' => $available]);
+        }
+
+        return __('candidates.materials.list.none');
     }
 }

@@ -95,6 +95,24 @@ Nothing in `.ai/**` or `docs/features/**` may assume a tool-specific capability.
 - Do not invoke `qa-tester` for trivial tasks; run the relevant tests directly.
 - One comprehensive review at the end of a feature, not a full-repository review
   per task.
+- **Cap subagent resume loops.** A background review/implementation delegation
+  gets at most one resume after it fails to produce a usable result (runs out
+  of turns, returns nothing, or spends its budget only reading reference
+  material). If it still hasn't produced one after that resume, stop delegating
+  it and verify the specific concern directly instead — a targeted `Read`/`Grep`
+  against one file or one invariant is faster and cheaper than a third round
+  trip, and is usually all a narrow, well-defined check needs anyway.
+- **Don't preemptively split a review.** Try a review as one pass first. Split
+  it into scoped sub-passes only after that single pass has demonstrably run
+  out of budget mid-file — splitting before that is guessing at a problem that
+  may not exist and doubles the token cost for no reason.
+- **A prompt that requires reading `docs/features/**` or `.ai/skills/**` before
+  writing anything is usually the wrong prompt.** Embed the specific contract
+  (method signatures, constants, acceptance-criteria text, product rules) the
+  delegation actually needs directly in its instructions instead of pointing it
+  at source documents to rediscover — this is what actually prevents an agent
+  from burning its whole turn budget on background reading before writing a
+  line of code or filing a finding.
 
 ## Filament plugin discovery
 

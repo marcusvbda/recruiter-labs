@@ -301,7 +301,10 @@ PASS/FAIL, blocking findings, non-blocking findings, and `Verdict: APPROVED` or
 `Verdict: CHANGES_REQUIRED`.
 
 A task is done only when its behaviour is right, not merely when the diff is
-clean.
+clean. Apply `.ai/guidelines/project-core.md`'s "Token discipline" loop caps
+here: try the review as one pass first, resume a stalled delegation at most
+once, and fall back to direct in-thread verification rather than a third
+delegation round.
 
 ### 1.5 Close or correct
 

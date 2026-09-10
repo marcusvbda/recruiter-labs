@@ -105,13 +105,17 @@ class SubmitJobApplication
 
     private function resolveCandidate(Job $job, SubmitJobApplicationData $data): Candidate
     {
-        $email = Str::lower(Str::trim($data->email));
+        $email = Candidate::normalizeEmail($data->email);
         $phone = PhoneCountry::from($data->phoneCountry)->toInternational($data->phone);
-        $candidate = Candidate::query()
-            ->where('company_id', $job->company_id)
-            ->whereRaw('LOWER(email) = ?', [$email])
+        $candidate = Candidate::matchingEmail($job->company_id, $email)
             ->lockForUpdate()
-            ->first();
+            ->get();
+
+        if ($candidate->count() > 1) {
+            $this->throwDuplicateApplication();
+        }
+
+        $candidate = $candidate->first();
 
         if (! $candidate instanceof Candidate) {
             return Candidate::query()->create([

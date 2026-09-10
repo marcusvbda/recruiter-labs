@@ -58,7 +58,7 @@ class ScoreCandidateForSourcing implements Agent, HasStructuredOutput
      * answer must never be reachable across them or across a change to this
      * request or response shape.
      */
-    public const CACHE_SCHEMA_VERSION = 'sourcing-candidate-criteria-match-v2';
+    public const CACHE_SCHEMA_VERSION = 'sourcing-candidate-criteria-match-v3';
 
     public function __construct(private readonly Job $job) {}
 
@@ -77,7 +77,9 @@ class ScoreCandidateForSourcing implements Agent, HasStructuredOutput
 
             confidence (high, medium, low): how strongly the submitted material supports your assessment — not how good the candidate is, not how likely they are to be hired, and not statistical certainty. Claims are not externally verified; the product checks nothing against the outside world. Specific, concrete support that directly addresses the criterion earns high; a vague or generic claim earns low. Polished writing and repeated keywords are weak evidence on their own. A null score normally means low confidence. Never detect or penalise suspected AI writing.
 
-            evidence: up to three items, each identifying the material it came from by its material_index in candidate_material, naming that item's source (resume, cover_letter, application_answer) and stating in a few words the concrete support found there. Quote or paraphrase only what the context actually contains, and never cite a material_index that is not in the context. Return an empty array when there is none, and do not repeat the same support twice to fill the list.
+            evidence: up to three items, each identifying the material it came from by its material_index in candidate_material, naming that item's source (resume, cover_letter, application_answer, candidate_material) and stating in a few words the concrete support found there. Quote or paraphrase only what the context actually contains, and never cite a material_index that is not in the context. Return an empty array when there is none, and do not repeat the same support twice to fill the list.
+
+            candidate_material is a CV the workspace holds for this person outside any application. An empty submitted field means its date is unknown: treat it as undated evidence, never as recent, and never guess when it was written.
 
             Use the job's own language. Plain text only, no HTML.
             INSTRUCTIONS;

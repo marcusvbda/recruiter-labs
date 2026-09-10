@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\ApplicationDocumentController;
+use App\Http\Controllers\CandidateImportReportController;
+use App\Http\Controllers\CandidateImportTemplateController;
+use App\Http\Controllers\CandidateMaterialController;
 use App\Http\Controllers\ConnectedIntegrationOAuthController;
 use App\Http\Controllers\JobApplicationController;
 use App\Http\Controllers\JobController;
@@ -65,4 +68,26 @@ Route::prefix('admin/{company:slug}/applications/{application}/documents/{docume
             ->name('application-documents.view');
         Route::get('/download', [ApplicationDocumentController::class, 'download'])
             ->name('application-documents.download');
+    });
+
+Route::get('/admin/candidate-imports/template', [CandidateImportTemplateController::class, 'download'])
+    ->middleware(Authenticate::class)
+    ->name('candidate-import-batches.template');
+
+Route::prefix('admin/{company:slug}/candidates/{candidate}/materials/{material}')
+    ->middleware([Authenticate::class, 'verified'])
+    ->scopeBindings()
+    ->group(function (): void {
+        Route::get('/view', [CandidateMaterialController::class, 'show'])->name('candidate-materials.view');
+        Route::get('/download', [CandidateMaterialController::class, 'download'])->name('candidate-materials.download');
+    });
+
+// Both files carry candidate detail, so they are served like a CV rather than
+// linked: private disk, attachment only, workspace checked per request.
+Route::prefix('admin/{company:slug}/candidate-imports/{candidateImportBatch}')
+    ->middleware([Authenticate::class, 'verified'])
+    ->scopeBindings()
+    ->group(function (): void {
+        Route::get('/report', [CandidateImportReportController::class, 'report'])->name('candidate-import-batches.report');
+        Route::get('/correction', [CandidateImportReportController::class, 'correction'])->name('candidate-import-batches.correction');
     });

@@ -152,6 +152,13 @@ class SourceCandidatesForJob implements ShouldBeUnique, ShouldQueue
             foreach ($eligibility->eligibleCandidates($job) as $candidate) {
                 $considered++;
 
+                // Read *before* the material is gathered, never after: a CV that
+                // becomes readable, is archived or is deleted between this line
+                // and the persistence transaction will not match, and the answer
+                // is dropped rather than stored as if it had read it. Taking the
+                // revision afterwards would leave exactly that gap open.
+                $materialsRevision = (int) $candidate->materials_revision;
+
                 // Sufficiency is judged on the sanitized material, so a candidate
                 // whose record is only their own name and contact details cannot
                 // look knowable enough to score.
@@ -195,11 +202,14 @@ class SourceCandidatesForJob implements ShouldBeUnique, ShouldQueue
                         $candidateContext->materials,
                         $this->generation,
                         $expectedCriteriaGeneration,
+                        $materialsRevision,
                     );
 
                     if ($persisted === null) {
-                        // Either a newer run has taken over or the criteria moved
-                        // on. Both mean this run no longer describes the job.
+                        // A newer run has taken over, the criteria moved on, or
+                        // this candidate's material changed underneath the cached
+                        // answer. A cached response is bound to the material
+                        // revision it describes exactly like a fresh one.
                         return;
                     }
 
@@ -262,6 +272,7 @@ class SourceCandidatesForJob implements ShouldBeUnique, ShouldQueue
                         $candidateContext->materials,
                         $this->generation,
                         $expectedCriteriaGeneration,
+                        $materialsRevision,
                     );
                     $usageTracker->complete($usageRecord, $response->usage, $this->elapsedMilliseconds($startedAt));
                     AiAgentResponseCache::remember(self::OPERATION, $model, $fingerprint, $response->toArray());

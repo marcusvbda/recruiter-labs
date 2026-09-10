@@ -1251,6 +1251,12 @@ Expected future capabilities include:
 Existing candidate databases can be imported into the workspace and then become
 eligible for internal rediscovery.
 
+**Delivered.** See
+[Talent pool import and materials](../talent-pool-import-and-materials/spec.md):
+imported candidates and independently attached CVs join this feature's eligible
+material, with material-aware currentness so a search's results stay traceable
+to the pool coverage they actually saw.
+
 ### External candidate sourcing
 
 Recruiter Labs can query approved external sourcing providers and normalize

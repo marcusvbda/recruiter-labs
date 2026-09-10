@@ -293,6 +293,14 @@ class JobSourcingPanel extends Widget
             return ['key' => 'blocked', 'label' => __('sourcing.status.blocked'), 'color' => 'warning', 'icon' => 'heroicon-o-bolt-slash'];
         }
 
+        // Checked before the general outdated case: the criteria this search
+        // measured still hold, so its existing assessments are not wrong —
+        // the pool has simply grown since. That is a softer, different fact
+        // than "criteria changed," and it needs its own sentence.
+        if ($search->predatesCurrentPool()) {
+            return ['key' => 'predates_pool', 'label' => __('sourcing.status.predates_pool'), 'color' => 'warning', 'icon' => 'heroicon-o-user-plus'];
+        }
+
         if ($search->isOutdated()) {
             return ['key' => 'outdated', 'label' => __('sourcing.status.outdated'), 'color' => 'warning', 'icon' => 'heroicon-o-arrow-path'];
         }

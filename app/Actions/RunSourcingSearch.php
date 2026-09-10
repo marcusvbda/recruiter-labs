@@ -4,6 +4,7 @@ namespace App\Actions;
 
 use App\Enums\SourcingSearchStatus;
 use App\Jobs\SourceCandidatesForJob;
+use App\Models\Company;
 use App\Models\Job;
 use App\Models\SourcingSearch;
 use Illuminate\Support\Facades\DB;
@@ -52,10 +53,21 @@ class RunSourcingSearch
 
             $search = $this->lockedSearchFor($lockedJob);
 
+            // The pool this sweep is about to cover, captured with the criteria
+            // revision and under the same lock. Anything that changes the
+            // workspace's candidates or their material after this instant —
+            // during the run or long after it — advances the company counter and
+            // leaves the finished result honestly describing a pool that has
+            // since moved on, until the recruiter asks for another sweep.
+            $poolRevision = (int) (Company::query()
+                ->whereKey($lockedJob->company_id)
+                ->value('candidate_pool_revision') ?? 0);
+
             $search->forceFill([
                 'status' => SourcingSearchStatus::Pending,
                 'generation' => $search->generation + 1,
                 'criteria_generation' => $lockedJob->criteria_generation,
+                'candidate_pool_revision' => $poolRevision,
                 'requested_by_id' => $userId,
                 'started_at' => now(),
                 'completed_at' => null,

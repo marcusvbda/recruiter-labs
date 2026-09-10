@@ -20,9 +20,24 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * Counts every change to the workspace's candidate pool that could widen or
+ * narrow what a sourcing search would find. A completed search snapshots it, so
+ * a later contact or newly readable CV makes that search's coverage older than
+ * the pool without invalidating its individual candidate results.
+ *
+ * @property int $candidate_pool_revision
+ */
 #[Fillable(['name', 'slug', 'plan_id'])]
 class Company extends Model
 {
+    protected $attributes = ['candidate_pool_revision' => 0];
+
+    protected function casts(): array
+    {
+        return ['candidate_pool_revision' => 'integer'];
+    }
+
     /** @use HasFactory<CompanyFactory> */
     use HasFactory;
 
@@ -210,6 +225,18 @@ class Company extends Model
     public function candidates(): HasMany
     {
         return $this->hasMany(Candidate::class);
+    }
+
+    /** @return HasMany<CandidateImportBatch, $this> */
+    public function candidateImportBatches(): HasMany
+    {
+        return $this->hasMany(CandidateImportBatch::class);
+    }
+
+    /** @return HasMany<CandidateMaterial, $this> */
+    public function candidateMaterials(): HasMany
+    {
+        return $this->hasMany(CandidateMaterial::class);
     }
 
     /** @return HasMany<Job, $this> */

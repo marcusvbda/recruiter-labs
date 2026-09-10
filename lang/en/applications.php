@@ -383,6 +383,7 @@ return [
                     'resume' => 'Resume',
                     'cover_letter' => 'Cover letter',
                     'application_answer' => 'Answer',
+                    'candidate_material' => 'Candidate CV',
                 ],
             ],
             'interview_brief' => [

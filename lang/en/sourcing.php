@@ -20,6 +20,7 @@ return [
         'failed' => 'Search failed',
         'blocked' => 'Blocked — AI allowance unavailable',
         'outdated' => 'Outdated — criteria changed',
+        'predates_pool' => 'New candidates or CVs added — refresh to include them',
     ],
 
     'panel' => [

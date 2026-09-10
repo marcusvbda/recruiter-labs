@@ -28,6 +28,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $job_id
  * @property int $candidate_id
  * @property int $criteria_generation
+ * @property int|null $materials_revision
  * @property int|null $potential_match
  * @property int|null $evidence_coverage
  * @property AnalysisConfidence|null $confidence
@@ -37,7 +38,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int|null $state_changed_by_id
  * @property CarbonImmutable|null $analyzed_at
  */
-#[Fillable(['company_id', 'job_id', 'candidate_id', 'criteria_generation', 'potential_match', 'evidence_coverage', 'confidence', 'sufficient_information', 'state', 'state_changed_at', 'state_changed_by_id', 'analyzed_at'])]
+#[Fillable(['company_id', 'job_id', 'candidate_id', 'criteria_generation', 'materials_revision', 'potential_match', 'evidence_coverage', 'confidence', 'sufficient_information', 'state', 'state_changed_at', 'state_changed_by_id', 'analyzed_at'])]
 class SourcingMatch extends Model
 {
     protected $attributes = [
@@ -49,6 +50,7 @@ class SourcingMatch extends Model
     {
         return [
             'criteria_generation' => 'integer',
+            'materials_revision' => 'integer',
             'potential_match' => 'integer',
             'evidence_coverage' => 'integer',
             'confidence' => AnalysisConfidence::class,
@@ -60,9 +62,18 @@ class SourcingMatch extends Model
     }
 
     /**
-     * Whether this match still describes the criteria the recruiter confirmed.
-     * A match produced against an earlier revision measured criteria that no
-     * longer govern this job.
+     * Whether this match still describes both the criteria the recruiter
+     * confirmed and the material it was built from.
+     *
+     * A match produced against an earlier criteria revision measured criteria
+     * that no longer govern this job. A match produced before this candidate's
+     * material changed — a CV became readable, was archived, restored, deleted or
+     * had its declared received date corrected — measured evidence the workspace
+     * no longer holds in that form.
+     *
+     * The material check is per candidate on purpose: it compares this
+     * candidate's own `materials_revision`, so one person's new CV cannot
+     * invalidate everybody else's analyses.
      */
     public function isCurrent(): bool
     {
@@ -70,7 +81,24 @@ class SourcingMatch extends Model
 
         return $job instanceof Job
             && $job->hasConfirmedCriteria()
-            && $this->criteria_generation === $job->criteria_generation;
+            && $this->criteria_generation === $job->criteria_generation
+            && $this->matchesCurrentMaterial();
+    }
+
+    /**
+     * Whether the candidate's material is still the material this assessment
+     * read.
+     *
+     * A row recorded before the snapshot existed compares as the initial counter
+     * value, which is the truth for a candidate whose material has never changed
+     * and stops being the truth the moment it does.
+     */
+    public function matchesCurrentMaterial(): bool
+    {
+        $candidate = $this->candidate;
+
+        return ! $candidate instanceof Candidate
+            || (int) $this->materials_revision === (int) $candidate->materials_revision;
     }
 
     /**

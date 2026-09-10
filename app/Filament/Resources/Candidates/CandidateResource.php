@@ -3,12 +3,14 @@
 namespace App\Filament\Resources\Candidates;
 
 use App\Enums\Feature;
+use App\Filament\Resources\CandidateImportBatches\CandidateImportBatchResource;
 use App\Filament\Resources\Candidates\Pages\CreateCandidate;
 use App\Filament\Resources\Candidates\Pages\EditCandidate;
 use App\Filament\Resources\Candidates\Pages\ListCandidates;
 use App\Filament\Resources\Candidates\Pages\ViewCandidate;
 use App\Filament\Resources\Candidates\Schemas\CandidateForm;
 use App\Filament\Resources\Candidates\Tables\CandidatesTable;
+use App\Filament\Resources\Jobs\JobResource;
 use App\Models\Candidate;
 use BackedEnum;
 use Filament\Facades\Filament;
@@ -51,6 +53,24 @@ class CandidateResource extends Resource
     public static function canAccess(): bool
     {
         return (bool) Filament::getTenant()?->hasFeature(Feature::Candidates);
+    }
+
+    /**
+     * Import screens have no sidebar entry of their own; this is what keeps
+     * Candidates active while the recruiter is on one of them, the same way
+     * {@see JobResource} claims the application
+     * workspace for Jobs. The merge belongs here, not on the hidden resource:
+     * a resource with navigation off is skipped when the active-route map is
+     * built, so its own override would never be consulted.
+     *
+     * @return string|array<string>
+     */
+    public static function getNavigationItemActiveRoutePattern(): string|array
+    {
+        return [
+            ...(array) parent::getNavigationItemActiveRoutePattern(),
+            ...(array) CandidateImportBatchResource::getNavigationItemActiveRoutePattern(),
+        ];
     }
 
     /** @return array<int, string> */

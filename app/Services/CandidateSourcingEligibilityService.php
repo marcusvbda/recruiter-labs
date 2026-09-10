@@ -8,6 +8,7 @@ use App\Data\CandidateSourcingMaterial;
 use App\Enums\ApplicationCoverLetterType;
 use App\Enums\ApplicationDocumentType;
 use App\Enums\ApplicationQuestionType;
+use App\Enums\CandidateMaterialPreparationStatus;
 use App\Enums\CriterionEvidenceSource;
 use App\Models\Application;
 use App\Models\ApplicationAnswer;
@@ -34,10 +35,11 @@ use Illuminate\Support\LazyCollection;
  * - Candidates are always resolved inside one company. Neither {@see Candidate}
  *   nor {@see Job} carries a tenant global scope, so every query here filters
  *   `company_id` by hand.
- * - Aggregated material is candidate-submitted material only — resume, cover
- *   letter, application answers — because {@see CandidateSourcingMaterial} can
- *   represent nothing else. Structured interview feedback, recruiter notes and
- *   previous per-application AI evaluations are not gathered here at all.
+ * - Aggregated material is candidate-supplied material only — resume, cover
+ *   letter, application answers and independently retained candidate CVs —
+ *   because {@see CandidateSourcingMaterial} can represent nothing else.
+ *   Structured interview feedback, recruiter notes, import metadata and previous
+ *   per-application AI evaluations are not gathered here at all.
  * - Recruitment history is returned as {@see CandidateRecruitmentHistoryEntry},
  *   a shape the sanitizer and the sourcing agent cannot consume. It exists so a
  *   recruiter can read a suggestion in context; it is never agent input, so a
@@ -107,8 +109,9 @@ class CandidateSourcingEligibilityService
     }
 
     /**
-     * Everything the candidate themselves submitted, across every job they ever
-     * applied to, newest first.
+     * Everything the candidate themselves supplied — the material they submitted
+     * with past applications, plus the independent CVs the workspace retains for
+     * them, newest application first.
      *
      * Extraction follows the per-application evaluation conventions exactly —
      * resume text through {@see ResumeTextExtractor}, rich text reduced with
@@ -116,10 +119,25 @@ class CandidateSourcingEligibilityService
      * agent reads the same material the evaluation agent would have read, just
      * gathered across a history instead of a single application.
      *
-     * Identical material submitted to several jobs is kept once, at its most
-     * recent submission: repeating a resume verbatim costs tokens and tells the
-     * agent nothing new. Each item keeps the date it was submitted so the
-     * recruiter can see how old the evidence behind a suggestion is.
+     * Independent CVs *supplement* application history rather than replacing it,
+     * and only when they are genuinely usable: available (neither archived nor
+     * deleted) and carrying readable prepared text. A material with no readable
+     * text contributes nothing here — it cannot support an assessment on its own,
+     * and it must not be padded with its filename or source label to look as if
+     * it could. This is what lets a candidate with zero applications and one
+     * sufficient readable CV become assessable at all.
+     *
+     * Identical substantive content is kept once, whatever it was supplied
+     * through: repeating a resume verbatim costs tokens, and — more importantly —
+     * two copies of one document are not two independent pieces of support. The
+     * surviving item absorbs the *earliest* provenance of the copies it replaced,
+     * so removing duplication can never relabel an old CV as newly received
+     * because a copy was imported today.
+     *
+     * Recruiter-written and operational metadata is not gathered at all: no
+     * filename, no source label, no batch, no importer, no import order. None of
+     * it is candidate evidence, and the type these items are returned in has
+     * nowhere to put it.
      *
      * @return list<CandidateSourcingMaterial>
      */
@@ -132,23 +150,100 @@ class CandidateSourcingEligibilityService
             ->orderByDesc('id')
             ->get();
 
-        $materials = [];
-        $seen = [];
+        $gathered = [];
 
         foreach ($applications as $application) {
-            foreach ($this->materialsForApplication($application) as $material) {
-                $fingerprint = $material->source->value.'|'.mb_strtolower((string) $material->label).'|'.mb_strtolower($material->text);
+            $gathered = [...$gathered, ...$this->materialsForApplication($application)];
+        }
 
-                if (isset($seen[$fingerprint])) {
-                    continue;
-                }
+        $gathered = [...$gathered, ...$this->independentMaterialsFor($candidate)];
 
-                $seen[$fingerprint] = true;
-                $materials[] = $material;
+        /** @var array<string, CandidateSourcingMaterial> $byContent */
+        $byContent = [];
+
+        foreach ($gathered as $material) {
+            $fingerprint = $this->contentFingerprint($material);
+
+            $byContent[$fingerprint] = isset($byContent[$fingerprint])
+                ? $byContent[$fingerprint]->mergedWith($material)
+                : $material;
+        }
+
+        return array_values($byContent);
+    }
+
+    /**
+     * The candidate's independently retained CVs, newest holding first.
+     *
+     * Ordered by `added_at` for display consistency only. It is deliberately not
+     * treated as an ordering by relevance or recency of the career it describes:
+     * the product cannot tell which of several available CVs is the current one,
+     * and must not infer it from upload order.
+     *
+     * @return list<CandidateSourcingMaterial>
+     */
+    private function independentMaterialsFor(Candidate $candidate): array
+    {
+        $materials = [];
+
+        $records = $candidate->materials()
+            ->where('company_id', $candidate->company_id)
+            ->whereNull('archived_at')
+            ->where('preparation_status', CandidateMaterialPreparationStatus::Ready)
+            ->orderByDesc('added_at')
+            ->orderByDesc('id')
+            ->get();
+
+        foreach ($records as $record) {
+            // Asked of the model rather than reimplemented, so "usable" cannot
+            // drift between the profile screen and what the agent is sent.
+            if (! $record->hasReadableText()) {
+                continue;
             }
+
+            $text = $this->plainText($record->prepared_text);
+
+            if ($text === null) {
+                continue;
+            }
+
+            $receivedOn = $record->received_on;
+
+            $materials[] = new CandidateSourcingMaterial(
+                source: CriterionEvidenceSource::CandidateMaterial,
+                text: $text,
+                label: null,
+                // The declared historical receipt when the recruiter knew it, and
+                // nothing at all when they did not. The day the file was added is
+                // never promoted into a submission date: the workspace holding a
+                // copy since Tuesday says nothing about when the candidate wrote
+                // or sent it.
+                submittedAt: $receivedOn,
+                materialId: (int) $record->getKey(),
+                receivedOn: $receivedOn,
+                addedAt: $record->added_at,
+                receivedDateKnown: $receivedOn !== null,
+            );
         }
 
         return $materials;
+    }
+
+    /**
+     * What makes two items the same piece of support.
+     *
+     * The kind of document is deliberately *not* part of it. A CV supplied
+     * independently and the same CV attached to an old application are one
+     * document the workspace happens to hold twice, and counting them twice would
+     * manufacture repeated support out of a duplicate file. An application answer
+     * still keeps its question, so two different questions with the same short
+     * answer remain two answers.
+     */
+    private function contentFingerprint(CandidateSourcingMaterial $material): string
+    {
+        $normalize = fn (string $value): string => mb_strtolower(trim((string) preg_replace('/\s+/u', ' ', $value)));
+
+        return $normalize((string) $material->label).'|'.$normalize($material->text);
     }
 
     /**

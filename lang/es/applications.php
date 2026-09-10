@@ -383,6 +383,7 @@ return [
                     'resume' => 'Currículum',
                     'cover_letter' => 'Carta de presentación',
                     'application_answer' => 'Respuesta',
+                    'candidate_material' => 'CV del candidato',
                 ],
             ],
             'interview_brief' => [
