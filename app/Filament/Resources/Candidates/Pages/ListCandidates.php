@@ -25,7 +25,7 @@ class ListCandidates extends ListRecords
                 ->label(__('candidate_imports.actions.import_history'))
                 ->icon(Heroicon::OutlinedClock)
                 ->color('gray')
-                ->url(CandidateImportBatchResource::getUrl('history')),
+                ->url(CandidateImportBatchResource::getUrl('index')),
             CreateAction::make(),
         ];
     }

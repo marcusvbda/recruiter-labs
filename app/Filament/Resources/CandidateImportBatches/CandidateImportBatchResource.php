@@ -2,11 +2,12 @@
 
 namespace App\Filament\Resources\CandidateImportBatches;
 
-use App\Filament\Resources\Candidates\CandidateResource;
+use App\Filament\Resources\Applications\ApplicationResource;
 use App\Filament\Resources\CandidateImportBatches\Pages\ListCandidateImportBatches;
 use App\Filament\Resources\CandidateImportBatches\Pages\ProgressCandidateImportBatch;
 use App\Filament\Resources\CandidateImportBatches\Pages\ReviewCandidateImportBatch;
 use App\Filament\Resources\CandidateImportBatches\Pages\UploadCandidateImportBatch;
+use App\Filament\Resources\Candidates\CandidateResource;
 use App\Models\CandidateImportBatch;
 use App\Models\Company;
 use Filament\Facades\Filament;
@@ -16,7 +17,7 @@ use Illuminate\Database\Eloquent\Builder;
 /**
  * Import screens reached from inside Candidates, not from their own nav entry.
  *
- * Kept hidden the same way {@see \App\Filament\Resources\Applications\ApplicationResource}
+ * Kept hidden the same way {@see ApplicationResource}
  * is: no sidebar item of its own. This resource is skipped when the panel
  * builds its active-route map (navigation is off), so keeping Candidates
  * active while the recruiter is here is {@see CandidateResource}'s job, which
@@ -54,9 +55,15 @@ class CandidateImportBatchResource extends Resource
     public static function getPages(): array
     {
         return [
+            // Filament's base resource `Page` derives breadcrumbs from the
+            // resource's `index` URL by default; a hidden resource with no
+            // page registered under that key throws the moment any of its
+            // pages tries to render one. The import history list IS this
+            // resource's index in every sense that matters, so it fills the
+            // role Filament expects rather than needing a dedicated stub.
+            'index' => ListCandidateImportBatches::route('/history'),
             'create' => UploadCandidateImportBatch::route('/create/{batch?}'),
             'review' => ReviewCandidateImportBatch::route('/review/{record}'),
-            'history' => ListCandidateImportBatches::route('/history'),
             'progress' => ProgressCandidateImportBatch::route('/progress/{record}'),
         ];
     }

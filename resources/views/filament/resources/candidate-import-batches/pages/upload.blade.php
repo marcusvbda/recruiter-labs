@@ -8,7 +8,7 @@
             @foreach (\App\Services\CandidateImportCsvReader::HEADERS as $header)
                 <div>
                     <dt class="font-medium text-gray-700 dark:text-gray-200">{{ $header }}</dt>
-                    <dd class="text-gray-500 dark:text-gray-400">{{ __('candidate_imports.field_guide.'.$header) }}</dd>
+                    <dd class="text-gray-500 dark:text-gray-400">{{ __('candidate_imports.upload.field_guide.'.$header) }}</dd>
                 </div>
             @endforeach
         </dl>
