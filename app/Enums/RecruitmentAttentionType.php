@@ -32,6 +32,9 @@ enum RecruitmentAttentionType: string
     /** The automatic criteria preparation stopped without producing reviewable criteria. */
     case CriteriaPreparationFailed = 'criteria_preparation_failed';
 
+    /** Criteria preparation could not start because platform AI allowance is exhausted. */
+    case CriteriaBlockedByQuota = 'criteria_blocked_by_quota';
+
     /** Current criteria and an eligible internal pool are ready for an authorised first sweep. */
     case SourcingReady = 'sourcing_ready';
 
@@ -74,6 +77,7 @@ enum RecruitmentAttentionType: string
             self::EvaluationFailed,
             self::EvaluationBlockedByQuota,
             self::CriteriaPreparationFailed,
+            self::CriteriaBlockedByQuota,
             self::SourcingBlockedByQuota,
             self::SourcingFailed,
             self::StageOverdue,
@@ -99,6 +103,7 @@ enum RecruitmentAttentionType: string
             self::EvaluationBlockedByQuota => 'heroicon-m-bolt-slash',
             self::CriteriaReadyForReview => 'heroicon-m-clipboard-document-check',
             self::CriteriaPreparationFailed => 'heroicon-m-exclamation-triangle',
+            self::CriteriaBlockedByQuota => 'heroicon-m-bolt-slash',
             self::SourcingReady => 'heroicon-m-magnifying-glass',
             self::SourcingRefreshReady => 'heroicon-m-arrow-path',
             self::SourcingBlockedByQuota => 'heroicon-m-bolt-slash',

@@ -29,6 +29,19 @@ class RequireJobCriteriaReview
         DB::transaction(function () use ($job): void {
             $lockedJob = Job::query()->whereKey($job->getKey())->lockForUpdate()->firstOrFail();
 
+            // A blank job has no criteria revision to invalidate. In particular,
+            // an early edit before its description becomes substantive must not
+            // make the later initial extraction look like a regeneration.
+            if ($lockedJob->criteria_processing_status === JobCriteriaProcessingStatus::NotStarted
+                && $lockedJob->criteria_confirmed_generation === null
+                && $lockedJob->criteria_confirmed_at === null
+                && $lockedJob->criteria_confirmed_by_id === null
+                && ! $lockedJob->jobCriteria()->exists()) {
+                $job->setRawAttributes($lockedJob->getAttributes(), true);
+
+                return;
+            }
+
             $lockedJob->forceFill([
                 // A running extraction describes an older definition after a
                 // relevant edit. Invalidate its generation and make recovery

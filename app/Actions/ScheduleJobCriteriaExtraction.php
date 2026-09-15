@@ -45,7 +45,6 @@ class ScheduleJobCriteriaExtraction
             // created or edited them. Initial automation must never replace
             // them, and a non-fresh processing state is already meaningful.
             if ($lockedJob->criteria_processing_status !== JobCriteriaProcessingStatus::NotStarted
-                || $lockedJob->criteria_generation !== 0
                 || $lockedJob->criteria_confirmed_generation !== null
                 || $lockedJob->criteria_confirmed_at !== null
                 || $lockedJob->criteria_confirmed_by_id !== null

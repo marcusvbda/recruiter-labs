@@ -24,6 +24,9 @@ enum JobCriteriaProcessingStatus: string
     case Completed = 'completed';
     case Failed = 'failed';
 
+    /** The platform allowance was exhausted before extraction could begin. */
+    case PendingQuota = 'pending_quota';
+
     /** Whether criteria exist and can be read, edited and confirmed. */
     public function hasCriteria(): bool
     {

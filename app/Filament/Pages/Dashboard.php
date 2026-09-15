@@ -2,16 +2,13 @@
 
 namespace App\Filament\Pages;
 
-use App\Actions\RunSourcingSearch;
+use App\Actions\RunAttentionSourcingSearch;
 use App\Data\RecruiterAgendaPreview;
 use App\Data\WorkspaceActivationProgress;
-use App\Enums\AiExecutionOrigin;
 use App\Filament\Resources\Jobs\JobResource;
 use App\Models\Company;
 use App\Models\Job;
-use App\Models\SourcingSearch;
 use App\Models\User;
-use App\Services\CandidateSourcingEligibilityService;
 use App\Services\RecruitmentAttentionService;
 use App\Services\RecruitmentProgressService;
 use App\Services\WorkspaceActivationJourney;
@@ -62,7 +59,7 @@ class Dashboard extends BaseDashboard
      * only a suggestion, so this repeats tenant, permission, and state checks
      * instead of trusting a client-supplied job id or a stale rendered queue.
      */
-    public function runSourcingFromAttention(int $jobId): void
+    public function runSourcingFromAttention(int $jobId, string $intent): void
     {
         $company = Filament::getTenant();
         $recruiter = Filament::auth()->user();
@@ -72,33 +69,15 @@ class Dashboard extends BaseDashboard
         $job = Job::query()
             ->whereBelongsTo($company)
             ->whereKey($jobId)
-            ->with('sourcingSearch')
             ->firstOrFail();
 
         abort_unless(JobResource::canEdit($job), 403);
 
-        $search = $job->sourcingSearch;
+        $started = app(RunAttentionSourcingSearch::class)->handle($company, $recruiter, $jobId, $intent);
 
-        if ($search instanceof SourcingSearch && $search->status->isInProgress()) {
+        if (! $started) {
             return;
         }
-
-        $job->load('jobCriteria');
-
-        if (! $job->hasConfirmedCriteria() || $job->jobCriteria->isEmpty()) {
-            return;
-        }
-
-        if (app(CandidateSourcingEligibilityService::class)->eligibleCandidateCount($job) === 0) {
-            return;
-        }
-
-        app(RunSourcingSearch::class)->handle(
-            $job,
-            (int) $recruiter->getKey(),
-            AiExecutionOrigin::UserRequested,
-            'sourcing_requested_from_attention',
-        );
 
         Notification::make()
             ->title(__('sourcing.panel.search_started'))

@@ -73,9 +73,9 @@
                                     <x-filament::button
                                         color="gray"
                                         size="sm"
-                                        wire:click="runSourcingFromAttention({{ $item['job_id'] }})"
+                                        wire:click="runSourcingFromAttention({{ $item['job_id'] }}, '{{ $item['action_intent'] }}')"
                                         wire:loading.attr="disabled"
-                                        wire:target="runSourcingFromAttention({{ $item['job_id'] }})"
+                                        wire:target="runSourcingFromAttention({{ $item['job_id'] }}, '{{ $item['action_intent'] }}')"
                                         class="rl-attention-item__action">
                                         {{ $item['action_label'] }}
                                     </x-filament::button>

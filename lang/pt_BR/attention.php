@@ -38,6 +38,47 @@ return [
             'explanation' => '{1} 1 candidatura está na fila e não pode ser avaliada até o workspace ter limite disponível novamente.|[2,*] :count candidaturas estão na fila e não podem ser avaliadas até o workspace ter limite disponível novamente.',
             'action' => 'Revisar uso de IA',
         ],
+        'criteria_ready_for_review' => [
+            'title' => 'Os critérios estão prontos para revisão em :job',
+            'explanation' => 'A IA preparou estes critérios. Revise e confirme antes que orientem a avaliação de candidatos ou a busca interna.',
+            'action' => 'Revisar critérios',
+        ],
+        'criteria_preparation_failed' => [
+            'title' => 'Não foi possível preparar critérios para :job',
+            'explanation' => 'A preparação dos critérios não foi concluída, então não há novos critérios prontos para revisão.',
+            'action' => 'Revisar critérios',
+        ],
+        'criteria_blocked_by_quota' => [
+            'title' => 'A preparação de critérios para :job aguarda limite de IA',
+            'explanation' => 'A preparação dos critérios não foi executada porque o limite de IA do workspace foi atingido.',
+            'action' => 'Revisar uso de IA',
+        ],
+        'sourcing_ready' => [
+            'title' => 'A busca interna está pronta para :job',
+            'explanation' => 'Há critérios confirmados atuais e candidatos elegíveis. Iniciar uma busca continua sendo sua decisão.',
+            'action' => 'Encontrar correspondências',
+        ],
+        'sourcing_refresh_ready' => [
+            'title' => 'A busca interna pode ser atualizada para :job',
+            'criteria_explanation' => 'A busca anterior usou uma revisão de critérios mais antiga. Autorize uma nova busca quando estiver pronto.',
+            'pool_explanation' => 'A busca anterior é anterior ao conjunto atual de talentos ou aos materiais dos candidatos. Autorize uma nova busca quando estiver pronto.',
+            'action' => 'Atualizar correspondências',
+        ],
+        'sourcing_blocked_by_quota' => [
+            'title' => 'A busca interna para :job aguarda limite de IA',
+            'explanation' => 'A busca anterior foi interrompida porque o limite de IA do workspace foi atingido.',
+            'action' => 'Revisar uso de IA',
+        ],
+        'sourcing_failed' => [
+            'title' => 'A busca interna falhou para :job',
+            'explanation' => 'A busca anterior não foi concluída, por isso seu resultado não pode ser considerado uma busca atual completa.',
+            'action' => 'Revisar busca',
+        ],
+        'sourcing_results_ready_for_review' => [
+            'title' => '{1} 1 possível correspondência está pronta para revisão|[2,*] :count possíveis correspondências estão prontas para revisão',
+            'explanation' => 'Estas correspondências sugeridas ainda precisam de uma decisão explícita do recrutador.',
+            'action' => 'Revisar correspondências',
+        ],
         'stage_overdue' => [
             'title' => ':candidate está esperando em :stage',
             'explanation' => 'Esperando :waited em :stage — esta etapa está configurada para alertar após :threshold.',

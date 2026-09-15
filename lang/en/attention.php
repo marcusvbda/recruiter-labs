@@ -48,6 +48,11 @@ return [
             'explanation' => 'The criteria preparation did not complete, so there are no new criteria ready for review.',
             'action' => 'Review criteria',
         ],
+        'criteria_blocked_by_quota' => [
+            'title' => 'Criteria preparation is waiting for AI allowance for :job',
+            'explanation' => 'Criteria preparation did not run because the workspace AI allowance was reached.',
+            'action' => 'Review AI usage',
+        ],
         'sourcing_ready' => [
             'title' => 'Internal sourcing is ready for :job',
             'explanation' => 'Current confirmed criteria and eligible candidates are available. Starting a sweep remains your decision.',

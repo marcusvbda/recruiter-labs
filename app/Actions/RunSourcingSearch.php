@@ -8,6 +8,7 @@ use App\Jobs\SourceCandidatesForJob;
 use App\Models\Company;
 use App\Models\Job;
 use App\Models\SourcingSearch;
+use Closure;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -40,8 +41,9 @@ class RunSourcingSearch
         ?int $userId = null,
         AiExecutionOrigin $origin = AiExecutionOrigin::UserRequested,
         ?string $trigger = 'sourcing_requested',
-    ): void {
-        $generation = DB::transaction(function () use ($job, $userId): ?int {
+        ?Closure $accepts = null,
+    ): bool {
+        $generation = DB::transaction(function () use ($job, $userId, $accepts): ?int {
             $lockedJob = Job::query()
                 ->whereKey($job->getKey())
                 ->lockForUpdate()
@@ -57,6 +59,14 @@ class RunSourcingSearch
             }
 
             $search = $this->lockedSearchFor($lockedJob);
+
+            // Attention-derived requests carry an additional human gate. It
+            // must be evaluated while this exact search row is locked, rather
+            // than before this transaction where a stale tab could race a
+            // completed or newly started sweep.
+            if ($accepts !== null && ! $accepts($lockedJob, $search)) {
+                return null;
+            }
 
             // The pool this sweep is about to cover, captured with the criteria
             // revision and under the same lock. Anything that changes the
@@ -90,12 +100,14 @@ class RunSourcingSearch
         });
 
         if ($generation === null) {
-            return;
+            return false;
         }
 
         SourceCandidatesForJob::dispatch($job->getKey(), $userId, $generation, origin: $origin, trigger: $trigger)
             ->onConnection((string) config('services.openai.queue_connection', 'database'))
             ->afterCommit();
+
+        return true;
     }
 
     /**

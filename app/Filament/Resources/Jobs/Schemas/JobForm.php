@@ -309,7 +309,10 @@ class JobForm
                     JobCriteriaProcessingStatus::Processing,
                 ], strict: true)),
             View::make('filament.resources.jobs.components.ai-criteria-failed')
-                ->visible(fn (Job $record): bool => $record->criteria_processing_status === JobCriteriaProcessingStatus::Failed),
+                ->visible(fn (Job $record): bool => in_array($record->criteria_processing_status, [
+                    JobCriteriaProcessingStatus::Failed,
+                    JobCriteriaProcessingStatus::PendingQuota,
+                ], strict: true)),
             View::make('filament.resources.jobs.components.ai-criteria-awaiting-review')
                 ->viewData(fn (Job $record): array => [
                     'wasConfirmedBefore' => $record->criteria_confirmed_generation !== null,
@@ -336,7 +339,10 @@ class JobForm
                 self::runAiCriteriaAnalysisAction(
                     'retryAiCriteriaAnalysis',
                     __('jobs.criteria.retry_action'),
-                    fn (Job $record): bool => $record->criteria_processing_status === JobCriteriaProcessingStatus::Failed,
+                    fn (Job $record): bool => in_array($record->criteria_processing_status, [
+                        JobCriteriaProcessingStatus::Failed,
+                        JobCriteriaProcessingStatus::PendingQuota,
+                    ], strict: true),
                     requiresConfirmation: true,
                 ),
                 self::runAiCriteriaAnalysisAction(

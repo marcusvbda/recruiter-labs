@@ -114,7 +114,7 @@ class AnalyzeJobCriteria implements ShouldBeUnique, ShouldQueue
         }
 
         if (! $configuration->usesOwnKey && $limitManager->usage($job->company, Limit::AiAnalyses)->isReached) {
-            $this->markCurrentGenerationAsFailed();
+            $this->markCurrentGenerationAsPendingQuota();
 
             return;
         }
@@ -193,6 +193,14 @@ class AnalyzeJobCriteria implements ShouldBeUnique, ShouldQueue
             ->whereKey($this->jobId)
             ->where('criteria_generation', $this->generation)
             ->update(['criteria_processing_status' => JobCriteriaProcessingStatus::Failed]);
+    }
+
+    private function markCurrentGenerationAsPendingQuota(): void
+    {
+        Job::query()
+            ->whereKey($this->jobId)
+            ->where('criteria_generation', $this->generation)
+            ->update(['criteria_processing_status' => JobCriteriaProcessingStatus::PendingQuota]);
     }
 
     private function elapsedMilliseconds(int $startedAt): int

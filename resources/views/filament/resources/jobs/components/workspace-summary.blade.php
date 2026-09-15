@@ -72,9 +72,9 @@
                             <x-filament::button
                                 color="gray"
                                 size="sm"
-                                wire:click="runSourcingFromAttention"
+                                wire:click="runSourcingFromAttention('{{ $item['action_intent'] }}')"
                                 wire:loading.attr="disabled"
-                                wire:target="runSourcingFromAttention">
+                                wire:target="runSourcingFromAttention('{{ $item['action_intent'] }}')">
                                 {{ $item['action_label'] }}
                             </x-filament::button>
                         @else

@@ -530,6 +530,7 @@ class RecruitmentAttentionService
 
         $criteriaReady = [];
         $criteriaFailed = [];
+        $criteriaBlocked = [];
         $sourcingReady = [];
         $sourcingRefreshReady = [];
         $sourcingBlocked = [];
@@ -547,6 +548,12 @@ class RecruitmentAttentionService
 
             if ($attentionJob->criteria_processing_status === JobCriteriaProcessingStatus::Failed) {
                 $criteriaFailed[] = $this->criteriaPreparationFailedItem($attentionJob);
+
+                continue;
+            }
+
+            if ($attentionJob->criteria_processing_status === JobCriteriaProcessingStatus::PendingQuota) {
+                $criteriaBlocked[] = $this->criteriaBlockedByQuotaItem($attentionJob);
 
                 continue;
             }
@@ -612,6 +619,7 @@ class RecruitmentAttentionService
 
         return [
             $this->cap($criteriaFailed),
+            $this->cap($criteriaBlocked),
             $this->cap($sourcingBlocked),
             $this->cap($sourcingFailed),
             $this->cap($criteriaReady),
@@ -646,6 +654,19 @@ class RecruitmentAttentionService
             context: $job->name,
             jobId: (int) $job->getKey(),
             actionIntent: 'review_criteria',
+        );
+    }
+
+    private function criteriaBlockedByQuotaItem(Job $job): RecruitmentAttentionItem
+    {
+        return new RecruitmentAttentionItem(
+            type: RecruitmentAttentionType::CriteriaBlockedByQuota,
+            title: (string) __('attention.items.criteria_blocked_by_quota.title', ['job' => $job->name]),
+            explanation: (string) __('attention.items.criteria_blocked_by_quota.explanation'),
+            actionLabel: (string) __('attention.items.criteria_blocked_by_quota.action'),
+            actionUrl: AiSettings::getUrl(tenant: $job->company),
+            context: $job->name,
+            jobId: (int) $job->getKey(),
         );
     }
 

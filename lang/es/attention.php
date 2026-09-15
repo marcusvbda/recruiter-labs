@@ -38,6 +38,47 @@ return [
             'explanation' => '{1} 1 candidatura está en cola y no puede evaluarse hasta que el espacio de trabajo vuelva a tener cupo.|[2,*] :count candidaturas están en cola y no pueden evaluarse hasta que el espacio de trabajo vuelva a tener cupo.',
             'action' => 'Revisar uso de IA',
         ],
+        'criteria_ready_for_review' => [
+            'title' => 'Los criterios están listos para revisar en :job',
+            'explanation' => 'La IA preparó estos criterios. Revísalos y confírmalos antes de que orienten la evaluación de candidatos o la búsqueda interna.',
+            'action' => 'Revisar criterios',
+        ],
+        'criteria_preparation_failed' => [
+            'title' => 'No se pudieron preparar los criterios para :job',
+            'explanation' => 'La preparación de criterios no se completó, por lo que no hay criterios nuevos listos para revisar.',
+            'action' => 'Revisar criterios',
+        ],
+        'criteria_blocked_by_quota' => [
+            'title' => 'La preparación de criterios para :job espera cupo de IA',
+            'explanation' => 'La preparación de criterios no se ejecutó porque se alcanzó el cupo de IA del espacio de trabajo.',
+            'action' => 'Revisar uso de IA',
+        ],
+        'sourcing_ready' => [
+            'title' => 'La búsqueda interna está lista para :job',
+            'explanation' => 'Hay criterios confirmados vigentes y candidatos elegibles. Iniciar una búsqueda sigue siendo tu decisión.',
+            'action' => 'Buscar coincidencias',
+        ],
+        'sourcing_refresh_ready' => [
+            'title' => 'La búsqueda interna se puede actualizar para :job',
+            'criteria_explanation' => 'La búsqueda anterior usó una revisión de criterios anterior. Autoriza una nueva búsqueda cuando estés listo.',
+            'pool_explanation' => 'La búsqueda anterior es anterior al grupo de talento actual o al material de los candidatos. Autoriza una nueva búsqueda cuando estés listo.',
+            'action' => 'Actualizar coincidencias',
+        ],
+        'sourcing_blocked_by_quota' => [
+            'title' => 'La búsqueda interna para :job espera cupo de IA',
+            'explanation' => 'La búsqueda anterior se detuvo porque se alcanzó el cupo de IA del espacio de trabajo.',
+            'action' => 'Revisar uso de IA',
+        ],
+        'sourcing_failed' => [
+            'title' => 'La búsqueda interna falló para :job',
+            'explanation' => 'La búsqueda anterior no se completó, por lo que su resultado no puede tratarse como una búsqueda actual completa.',
+            'action' => 'Revisar búsqueda',
+        ],
+        'sourcing_results_ready_for_review' => [
+            'title' => '{1} 1 posible coincidencia está lista para revisión|[2,*] :count posibles coincidencias están listas para revisión',
+            'explanation' => 'Estas coincidencias sugeridas aún necesitan una decisión explícita del reclutador.',
+            'action' => 'Revisar coincidencias',
+        ],
         'stage_overdue' => [
             'title' => ':candidate está esperando en :stage',
             'explanation' => 'Esperando :waited en :stage — esta etapa está configurada para avisar después de :threshold.',
