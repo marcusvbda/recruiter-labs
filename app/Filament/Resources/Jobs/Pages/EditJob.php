@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Jobs\Pages;
 
 use App\Actions\RequireJobCriteriaReview;
+use App\Actions\ScheduleInitialJobCriteriaExtraction;
 use App\Filament\Resources\Jobs\Actions\JobStateActions;
 use App\Filament\Resources\Jobs\JobResource;
 use App\Filament\Resources\Jobs\Schemas\JobForm;
@@ -24,6 +25,8 @@ class EditJob extends EditRecord
 
     private RequireJobCriteriaReview $requireJobCriteriaReview;
 
+    private ScheduleInitialJobCriteriaExtraction $scheduleInitialJobCriteriaExtraction;
+
     /**
      * What the evaluation criteria depend on, captured before the save so it can
      * be compared with what the save actually produced.
@@ -32,9 +35,12 @@ class EditJob extends EditRecord
      */
     private ?array $evaluationInputsBeforeSave = null;
 
-    public function boot(RequireJobCriteriaReview $requireJobCriteriaReview): void
-    {
+    public function boot(
+        RequireJobCriteriaReview $requireJobCriteriaReview,
+        ScheduleInitialJobCriteriaExtraction $scheduleInitialJobCriteriaExtraction,
+    ): void {
         $this->requireJobCriteriaReview = $requireJobCriteriaReview;
+        $this->scheduleInitialJobCriteriaExtraction = $scheduleInitialJobCriteriaExtraction;
     }
 
     protected function getHeaderActions(): array
@@ -87,6 +93,14 @@ class EditJob extends EditRecord
         $job->unsetRelation('jobCriteria')->unsetRelation('applicationQuestions')->unsetRelation('coverLetterFileTypes');
 
         if ($before === null || $before === $this->evaluationInputs($job)) {
+            return;
+        }
+
+        // A blank job can gain its first substantive description on an edit.
+        // If it is still in its untouched initial state, schedule exactly that
+        // first automatic suggestion and do not immediately invalidate the new
+        // generation through the ordinary confirmed-criteria review flow.
+        if ($this->scheduleInitialJobCriteriaExtraction->handle($job, 'job_context_added')) {
             return;
         }
 

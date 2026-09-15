@@ -6,6 +6,7 @@ use App\Actions\RemoveCompanyAiCredentials;
 use App\Actions\TestCompanyAiCredentials;
 use App\Actions\UpdateCompanyAiSettings;
 use App\Enums\AiCredentialStatus;
+use App\Enums\AiExecutionOrigin;
 use App\Enums\AiProvider;
 use App\Enums\Feature;
 use App\Enums\Limit;
@@ -225,7 +226,9 @@ class AiSettings extends Page
             'history' => $usageService->recentAiUsage($company, 8)
                 ->map(fn (AiUsageRecord $record): array => [
                     'date' => $record->created_at?->translatedFormat('d M Y, H:i') ?? '—',
-                    'operation' => $record->operation,
+                    'operation' => $this->operationLabel($record->operation),
+                    'origin' => $this->originLabel($record->origin),
+                    'reason' => $this->triggerLabel($record->trigger),
                     'model' => $record->model,
                     'tokens' => Number::format($record->input_tokens + $record->output_tokens + $record->cached_tokens),
                     'cost' => $record->estimated_cost === null ? '—' : Number::currency((float) $record->estimated_cost, 'USD'),
@@ -251,6 +254,43 @@ class AiSettings extends Page
             AiCredentialStatus::Active => __('settings.ai.status.valid'),
             AiCredentialStatus::Invalid => __('settings.ai.status.invalid'),
             default => __('settings.ai.status.untested'),
+        };
+    }
+
+    private function originLabel(?AiExecutionOrigin $origin): string
+    {
+        return match ($origin) {
+            AiExecutionOrigin::Automatic => __('settings.ai.history.origins.automatic'),
+            AiExecutionOrigin::UserRequested => __('settings.ai.history.origins.user_requested'),
+            default => __('settings.ai.history.origins.legacy_unknown'),
+        };
+    }
+
+    private function operationLabel(string $operation): string
+    {
+        return match ($operation) {
+            'job_criteria_extraction',
+            'application_fit_analysis',
+            'candidate_sourcing_match',
+            'cv_analysis',
+            'candidate_summary' => __("settings.ai.history.operations.{$operation}"),
+            default => __('settings.ai.history.operations.unknown'),
+        };
+    }
+
+    private function triggerLabel(?string $trigger): string
+    {
+        return match ($trigger) {
+            'job_created',
+            'job_context_added',
+            'application_submitted',
+            'criteria_confirmed',
+            'application_analysis_backfill',
+            'criteria_regeneration_requested',
+            'application_analysis_requested',
+            'sourcing_requested',
+            'sourcing_requested_from_attention' => __("settings.ai.history.triggers.{$trigger}"),
+            default => __('settings.ai.history.triggers.unknown'),
         };
     }
 }

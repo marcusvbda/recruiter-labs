@@ -26,6 +26,8 @@ class RecruitmentAttentionItem
         public readonly ?int $jobId = null,
         public readonly ?int $applicationId = null,
         public readonly ?int $interviewId = null,
+        /** A UI may resolve this into a direct authorised action without re-deriving state. */
+        public readonly ?string $actionIntent = null,
     ) {}
 
     public function severity(): RecruitmentAttentionSeverity
@@ -49,6 +51,7 @@ class RecruitmentAttentionItem
             'job_id' => $this->jobId,
             'application_id' => $this->applicationId,
             'interview_id' => $this->interviewId,
+            'action_intent' => $this->actionIntent,
         ];
     }
 }

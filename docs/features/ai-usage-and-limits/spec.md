@@ -29,6 +29,9 @@ In AI settings, a workspace can see:
 - the effective AI provider and model;
 - current AI-analysis usage/remaining allowance;
 - recent AI execution history;
+- whether each execution was initiated automatically by Recruiter Labs, was
+  explicitly user-requested, or predates provenance tracking;
+- the understandable trigger for a recorded execution when available;
 - token usage and estimated cost when available;
 - whether executions used platform AI or the workspace's own key;
 - credential validation state for an own key.
@@ -62,7 +65,9 @@ AI execution that produces candidate-evaluation data.
 - Credential testing and provider selection are explicit workspace actions.
 - AI executions record enough usage information to distinguish operation,
   provider/model, execution status, token consumption, estimated cost when
-  available, and whether the workspace's own key was used.
+  available, whether the workspace's own key was used, execution origin, and a
+  meaningful trigger when known. Historical records that predate origin tracking
+  remain visibly legacy/unknown rather than being inferred from their actor.
 - AI response caching does not bypass product-integrity validation. A cache hit is
   still subject to the same criteria revision and persistence rules as a fresh
   candidate evaluation.
@@ -100,8 +105,9 @@ AI execution that produces candidate-evaluation data.
 
 1. AI operations create usage history.
 2. AI settings summarize the current allowance and recent operations.
-3. The workspace can distinguish platform and own-key usage and see execution
-   status/cost metadata when available.
+3. The workspace can distinguish platform and own-key usage, automatic and
+   user-requested execution origin, and see execution status/cost metadata and
+   meaningful trigger when available.
 
 ## Acceptance criteria
 

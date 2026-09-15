@@ -1,3 +1,8 @@
+---
+status: implemented
+type: as-built
+---
+
 # AI-native recruiting operations foundation
 
 ## Problem

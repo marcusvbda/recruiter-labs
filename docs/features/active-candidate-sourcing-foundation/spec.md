@@ -208,6 +208,12 @@ When current criteria are confirmed, the recruiter can explicitly request:
 
 **Find matches**
 
+Recruiter Labs proactively surfaces this human-authorized action when current
+confirmed criteria, eligible internal candidates, and no current search make it
+useful. The recruiter can start or refresh the sweep directly from the relevant
+Attention item; the action remains explicit and does not automatically scan the
+talent pool.
+
 Recruiter Labs searches eligible existing Candidates in that workspace.
 
 The recruiter does not need to construct Boolean search expressions or manually
@@ -686,6 +692,10 @@ If evaluation-relevant job criteria change:
 
 Criteria must be confirmed again before current sourcing can resume when the
 existing job-criteria rules require reconfirmation.
+
+When confirmed criteria and eligible candidates make a fresh search meaningful,
+Recruiter Labs can surface an explicit refresh action. It does not offer that
+action while criteria await confirmation or an equivalent search is running.
 
 A refresh must not create duplicate sourcing relationships for the same
 Candidate and Job.

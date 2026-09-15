@@ -8,7 +8,10 @@ use App\Enums\ApplicationAnalysisStatus;
 use App\Enums\ConnectedIntegrationStatus;
 use App\Enums\InterviewCalendarSyncStatus;
 use App\Enums\InterviewRsvpStatus;
+use App\Enums\JobCriteriaProcessingStatus;
 use App\Enums\RecruitmentAttentionType;
+use App\Enums\SourcingMatchState;
+use App\Enums\SourcingSearchStatus;
 use App\Filament\Clusters\Settings\Pages\AiSettings;
 use App\Filament\Clusters\Settings\Pages\CalendarSettings;
 use App\Filament\Resources\Applications\ApplicationResource;
@@ -18,6 +21,8 @@ use App\Models\Company;
 use App\Models\ConnectedIntegration;
 use App\Models\Interview;
 use App\Models\Job;
+use App\Models\SourcingMatch;
+use App\Models\SourcingSearch;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
@@ -43,6 +48,9 @@ use Illuminate\Support\Collection;
  *   waiting because the advert expired.
  * - Job items cover **currently active** processes only, since the suggestions
  *   they make (pause intake, review the target) apply to a live campaign.
+ * - Criteria and sourcing human gates cover every tenant job. Sourcing is
+ *   internal work and is deliberately not constrained by public publication or
+ *   campaign dates; its own action validates the confirmed-criteria gate again.
  */
 class RecruitmentAttentionService
 {
@@ -85,6 +93,7 @@ class RecruitmentAttentionService
             ...$this->interviewSignals($company, $recruiter, $job),
             ...$this->applicationSignals($company, $job),
             ...$this->jobSignals($company, $job),
+            ...$this->criteriaAndSourcingSignals($company, $job),
         ];
 
         $total = 0;
@@ -503,6 +512,233 @@ class RecruitmentAttentionService
     }
 
     /**
+     * Human gates around criteria and internal sourcing. Unlike legacy job
+     * operational signals, these intentionally include unpublished and inactive
+     * jobs: a private talent-pool search does not depend on public intake.
+     *
+     * @return list<array{items: list<RecruitmentAttentionItem>, total: int}>
+     */
+    private function criteriaAndSourcingSignals(Company $company, ?Job $job): array
+    {
+        $jobId = $job?->getKey();
+        $jobs = Job::query()
+            ->whereBelongsTo($company)
+            ->when($jobId !== null, fn (Builder $query): Builder => $query->whereKey($jobId))
+            ->with('sourcingSearch')
+            ->orderBy('name')
+            ->get();
+
+        $criteriaReady = [];
+        $criteriaFailed = [];
+        $sourcingReady = [];
+        $sourcingRefreshReady = [];
+        $sourcingBlocked = [];
+        $sourcingFailed = [];
+        $sourcingResultsReady = [];
+
+        foreach ($jobs as $attentionJob) {
+            if ($attentionJob->criteriaAwaitReview()) {
+                $criteriaReady[] = $this->criteriaReadyForReviewItem($attentionJob);
+
+                // A criteria review is the specific gate. A sourcing refresh
+                // cannot truthfully be offered until this revision is confirmed.
+                continue;
+            }
+
+            if ($attentionJob->criteria_processing_status === JobCriteriaProcessingStatus::Failed) {
+                $criteriaFailed[] = $this->criteriaPreparationFailedItem($attentionJob);
+
+                continue;
+            }
+
+            if (! $attentionJob->hasConfirmedCriteria()) {
+                continue;
+            }
+
+            $search = $attentionJob->sourcingSearch;
+
+            if ($search instanceof SourcingSearch) {
+                // The relationship is already known from this tenant-scoped job
+                // query. Supplying it avoids extra relationship queries while
+                // preserving SourcingSearch's single freshness definition.
+                $search->setRelation('job', $attentionJob);
+                $search->setRelation('company', $company);
+
+                if ($search->status->isInProgress()) {
+                    continue;
+                }
+
+                if ($search->status === SourcingSearchStatus::PendingQuota) {
+                    $sourcingBlocked[] = $this->sourcingBlockedByQuotaItem($attentionJob);
+
+                    continue;
+                }
+
+                if ($search->status === SourcingSearchStatus::Failed) {
+                    $sourcingFailed[] = $this->sourcingFailedItem($attentionJob);
+
+                    continue;
+                }
+
+                if ($search->status === SourcingSearchStatus::NotStarted) {
+                    if ($this->eligibleCandidateCount($attentionJob) > 0) {
+                        $sourcingReady[] = $this->sourcingReadyItem($attentionJob);
+                    }
+
+                    continue;
+                }
+
+                if ($search->isCurrent()) {
+                    $suggested = $this->actionableSuggestedMatchCount($attentionJob, $company);
+
+                    if ($suggested > 0) {
+                        $sourcingResultsReady[] = $this->sourcingResultsReadyForReviewItem($attentionJob, $suggested);
+                    }
+
+                    continue;
+                }
+
+                if ($search->isOutdated() && $this->eligibleCandidateCount($attentionJob) > 0) {
+                    $sourcingRefreshReady[] = $this->sourcingRefreshReadyItem($attentionJob, $search);
+                }
+
+                continue;
+            }
+
+            if ($this->eligibleCandidateCount($attentionJob) > 0) {
+                $sourcingReady[] = $this->sourcingReadyItem($attentionJob);
+            }
+        }
+
+        return [
+            $this->cap($criteriaFailed),
+            $this->cap($sourcingBlocked),
+            $this->cap($sourcingFailed),
+            $this->cap($criteriaReady),
+            $this->cap($sourcingResultsReady),
+            $this->cap($sourcingRefreshReady),
+            $this->cap($sourcingReady),
+        ];
+    }
+
+    private function criteriaReadyForReviewItem(Job $job): RecruitmentAttentionItem
+    {
+        return new RecruitmentAttentionItem(
+            type: RecruitmentAttentionType::CriteriaReadyForReview,
+            title: (string) __('attention.items.criteria_ready_for_review.title', ['job' => $job->name]),
+            explanation: (string) __('attention.items.criteria_ready_for_review.explanation'),
+            actionLabel: (string) __('attention.items.criteria_ready_for_review.action'),
+            actionUrl: $this->jobEditUrl($job),
+            context: $job->name,
+            jobId: (int) $job->getKey(),
+            actionIntent: 'review_criteria',
+        );
+    }
+
+    private function criteriaPreparationFailedItem(Job $job): RecruitmentAttentionItem
+    {
+        return new RecruitmentAttentionItem(
+            type: RecruitmentAttentionType::CriteriaPreparationFailed,
+            title: (string) __('attention.items.criteria_preparation_failed.title', ['job' => $job->name]),
+            explanation: (string) __('attention.items.criteria_preparation_failed.explanation'),
+            actionLabel: (string) __('attention.items.criteria_preparation_failed.action'),
+            actionUrl: $this->jobEditUrl($job),
+            context: $job->name,
+            jobId: (int) $job->getKey(),
+            actionIntent: 'review_criteria',
+        );
+    }
+
+    private function sourcingReadyItem(Job $job): RecruitmentAttentionItem
+    {
+        return new RecruitmentAttentionItem(
+            type: RecruitmentAttentionType::SourcingReady,
+            title: (string) __('attention.items.sourcing_ready.title', ['job' => $job->name]),
+            explanation: (string) __('attention.items.sourcing_ready.explanation'),
+            actionLabel: (string) __('attention.items.sourcing_ready.action'),
+            actionUrl: $this->jobUrl($job, 'sourcing'),
+            context: $job->name,
+            jobId: (int) $job->getKey(),
+            actionIntent: 'start_sourcing',
+        );
+    }
+
+    private function sourcingRefreshReadyItem(Job $job, SourcingSearch $search): RecruitmentAttentionItem
+    {
+        $reason = $search->predatesCurrentPool()
+            ? (string) __('attention.items.sourcing_refresh_ready.pool_explanation')
+            : (string) __('attention.items.sourcing_refresh_ready.criteria_explanation');
+
+        return new RecruitmentAttentionItem(
+            type: RecruitmentAttentionType::SourcingRefreshReady,
+            title: (string) __('attention.items.sourcing_refresh_ready.title', ['job' => $job->name]),
+            explanation: $reason,
+            actionLabel: (string) __('attention.items.sourcing_refresh_ready.action'),
+            actionUrl: $this->jobUrl($job, 'sourcing'),
+            context: $job->name,
+            jobId: (int) $job->getKey(),
+            actionIntent: 'refresh_sourcing',
+        );
+    }
+
+    private function sourcingBlockedByQuotaItem(Job $job): RecruitmentAttentionItem
+    {
+        return new RecruitmentAttentionItem(
+            type: RecruitmentAttentionType::SourcingBlockedByQuota,
+            title: (string) __('attention.items.sourcing_blocked_by_quota.title', ['job' => $job->name]),
+            explanation: (string) __('attention.items.sourcing_blocked_by_quota.explanation'),
+            actionLabel: (string) __('attention.items.sourcing_blocked_by_quota.action'),
+            actionUrl: AiSettings::getUrl(tenant: $job->company),
+            context: $job->name,
+            jobId: (int) $job->getKey(),
+        );
+    }
+
+    private function sourcingFailedItem(Job $job): RecruitmentAttentionItem
+    {
+        return new RecruitmentAttentionItem(
+            type: RecruitmentAttentionType::SourcingFailed,
+            title: (string) __('attention.items.sourcing_failed.title', ['job' => $job->name]),
+            explanation: (string) __('attention.items.sourcing_failed.explanation'),
+            actionLabel: (string) __('attention.items.sourcing_failed.action'),
+            actionUrl: $this->jobUrl($job, 'sourcing'),
+            context: $job->name,
+            jobId: (int) $job->getKey(),
+        );
+    }
+
+    private function sourcingResultsReadyForReviewItem(Job $job, int $suggested): RecruitmentAttentionItem
+    {
+        return new RecruitmentAttentionItem(
+            type: RecruitmentAttentionType::SourcingResultsReadyForReview,
+            title: trans_choice('attention.items.sourcing_results_ready_for_review.title', $suggested, ['count' => $suggested]),
+            explanation: (string) __('attention.items.sourcing_results_ready_for_review.explanation'),
+            actionLabel: (string) __('attention.items.sourcing_results_ready_for_review.action'),
+            actionUrl: $this->jobUrl($job, 'sourcing'),
+            context: $job->name,
+            jobId: (int) $job->getKey(),
+        );
+    }
+
+    private function eligibleCandidateCount(Job $job): int
+    {
+        return app(CandidateSourcingEligibilityService::class)->eligibleCandidateCount($job);
+    }
+
+    private function actionableSuggestedMatchCount(Job $job, Company $company): int
+    {
+        return SourcingMatch::query()
+            ->whereBelongsTo($company)
+            ->where('job_id', $job->getKey())
+            ->where('state', SourcingMatchState::Suggested->value)
+            ->whereDoesntHave(
+                'candidate.applications',
+                fn (Builder $applications): Builder => $applications->where('job_id', $job->getKey()),
+            )
+            ->count();
+    }
+
+    /**
      * @param  list<RecruitmentAttentionItem>  $items
      * @return array{items: list<RecruitmentAttentionItem>, total: int}
      */
@@ -552,5 +788,10 @@ class RecruitmentAttentionService
             array_filter(['record' => $job, 'section' => $section]),
             tenant: $job->company,
         );
+    }
+
+    private function jobEditUrl(Job $job): string
+    {
+        return JobResource::getUrl('edit', ['record' => $job], tenant: $job->company);
     }
 }

@@ -2,18 +2,23 @@
 
 namespace App\Filament\Pages;
 
+use App\Actions\RunSourcingSearch;
 use App\Data\RecruiterAgendaPreview;
 use App\Data\WorkspaceActivationProgress;
+use App\Enums\AiExecutionOrigin;
 use App\Filament\Resources\Jobs\JobResource;
 use App\Models\Company;
 use App\Models\Job;
+use App\Models\SourcingSearch;
 use App\Models\User;
+use App\Services\CandidateSourcingEligibilityService;
 use App\Services\RecruitmentAttentionService;
 use App\Services\RecruitmentProgressService;
 use App\Services\WorkspaceActivationJourney;
 use BackedEnum;
 use DateTimeZone;
 use Filament\Facades\Filament;
+use Filament\Notifications\Notification;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
@@ -51,6 +56,55 @@ class Dashboard extends BaseDashboard
     protected static ?int $navigationSort = 1;
 
     protected string $view = 'filament.pages.dashboard';
+
+    /**
+     * Starts the specific sourcing sweep the attention row surfaced. The row is
+     * only a suggestion, so this repeats tenant, permission, and state checks
+     * instead of trusting a client-supplied job id or a stale rendered queue.
+     */
+    public function runSourcingFromAttention(int $jobId): void
+    {
+        $company = Filament::getTenant();
+        $recruiter = Filament::auth()->user();
+
+        abort_unless($company instanceof Company && $recruiter instanceof User, 403);
+
+        $job = Job::query()
+            ->whereBelongsTo($company)
+            ->whereKey($jobId)
+            ->with('sourcingSearch')
+            ->firstOrFail();
+
+        abort_unless(JobResource::canEdit($job), 403);
+
+        $search = $job->sourcingSearch;
+
+        if ($search instanceof SourcingSearch && $search->status->isInProgress()) {
+            return;
+        }
+
+        $job->load('jobCriteria');
+
+        if (! $job->hasConfirmedCriteria() || $job->jobCriteria->isEmpty()) {
+            return;
+        }
+
+        if (app(CandidateSourcingEligibilityService::class)->eligibleCandidateCount($job) === 0) {
+            return;
+        }
+
+        app(RunSourcingSearch::class)->handle(
+            $job,
+            (int) $recruiter->getKey(),
+            AiExecutionOrigin::UserRequested,
+            'sourcing_requested_from_attention',
+        );
+
+        Notification::make()
+            ->title(__('sourcing.panel.search_started'))
+            ->success()
+            ->send();
+    }
 
     public static function getNavigationLabel(): string
     {

@@ -38,6 +38,42 @@ return [
             'explanation' => '{1} 1 application is queued and cannot be evaluated until the workspace has allowance again.|[2,*] :count applications are queued and cannot be evaluated until the workspace has allowance again.',
             'action' => 'Review AI usage',
         ],
+        'criteria_ready_for_review' => [
+            'title' => 'Criteria are ready to review for :job',
+            'explanation' => 'AI prepared these criteria. Review and confirm them before they govern candidate evaluation or sourcing.',
+            'action' => 'Review criteria',
+        ],
+        'criteria_preparation_failed' => [
+            'title' => 'Criteria could not be prepared for :job',
+            'explanation' => 'The criteria preparation did not complete, so there are no new criteria ready for review.',
+            'action' => 'Review criteria',
+        ],
+        'sourcing_ready' => [
+            'title' => 'Internal sourcing is ready for :job',
+            'explanation' => 'Current confirmed criteria and eligible candidates are available. Starting a sweep remains your decision.',
+            'action' => 'Find matches',
+        ],
+        'sourcing_refresh_ready' => [
+            'title' => 'Internal sourcing can be refreshed for :job',
+            'criteria_explanation' => 'The previous sweep used an older criteria revision. Authorise a new sweep when ready.',
+            'pool_explanation' => 'The previous sweep predates the current talent pool or candidate material. Authorise a new sweep when ready.',
+            'action' => 'Refresh matches',
+        ],
+        'sourcing_blocked_by_quota' => [
+            'title' => 'Internal sourcing is waiting for AI allowance for :job',
+            'explanation' => 'The previous sweep stopped because the workspace AI allowance was reached.',
+            'action' => 'Review AI usage',
+        ],
+        'sourcing_failed' => [
+            'title' => 'Internal sourcing failed for :job',
+            'explanation' => 'The previous sweep did not complete, so its result cannot be treated as a complete current search.',
+            'action' => 'Review sourcing',
+        ],
+        'sourcing_results_ready_for_review' => [
+            'title' => '{1} 1 potential match is ready for review|[2,*] :count potential matches are ready for review',
+            'explanation' => 'These suggested matches still need an explicit recruiter decision.',
+            'action' => 'Review matches',
+        ],
         'stage_overdue' => [
             'title' => ':candidate is waiting in :stage',
             'explanation' => 'Waiting :waited in :stage — this stage is configured for attention after :threshold.',

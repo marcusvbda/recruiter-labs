@@ -68,9 +68,20 @@
                             {{ $item['title'] }}
                         </x-filament::badge>
                         <span class="text-gray-500 dark:text-gray-400">{{ $item['explanation'] }}</span>
-                        <x-filament::link :href="$item['action_url']" size="sm" icon="heroicon-m-arrow-right" icon-position="after">
-                            {{ $item['action_label'] }}
-                        </x-filament::link>
+                        @if (in_array($item['action_intent'], ['start_sourcing', 'refresh_sourcing'], true))
+                            <x-filament::button
+                                color="gray"
+                                size="sm"
+                                wire:click="runSourcingFromAttention"
+                                wire:loading.attr="disabled"
+                                wire:target="runSourcingFromAttention">
+                                {{ $item['action_label'] }}
+                            </x-filament::button>
+                        @else
+                            <x-filament::link :href="$item['action_url']" size="sm" icon="heroicon-m-arrow-right" icon-position="after">
+                                {{ $item['action_label'] }}
+                            </x-filament::link>
+                        @endif
                     </li>
                 @endforeach
             </ul>

@@ -195,7 +195,7 @@
                     <thead
                         class="bg-gray-50 text-xs font-semibold tracking-wide text-gray-500 uppercase dark:bg-white/5 dark:text-gray-400">
                         <tr>
-                            @foreach (['date', 'operation', 'model', 'tokens', 'cost', 'provider', 'status'] as $column)
+                            @foreach (['date', 'operation', 'origin', 'reason', 'model', 'tokens', 'cost', 'provider', 'status'] as $column)
                                 <th class="px-4 py-3">{{ __('settings.ai.history.' . $column) }}</th>
                             @endforeach
                         </tr>
@@ -205,6 +205,8 @@
                             <tr class="text-gray-700 dark:text-gray-200">
                                 <td class="whitespace-nowrap px-4 py-3">{{ $record['date'] }}</td>
                                 <td class="px-4 py-3 font-medium">{{ $record['operation'] }}</td>
+                                <td class="whitespace-nowrap px-4 py-3">{{ $record['origin'] }}</td>
+                                <td class="px-4 py-3">{{ $record['reason'] }}</td>
                                 <td class="whitespace-nowrap px-4 py-3">{{ $record['model'] }}</td>
                                 <td class="whitespace-nowrap px-4 py-3 tabular-nums">{{ $record['tokens'] }}</td>
                                 <td class="whitespace-nowrap px-4 py-3 tabular-nums">{{ $record['cost'] }}</td>

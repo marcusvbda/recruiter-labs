@@ -26,6 +26,27 @@ enum RecruitmentAttentionType: string
     /** Evaluations are queued but the workspace has no AI allowance left. */
     case EvaluationBlockedByQuota = 'evaluation_blocked_by_quota';
 
+    /** AI-prepared criteria are ready for a recruiter to review and confirm. */
+    case CriteriaReadyForReview = 'criteria_ready_for_review';
+
+    /** The automatic criteria preparation stopped without producing reviewable criteria. */
+    case CriteriaPreparationFailed = 'criteria_preparation_failed';
+
+    /** Current criteria and an eligible internal pool are ready for an authorised first sweep. */
+    case SourcingReady = 'sourcing_ready';
+
+    /** A completed sweep no longer describes the confirmed criteria or current pool. */
+    case SourcingRefreshReady = 'sourcing_refresh_ready';
+
+    /** A sweep stopped because the workspace's AI allowance was exhausted. */
+    case SourcingBlockedByQuota = 'sourcing_blocked_by_quota';
+
+    /** A sweep failed before it could complete a trustworthy result. */
+    case SourcingFailed = 'sourcing_failed';
+
+    /** A completed, current sweep has suggestions the recruiter has not decided on. */
+    case SourcingResultsReadyForReview = 'sourcing_results_ready_for_review';
+
     /** The candidate has been in a stage longer than that stage allows. */
     case StageOverdue = 'stage_overdue';
 
@@ -52,11 +73,18 @@ enum RecruitmentAttentionType: string
             self::CalendarReconnectRequired => RecruitmentAttentionSeverity::Critical,
             self::EvaluationFailed,
             self::EvaluationBlockedByQuota,
+            self::CriteriaPreparationFailed,
+            self::SourcingBlockedByQuota,
+            self::SourcingFailed,
             self::StageOverdue,
             self::DecisionPending,
             self::JobStalled,
             self::JobEndingWithoutFinalists,
             self::HiringTargetReached => RecruitmentAttentionSeverity::Warning,
+            self::CriteriaReadyForReview,
+            self::SourcingReady,
+            self::SourcingRefreshReady,
+            self::SourcingResultsReadyForReview,
             self::HiringTargetNear => RecruitmentAttentionSeverity::Info,
         };
     }
@@ -69,6 +97,13 @@ enum RecruitmentAttentionType: string
             self::CalendarReconnectRequired => 'heroicon-m-link-slash',
             self::EvaluationFailed => 'heroicon-m-x-circle',
             self::EvaluationBlockedByQuota => 'heroicon-m-bolt-slash',
+            self::CriteriaReadyForReview => 'heroicon-m-clipboard-document-check',
+            self::CriteriaPreparationFailed => 'heroicon-m-exclamation-triangle',
+            self::SourcingReady => 'heroicon-m-magnifying-glass',
+            self::SourcingRefreshReady => 'heroicon-m-arrow-path',
+            self::SourcingBlockedByQuota => 'heroicon-m-bolt-slash',
+            self::SourcingFailed => 'heroicon-m-x-circle',
+            self::SourcingResultsReadyForReview => 'heroicon-m-user-group',
             self::StageOverdue => 'heroicon-m-clock',
             self::DecisionPending => 'heroicon-m-hand-raised',
             self::JobStalled => 'heroicon-m-pause-circle',

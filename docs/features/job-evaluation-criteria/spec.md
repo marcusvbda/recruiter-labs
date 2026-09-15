@@ -27,7 +27,10 @@ Treat the confirmed criteria set as a versioned product contract for the job.
 
 The recruiter can:
 
-- request AI-assisted criteria extraction for a job;
+- receive an initial AI-assisted criteria suggestion automatically when a newly
+  created job has substantive role context;
+- add substantive role context to an initially incomplete job and receive that
+  first suggestion automatically;
 - review the suggested criteria and their weights;
 - review separate Job Review guidance;
 - edit the criteria before they become authoritative;
@@ -70,8 +73,9 @@ This feature is governed by
 
 ## User flow
 
-1. A recruiter creates or edits a job.
-2. The recruiter requests AI-assisted criteria extraction.
+1. A recruiter creates a job with substantive role context, or adds that context
+   to an otherwise untouched initial job.
+2. The system automatically starts the first AI-assisted criteria extraction.
 3. The system produces suggested criteria plus Job Review guidance.
 4. The criteria remain in a review-required state.
 5. The recruiter inspects and may edit criterion wording and weights.
@@ -84,6 +88,11 @@ This feature is governed by
    as current.
 10. After a human confirms the new revision, eligible active applications can be
     evaluated against it.
+
+Automatic first preparation is idempotent from the recruiter's perspective. It
+does not run for title-only jobs, copied or existing criteria, a repeated save,
+or a page refresh. Explicit regeneration remains available for recovery and for
+requesting a new suggestion; it is not the normal first-generation path.
 
 ## Acceptance criteria
 

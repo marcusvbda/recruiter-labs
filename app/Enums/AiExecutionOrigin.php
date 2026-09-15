@@ -10,6 +10,13 @@ namespace App\Enums;
  */
 enum AiExecutionOrigin: string
 {
+    /**
+     * The record existed before execution provenance was captured. Its source
+     * must not be inferred from the actor or operation that happened to be
+     * stored alongside it.
+     */
+    case LegacyUnknown = 'legacy_unknown';
+
     case Automatic = 'automatic';
     case UserRequested = 'user_requested';
 }

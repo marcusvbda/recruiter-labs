@@ -30,11 +30,16 @@ class RequireJobCriteriaReview
             $lockedJob = Job::query()->whereKey($job->getKey())->lockForUpdate()->firstOrFail();
 
             $lockedJob->forceFill([
-                // A job whose extraction never produced criteria has nothing to
-                // review; its own status already says so.
-                'criteria_processing_status' => $lockedJob->criteria_processing_status->hasCriteria()
-                    ? JobCriteriaProcessingStatus::AwaitingReview
-                    : $lockedJob->criteria_processing_status,
+                // A running extraction describes an older definition after a
+                // relevant edit. Invalidate its generation and make recovery
+                // explicit rather than showing the old run as still current.
+                'criteria_processing_status' => match ($lockedJob->criteria_processing_status) {
+                    JobCriteriaProcessingStatus::Pending,
+                    JobCriteriaProcessingStatus::Processing => JobCriteriaProcessingStatus::Failed,
+                    default => $lockedJob->criteria_processing_status->hasCriteria()
+                        ? JobCriteriaProcessingStatus::AwaitingReview
+                        : $lockedJob->criteria_processing_status,
+                },
                 'criteria_generation' => $lockedJob->criteria_generation + 1,
             ])->saveQuietly();
 

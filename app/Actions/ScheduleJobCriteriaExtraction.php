@@ -36,7 +36,7 @@ class ScheduleJobCriteriaExtraction
      * Eligibility and transition to Pending share a lock, so equivalent model
      * lifecycle signals cannot each advance the generation.
      */
-    public function handleInitial(Job $job): void
+    public function handleInitial(Job $job, string $trigger = 'job_created'): bool
     {
         $generation = DB::transaction(function () use ($job): ?int {
             $lockedJob = Job::query()->whereKey($job->getKey())->lockForUpdate()->firstOrFail();
@@ -45,6 +45,10 @@ class ScheduleJobCriteriaExtraction
             // created or edited them. Initial automation must never replace
             // them, and a non-fresh processing state is already meaningful.
             if ($lockedJob->criteria_processing_status !== JobCriteriaProcessingStatus::NotStarted
+                || $lockedJob->criteria_generation !== 0
+                || $lockedJob->criteria_confirmed_generation !== null
+                || $lockedJob->criteria_confirmed_at !== null
+                || $lockedJob->criteria_confirmed_by_id !== null
                 || $lockedJob->jobCriteria()->exists()
                 || ! $this->hasSubstantiveRoleDescription($lockedJob)) {
                 return null;
@@ -59,10 +63,12 @@ class ScheduleJobCriteriaExtraction
         });
 
         if ($generation === null) {
-            return;
+            return false;
         }
 
-        $this->dispatch($job, null, $generation, AiExecutionOrigin::Automatic, 'job_created');
+        $this->dispatch($job, null, $generation, AiExecutionOrigin::Automatic, $trigger);
+
+        return true;
     }
 
     private function hasSubstantiveRoleDescription(Job $job): bool

@@ -49,6 +49,11 @@ The queue may include signals for:
 - job ending without finalists;
 - hiring target reached;
 - hiring target nearly reached.
+- criteria prepared and awaiting human review;
+- failed criteria preparation;
+- internal sourcing ready or ready to refresh;
+- sourcing blocked or failed; and
+- aggregated sourcing results awaiting human review.
 
 ## Business rules
 
@@ -74,6 +79,18 @@ This feature is governed by
   candidate-quality signals.
 - AI quota/evaluation failure signals describe missing decision support, not
   negative evidence about a candidate.
+- Criteria and internal-sourcing human gates may apply to unpublished jobs:
+  internal sourcing does not depend on public intake. Legacy operational job
+  signals remain limited to active hiring processes.
+- Criteria awaiting human confirmation suppresses a sourcing refresh signal;
+  an in-progress, failed, or quota-blocked sourcing search suppresses a
+  competing start/refresh signal.
+- Sourcing-ready actions explicitly authorize the existing sourcing operation
+  after the server rechecks tenant ownership, permission, current criteria,
+  search state, and eligible candidates. Attention never starts a sweep by
+  itself.
+- A completed current search produces at most one job-level review item for its
+  still-actionable suggested matches, rather than one item per candidate.
 - Hiring-target signals are advisory. Reaching a target does not automatically
   pause, unpublish, or close a job.
 - Lists are bounded so one signal category cannot consume the whole surface;
@@ -93,7 +110,8 @@ This feature is governed by
 4. The overview presents a bounded cross-job queue.
 5. A job workspace can present the subset relevant to that hiring process.
 6. The recruiter follows an attention item to the affected application, job,
-   calendar settings, AI settings, or pipeline context.
+   calendar settings, AI settings, pipeline context, or directly authorizes a
+   prepared internal sourcing sweep when that explicit human gate is shown.
 7. Once the underlying persisted condition changes, the derived attention signal
    disappears or changes accordingly.
 

@@ -3,7 +3,9 @@
 namespace App\Filament\Resources\Jobs\Pages;
 
 use App\Actions\AddCandidateToJob;
+use App\Actions\RunSourcingSearch;
 use App\Data\RecruitmentAttentionQueue;
+use App\Enums\AiExecutionOrigin;
 use App\Exceptions\PlanLimitExceededException;
 use App\Exceptions\RecruitmentWorkflowException;
 use App\Filament\Clusters\Settings\Pages\PlanSettings;
@@ -17,7 +19,9 @@ use App\Filament\Resources\Pipelines\PipelineResource;
 use App\Models\Candidate;
 use App\Models\Company;
 use App\Models\Job;
+use App\Models\SourcingSearch;
 use App\Models\User;
+use App\Services\CandidateSourcingEligibilityService;
 use App\Services\JobDashboardService;
 use App\Services\RecruitmentAttentionService;
 use App\Services\RecruitmentProgressService;
@@ -70,6 +74,55 @@ class ViewJob extends ViewRecord
     public function getTitle(): string|Htmlable
     {
         return $this->getJob()->name;
+    }
+
+    /**
+     * The workspace summary can start the sourcing work it identifies. This
+     * repeats the same authorization and state gates as the sourcing panel
+     * because summary data can be stale by the time a recruiter clicks it.
+     */
+    public function runSourcingFromAttention(): void
+    {
+        $company = Filament::getTenant();
+        $recruiter = Filament::auth()->user();
+
+        abort_unless($company instanceof Company && $recruiter instanceof User, 403);
+
+        $job = Job::query()
+            ->whereBelongsTo($company)
+            ->whereKey($this->getJob()->getKey())
+            ->with('sourcingSearch')
+            ->firstOrFail();
+
+        abort_unless(JobResource::canEdit($job), 403);
+
+        $search = $job->sourcingSearch;
+
+        if ($search instanceof SourcingSearch && $search->status->isInProgress()) {
+            return;
+        }
+
+        $job->load('jobCriteria');
+
+        if (! $job->hasConfirmedCriteria() || $job->jobCriteria->isEmpty()) {
+            return;
+        }
+
+        if (app(CandidateSourcingEligibilityService::class)->eligibleCandidateCount($job) === 0) {
+            return;
+        }
+
+        app(RunSourcingSearch::class)->handle(
+            $job,
+            (int) $recruiter->getKey(),
+            AiExecutionOrigin::UserRequested,
+            'sourcing_requested_from_attention',
+        );
+
+        Notification::make()
+            ->title(__('sourcing.panel.search_started'))
+            ->success()
+            ->send();
     }
 
     protected function getHeaderActions(): array

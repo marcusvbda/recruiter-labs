@@ -114,6 +114,12 @@ This feature is governed by
    revision.
 10. Human workflow actions remain independent from the AI result.
 
+For eligible public applications, this queueing is the normal automatic path:
+the recruiter does not have to start an ordinary evaluation manually. An
+explicit retry remains a recovery action. Adding an existing candidate to a job
+without application-submitted evidence does not create an empty formal
+evaluation or reuse sourcing analysis as application fit.
+
 ## Acceptance criteria
 
 - **AC01** — An application cannot receive a current candidate evaluation while

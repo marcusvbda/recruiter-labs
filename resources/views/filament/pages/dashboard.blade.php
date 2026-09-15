@@ -69,10 +69,22 @@
                                     </span>
                                 </span>
 
-                                <a href="{{ $item['action_url'] }}" wire:navigate class="rl-overview-action rl-attention-item__action">
-                                    {{ $item['action_label'] }}
-                                    <x-filament::icon icon="heroicon-m-arrow-right" class="size-3.5 shrink-0" aria-hidden="true" />
-                                </a>
+                                @if (in_array($item['action_intent'], ['start_sourcing', 'refresh_sourcing'], true) && $item['job_id'])
+                                    <x-filament::button
+                                        color="gray"
+                                        size="sm"
+                                        wire:click="runSourcingFromAttention({{ $item['job_id'] }})"
+                                        wire:loading.attr="disabled"
+                                        wire:target="runSourcingFromAttention({{ $item['job_id'] }})"
+                                        class="rl-attention-item__action">
+                                        {{ $item['action_label'] }}
+                                    </x-filament::button>
+                                @else
+                                    <a href="{{ $item['action_url'] }}" wire:navigate class="rl-overview-action rl-attention-item__action">
+                                        {{ $item['action_label'] }}
+                                        <x-filament::icon icon="heroicon-m-arrow-right" class="size-3.5 shrink-0" aria-hidden="true" />
+                                    </a>
+                                @endif
                             </li>
                         @endforeach
                     </ul>
