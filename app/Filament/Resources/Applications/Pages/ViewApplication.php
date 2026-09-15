@@ -28,6 +28,7 @@ use App\Models\Status;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
@@ -241,7 +242,12 @@ class ViewApplication extends ViewRecord
 
                 Gate::authorize('update', $application);
 
-                app(ScheduleApplicationFitAnalysis::class)->handle($application);
+                $userId = Filament::auth()->id();
+
+                app(ScheduleApplicationFitAnalysis::class)->handle(
+                    $application,
+                    $userId === null ? null : (int) $userId,
+                );
 
                 $this->redirect(ApplicationResource::getUrl('view', [
                     'record' => $application,

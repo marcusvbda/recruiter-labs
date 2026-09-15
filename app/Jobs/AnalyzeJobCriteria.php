@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Actions\ReplaceJobCriteria;
 use App\Ai\Agents\ExtractJobCriteria;
+use App\Enums\AiExecutionOrigin;
 use App\Enums\AiUsageStatus;
 use App\Enums\JobCriteriaProcessingStatus;
 use App\Enums\Limit;
@@ -46,6 +47,8 @@ class AnalyzeJobCriteria implements ShouldBeUnique, ShouldQueue
         public readonly ?int $userId,
         public readonly int $generation,
         ?string $executionId = null,
+        public readonly AiExecutionOrigin $origin = AiExecutionOrigin::UserRequested,
+        public readonly ?string $trigger = 'criteria_regeneration_requested',
     ) {
         $this->executionId = $executionId ?? (string) Str::uuid();
         $this->queue = self::QUEUE;
@@ -125,6 +128,8 @@ class AnalyzeJobCriteria implements ShouldBeUnique, ShouldQueue
             self::PROVIDER,
             $configuration->usesOwnKey ? $configuration->model : self::MODEL,
             $configuration->usesOwnKey,
+            $this->origin,
+            $this->trigger,
         );
 
         $markedAsProcessing = Job::query()

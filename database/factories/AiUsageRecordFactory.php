@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\AiExecutionOrigin;
 use App\Enums\AiProvider;
 use App\Enums\AiUsageStatus;
 use App\Models\AiUsageRecord;
@@ -28,6 +29,8 @@ class AiUsageRecordFactory extends Factory
             'execution_id' => fake()->uuid(),
             'attempt' => 1,
             'operation' => fake()->randomElement(['cv_analysis', 'candidate_summary']),
+            'origin' => AiExecutionOrigin::UserRequested,
+            'trigger' => 'application_analysis_requested',
             'provider' => AiProvider::Platform,
             'ai_provider' => 'openai',
             'model' => 'gpt-4o-mini',

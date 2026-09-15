@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Actions\CaptureCompanyMilestone;
+use App\Actions\ScheduleInitialJobCriteriaExtraction;
 use App\Enums\ApplicationLocale;
 use App\Enums\CompanyMilestone as CompanyMilestoneEnum;
 use App\Enums\CoverLetterType;
@@ -69,6 +70,7 @@ class Job extends Model
         // captured here and covers every creation path, including duplication.
         static::created(function (Job $job): void {
             app(CaptureCompanyMilestone::class)->handle((int) $job->company_id, CompanyMilestoneEnum::FirstJobCreated);
+            app(ScheduleInitialJobCriteriaExtraction::class)->handle($job);
         });
 
         // Changing the pipeline of a job that already has applications would leave

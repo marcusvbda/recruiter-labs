@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Enums\AiExecutionOrigin;
 use App\Enums\ApplicationAnalysisStatus;
 use App\Enums\CompanyMilestone;
 use App\Enums\JobCriteriaProcessingStatus;
@@ -122,7 +123,12 @@ class ConfirmJobCriteria
                         ->orWhere('analysis_criteria_generation', '!=', $job->criteria_generation))))
             ->get()
             ->each(function (Application $application) use ($userId): void {
-                $this->scheduleApplicationFitAnalysis->handle($application, $userId);
+                $this->scheduleApplicationFitAnalysis->handle(
+                    $application,
+                    $userId,
+                    origin: AiExecutionOrigin::Automatic,
+                    trigger: 'criteria_confirmed',
+                );
             });
     }
 }

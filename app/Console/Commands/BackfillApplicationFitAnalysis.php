@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Actions\ScheduleApplicationFitAnalysis;
+use App\Enums\AiExecutionOrigin;
 use App\Enums\ApplicationAnalysisStatus;
 use App\Models\Application;
 use Illuminate\Console\Command;
@@ -35,7 +36,11 @@ class BackfillApplicationFitAnalysis extends Command
         $awaitingCriteria = 0;
 
         foreach ($staleApplications as $application) {
-            $scheduleApplicationFitAnalysis->handle($application);
+            $scheduleApplicationFitAnalysis->handle(
+                $application,
+                origin: AiExecutionOrigin::Automatic,
+                trigger: 'application_analysis_backfill',
+            );
 
             match ($application->refresh()->analysis_status) {
                 ApplicationAnalysisStatus::Pending => $scheduled++,

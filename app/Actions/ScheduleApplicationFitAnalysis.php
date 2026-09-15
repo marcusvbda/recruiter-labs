@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Enums\AiExecutionOrigin;
 use App\Enums\ApplicationAnalysisStatus;
 use App\Jobs\AnalyzeApplicationFit;
 use App\Models\Application;
@@ -24,8 +25,13 @@ use Illuminate\Support\Facades\DB;
  */
 class ScheduleApplicationFitAnalysis
 {
-    public function handle(Application $application, ?int $userId = null, ?int $expectedGeneration = null): void
-    {
+    public function handle(
+        Application $application,
+        ?int $userId = null,
+        ?int $expectedGeneration = null,
+        AiExecutionOrigin $origin = AiExecutionOrigin::UserRequested,
+        ?string $trigger = 'application_analysis_requested',
+    ): void {
         $generation = DB::transaction(function () use ($application, $expectedGeneration): ?int {
             $lockedApplication = Application::query()
                 ->whereKey($application->getKey())
@@ -66,7 +72,7 @@ class ScheduleApplicationFitAnalysis
             return;
         }
 
-        AnalyzeApplicationFit::dispatch($application->getKey(), $userId, $generation)
+        AnalyzeApplicationFit::dispatch($application->getKey(), $userId, $generation, origin: $origin, trigger: $trigger)
             ->onConnection((string) config('services.openai.queue_connection', 'database'))
             ->afterCommit();
     }

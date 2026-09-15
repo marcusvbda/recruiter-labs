@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Enums\AiExecutionOrigin;
 use App\Enums\SourcingSearchStatus;
 use App\Jobs\SourceCandidatesForJob;
 use App\Models\Company;
@@ -34,8 +35,12 @@ use Illuminate\Support\Facades\DB;
  */
 class RunSourcingSearch
 {
-    public function handle(Job $job, ?int $userId = null): void
-    {
+    public function handle(
+        Job $job,
+        ?int $userId = null,
+        AiExecutionOrigin $origin = AiExecutionOrigin::UserRequested,
+        ?string $trigger = 'sourcing_requested',
+    ): void {
         $generation = DB::transaction(function () use ($job, $userId): ?int {
             $lockedJob = Job::query()
                 ->whereKey($job->getKey())
@@ -88,7 +93,7 @@ class RunSourcingSearch
             return;
         }
 
-        SourceCandidatesForJob::dispatch($job->getKey(), $userId, $generation)
+        SourceCandidatesForJob::dispatch($job->getKey(), $userId, $generation, origin: $origin, trigger: $trigger)
             ->onConnection((string) config('services.openai.queue_connection', 'database'))
             ->afterCommit();
     }

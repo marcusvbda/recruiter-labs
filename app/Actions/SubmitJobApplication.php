@@ -3,6 +3,7 @@
 namespace App\Actions;
 
 use App\Data\SubmitJobApplicationData;
+use App\Enums\AiExecutionOrigin;
 use App\Enums\ApplicationCoverLetterType;
 use App\Enums\ApplicationDocumentType;
 use App\Enums\ApplicationQuestionType;
@@ -82,7 +83,11 @@ class SubmitJobApplication
                     );
                 }
 
-                $this->scheduleApplicationFitAnalysis->handle($application);
+                $this->scheduleApplicationFitAnalysis->handle(
+                    $application,
+                    origin: AiExecutionOrigin::Automatic,
+                    trigger: 'application_submitted',
+                );
 
                 return $application->load([
                     'candidate',

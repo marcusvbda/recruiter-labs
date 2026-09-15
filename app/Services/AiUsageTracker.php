@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\AiExecutionOrigin;
 use App\Enums\AiProvider;
 use App\Enums\AiUsageStatus;
 use App\Models\AiUsageRecord;
@@ -19,6 +20,8 @@ class AiUsageTracker
         string $provider,
         string $model,
         bool $usedOwnKey = false,
+        AiExecutionOrigin $origin = AiExecutionOrigin::UserRequested,
+        ?string $trigger = null,
     ): AiUsageRecord {
         $attempt = ((int) AiUsageRecord::query()
             ->where('execution_id', $executionId)
@@ -31,6 +34,8 @@ class AiUsageTracker
             'execution_id' => $executionId,
             'attempt' => $attempt,
             'operation' => $operation,
+            'origin' => $origin,
+            'trigger' => $trigger,
             'provider' => $usedOwnKey ? AiProvider::Own : AiProvider::Platform,
             'ai_provider' => $provider,
             'model' => $model,
@@ -47,6 +52,8 @@ class AiUsageTracker
         string $provider,
         string $model,
         bool $usedOwnKey = false,
+        AiExecutionOrigin $origin = AiExecutionOrigin::UserRequested,
+        ?string $trigger = null,
     ): AiUsageRecord {
         $attempt = ((int) AiUsageRecord::query()
             ->where('execution_id', $executionId)
@@ -60,6 +67,8 @@ class AiUsageTracker
             'execution_id' => $executionId,
             'attempt' => $attempt,
             'operation' => $operation,
+            'origin' => $origin,
+            'trigger' => $trigger,
             'provider' => $usedOwnKey ? AiProvider::Own : AiProvider::Platform,
             'ai_provider' => $provider,
             'model' => $model,

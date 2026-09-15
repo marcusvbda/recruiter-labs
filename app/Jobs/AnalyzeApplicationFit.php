@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Actions\ReplaceApplicationFitAnalysis;
 use App\Actions\ScheduleApplicationFitAnalysis;
 use App\Ai\Agents\ScoreApplicationAgainstCriteria;
+use App\Enums\AiExecutionOrigin;
 use App\Enums\AiUsageStatus;
 use App\Enums\ApplicationAnalysisStatus;
 use App\Enums\ApplicationDocumentType;
@@ -52,6 +53,8 @@ class AnalyzeApplicationFit implements ShouldBeUnique, ShouldQueue
         public readonly ?int $userId,
         public readonly int $generation,
         ?string $executionId = null,
+        public readonly AiExecutionOrigin $origin = AiExecutionOrigin::UserRequested,
+        public readonly ?string $trigger = 'application_analysis_requested',
     ) {
         $this->executionId = $executionId ?? (string) Str::uuid();
         $this->queue = self::QUEUE;
@@ -173,6 +176,8 @@ class AnalyzeApplicationFit implements ShouldBeUnique, ShouldQueue
             self::PROVIDER,
             $configuration->usesOwnKey ? $configuration->model : self::MODEL,
             $configuration->usesOwnKey,
+            $this->origin,
+            $this->trigger,
         );
 
         $markedAsProcessing = Application::query()
@@ -296,7 +301,13 @@ class AnalyzeApplicationFit implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        $scheduleApplicationFitAnalysis->handle($application, $this->userId, $this->generation);
+        $scheduleApplicationFitAnalysis->handle(
+            $application,
+            $this->userId,
+            $this->generation,
+            $this->origin,
+            $this->trigger,
+        );
     }
 
     private function elapsedMilliseconds(int $startedAt): int

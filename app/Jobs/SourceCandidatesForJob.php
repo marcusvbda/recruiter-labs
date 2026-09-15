@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Actions\ReplaceSourcingMatchAnalysis;
 use App\Ai\Agents\ScoreCandidateForSourcing;
+use App\Enums\AiExecutionOrigin;
 use App\Enums\AiUsageStatus;
 use App\Enums\Limit;
 use App\Enums\SourcingSearchStatus;
@@ -81,6 +82,8 @@ class SourceCandidatesForJob implements ShouldBeUnique, ShouldQueue
         public readonly int $jobId,
         public readonly ?int $userId,
         public readonly int $generation,
+        public readonly AiExecutionOrigin $origin = AiExecutionOrigin::UserRequested,
+        public readonly ?string $trigger = 'sourcing_requested',
     ) {
         $this->queue = self::QUEUE;
     }
@@ -243,6 +246,8 @@ class SourceCandidatesForJob implements ShouldBeUnique, ShouldQueue
                     self::PROVIDER,
                     $model,
                     $configuration->usesOwnKey,
+                    $this->origin,
+                    $this->trigger,
                 );
 
                 try {
