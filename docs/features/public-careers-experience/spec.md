@@ -1,3 +1,8 @@
+---
+status: implemented
+type: as-built
+---
+
 # Public careers experience
 
 ## Problem
@@ -76,7 +81,7 @@ The core product principle is:
 
 ## Product context and source-of-truth boundary
 
-This is a planned product specification.
+This is an as-built product specification.
 
 It extends existing recruitment features rather than replacing them.
 

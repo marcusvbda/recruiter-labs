@@ -170,6 +170,7 @@ return [
         'sources' => [
             'direct' => 'Direct application',
             'referral' => 'Referral link',
+            'career_page' => 'Career Page',
         ],
         'cover_letter' => [
             'types' => [

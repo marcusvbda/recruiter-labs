@@ -114,7 +114,7 @@ class ViewJob extends ViewRecord
         $job = $this->getJob();
         $company = $job->company;
 
-        $publicUrl = $company !== null && $company->careers_enabled && $job->acceptsApplications()
+        $publicUrl = $company !== null && $company->careers_enabled && $job->published
             ? route('careers.jobs.show', ['company' => $company->slug, 'key' => $job->key])
             : route('job.show', ['key' => $job->key]);
 

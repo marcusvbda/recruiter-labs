@@ -35,7 +35,14 @@ class JobController extends Controller
             ? route('careers.jobs.show', ['company' => $job->company->slug, 'key' => $job->key])
             : route('job.show', ['key' => $job->key]);
         $description = $this->publicJobPageService->descriptionExcerpt($job)
-            ?? "Explore the {$job->name} opportunity at {$publicCompany['name']}.";
+            ?? __('job_application.meta.description', [
+                'job' => $job->name,
+                'company' => $publicCompany['name'],
+            ]);
+        $title = __('job_application.meta.title', [
+            'job' => $job->name,
+            'company' => $publicCompany['name'],
+        ]);
 
         return Inertia::render('job/apply', [
             'job' => $this->publicJobPageService->applicationJob($job),
@@ -48,11 +55,11 @@ class JobController extends Controller
                 'application' => route('job.apply.store', ['key' => $job->key]),
             ],
             'meta' => [
-                'title' => "{$job->name} at {$publicCompany['name']}",
+                'title' => $title,
                 'description' => $description,
                 'canonicalUrl' => $canonicalUrl,
                 'openGraph' => [
-                    'title' => "{$job->name} at {$publicCompany['name']}",
+                    'title' => $title,
                     'description' => $description,
                     'url' => $canonicalUrl,
                     'imageUrl' => $this->publicJobPageService->metadataImageUrl($job->company),
@@ -74,6 +81,16 @@ class JobController extends Controller
 
         App::setLocale((string) $job->getRawOriginal('application_locale'));
 
+        $publicCompany = $this->publicJobPageService->company($job->company);
+        $title = __('job_application.meta.title', [
+            'job' => $job->name,
+            'company' => $publicCompany['name'],
+        ]);
+        $description = __('job_application.meta.description', [
+            'job' => $job->name,
+            'company' => $publicCompany['name'],
+        ]);
+
         return Inertia::render('job/apply', [
             'job' => $this->publicJobPageService->applicationJob($job),
             'phoneCountries' => PhoneCountry::applicationOptions(),
@@ -82,12 +99,23 @@ class JobController extends Controller
             'availability' => [
                 'status' => 'open',
                 'acceptsApplications' => false,
-                'message' => 'Preview mode. Applications cannot be submitted from this page.',
             ],
             'urls' => [
                 'current' => $request->fullUrl(),
                 'canonical' => route('job.preview', ['key' => $job->key]),
                 'application' => route('job.apply.store', ['key' => $job->key]),
+            ],
+            'meta' => [
+                'title' => $title,
+                'description' => $description,
+                'canonicalUrl' => route('job.preview', ['key' => $job->key]),
+                'openGraph' => [
+                    'title' => $title,
+                    'description' => $description,
+                    'url' => route('job.preview', ['key' => $job->key]),
+                    'imageUrl' => $this->publicJobPageService->metadataImageUrl($job->company),
+                ],
+                'robots' => 'noindex,nofollow',
             ],
         ]);
     }

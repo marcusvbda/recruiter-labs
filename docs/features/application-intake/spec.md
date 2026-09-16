@@ -106,8 +106,9 @@ The recruitment workflow rules in
   edits.
 - **AC08** — The submitted CV is associated with the resulting application, and
   cover-letter material follows the job's configured mode.
-- **AC09** — A valid referral is recorded as application provenance; a direct
-  application remains direct.
+- **AC09** — A direct application is attributed as Direct and a careers-page
+  application as Career Page; a valid referral is attributed as Referral and
+  takes precedence over Career Page.
 - **AC10** — Referral/source attribution does not alter candidate evaluation.
 - **AC11** — UTM/campaign attribution can be retained with the application.
 - **AC12** — An application created before criteria confirmation waits rather

@@ -11,9 +11,8 @@ export interface PublicCompany {
 }
 
 export interface JobApplicationAvailability {
-    status: 'open' | 'unavailable';
+    status: 'open' | 'not_started' | 'paused' | 'full' | 'ended';
     acceptsApplications: boolean;
-    message: string | null;
 }
 
 export interface JobApplicationUrls {
@@ -57,9 +56,21 @@ export interface JobApplicationTranslations {
     description_empty: string;
     header: {
         careers_at: string;
+        careers: string;
         tagline: string;
         preview_mode: string;
-        applications_open: string;
+        company_fallback: string;
+        company_logo_alt: string;
+    };
+    availability: {
+        unavailable_heading: string;
+        statuses: {
+            open: string;
+            not_started: string;
+            paused: string;
+            full: string;
+            ended: string;
+        };
     };
     alerts: {
         preview: string;
@@ -1113,13 +1124,17 @@ export const JobApplication = ({
         useState<ApplicationStep>('description');
     const [applicationSubmitted, setApplicationSubmitted] = useState(false);
     const applicationFlowRef = useRef<HTMLDivElement>(null);
-    const companyName = company?.name ?? job.company?.name ?? 'Company';
+    const companyName =
+        company?.name ??
+        job.company?.name ??
+        translations.header.company_fallback;
     const closingDate = formatDate(job.ends_at, translations.locale);
     const openingDate = formatDate(job.starts_at, translations.locale);
     const questions = job.application_questions ?? [];
     const cvTypes = job.accepted_cv_types ?? [];
-    const isUnavailable = !preview && !availability.acceptsApplications;
+    const isUnavailable = !preview && availability.status !== 'open';
     const showApplicationForm = preview || availability.acceptsApplications;
+    const showOpenAvailability = preview || availability.status === 'open';
 
     function changeStep(step: ApplicationStep) {
         if (step === 'form' && !showApplicationForm) {
@@ -1149,7 +1164,10 @@ export const JobApplication = ({
                     {company?.logoUrl ? (
                         <img
                             src={company.logoUrl}
-                            alt={`${companyName} logo`}
+                            alt={translate(
+                                translations.header.company_logo_alt,
+                                { company: companyName },
+                            )}
                             className="h-9 w-auto max-w-36 rounded object-contain sm:h-10"
                         />
                     ) : (
@@ -1175,7 +1193,7 @@ export const JobApplication = ({
                             href={urls.careers}
                             className="text-sm font-semibold text-blue-700 transition hover:text-blue-900 focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
                         >
-                            Careers
+                            {translations.header.careers}
                         </Link>
                     )}
                     <span
@@ -1194,9 +1212,9 @@ export const JobApplication = ({
                         />
                         {preview
                             ? translations.header.preview_mode
-                            : isUnavailable
-                              ? 'Applications unavailable'
-                              : translations.header.applications_open}
+                            : translations.availability.statuses[
+                                  availability.status
+                              ]}
                     </span>
                 </div>
             </header>
@@ -1220,7 +1238,7 @@ export const JobApplication = ({
                     </div>
                 )}
 
-                {isUnavailable && availability.message && (
+                {isUnavailable && (
                     <div
                         role="status"
                         className="mb-5 flex items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm dark:border-white/10 dark:bg-slate-900 dark:text-slate-200"
@@ -1228,7 +1246,13 @@ export const JobApplication = ({
                         <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300">
                             <BriefcaseIcon className="size-5" />
                         </span>
-                        <p>{availability.message}</p>
+                        <p>
+                            {
+                                translations.availability.statuses[
+                                    availability.status
+                                ]
+                            }
+                        </p>
                     </div>
                 )}
 
@@ -1288,15 +1312,17 @@ export const JobApplication = ({
                                         />
                                     </button>
                                 )}
-                                <span className="inline-flex items-center justify-center gap-2 text-sm text-blue-100 sm:justify-start">
-                                    <CalendarIcon className="size-4" />
-                                    {closingDate
-                                        ? translate(
-                                              translations.hero.open_until,
-                                              { date: closingDate },
-                                          )
-                                        : translations.hero.no_closing_date}
-                                </span>
+                                {showOpenAvailability && (
+                                    <span className="inline-flex items-center justify-center gap-2 text-sm text-blue-100 sm:justify-start">
+                                        <CalendarIcon className="size-4" />
+                                        {closingDate
+                                            ? translate(
+                                                  translations.hero.open_until,
+                                                  { date: closingDate },
+                                              )
+                                            : translations.hero.no_closing_date}
+                                    </span>
+                                )}
                             </div>
                         </div>
 
@@ -1400,7 +1426,8 @@ export const JobApplication = ({
                                         </span>
                                         <h2 className="mt-5 text-xl font-semibold tracking-tight">
                                             {isUnavailable
-                                                ? 'Applications unavailable'
+                                                ? translations.availability
+                                                      .unavailable_heading
                                                 : translations.sidebar.title}
                                         </h2>
                                     </div>
@@ -1458,39 +1485,43 @@ export const JobApplication = ({
                                             </div>
                                         </div>
 
-                                        <div className="flex items-start gap-3">
-                                            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-400/10 dark:text-amber-300">
-                                                <CalendarIcon className="size-5" />
-                                            </span>
-                                            <div>
-                                                <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                                                    {closingDate
-                                                        ? translate(
-                                                              translations
+                                        {showOpenAvailability && (
+                                            <div className="flex items-start gap-3">
+                                                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-400/10 dark:text-amber-300">
+                                                    <CalendarIcon className="size-5" />
+                                                </span>
+                                                <div>
+                                                    <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                                                        {closingDate
+                                                            ? translate(
+                                                                  translations
+                                                                      .sidebar
+                                                                      .closes,
+                                                                  {
+                                                                      date: closingDate,
+                                                                  },
+                                                              )
+                                                            : translations
                                                                   .sidebar
-                                                                  .closes,
-                                                              {
-                                                                  date: closingDate,
-                                                              },
-                                                          )
-                                                        : translations.sidebar
-                                                              .open_ended}
-                                                </p>
-                                                <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                                                    {openingDate
-                                                        ? translate(
-                                                              translations
+                                                                  .open_ended}
+                                                    </p>
+                                                    <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                                                        {openingDate
+                                                            ? translate(
+                                                                  translations
+                                                                      .sidebar
+                                                                      .applications_opened,
+                                                                  {
+                                                                      date: openingDate,
+                                                                  },
+                                                              )
+                                                            : translations
                                                                   .sidebar
-                                                                  .applications_opened,
-                                                              {
-                                                                  date: openingDate,
-                                                              },
-                                                          )
-                                                        : translations.sidebar
-                                                              .applications_open_now}
-                                                </p>
+                                                                  .applications_open_now}
+                                                    </p>
+                                                </div>
                                             </div>
-                                        </div>
+                                        )}
 
                                         <div className="h-px bg-slate-100 dark:bg-white/10" />
 

@@ -170,6 +170,7 @@ return [
         'sources' => [
             'direct' => 'Candidatura direta',
             'referral' => 'Link de indicação',
+            'career_page' => 'Página de carreiras',
         ],
         'cover_letter' => [
             'types' => [

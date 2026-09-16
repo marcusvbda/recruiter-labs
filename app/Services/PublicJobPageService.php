@@ -6,6 +6,7 @@ use App\Models\Company;
 use App\Models\CvFileType;
 use App\Models\Job;
 use App\Models\JobApplicationQuestion;
+use Carbon\CarbonImmutable;
 use Filament\Forms\Components\RichEditor\RichContentRenderer;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -112,18 +113,50 @@ class PublicJobPageService
         ];
     }
 
-    /** @return array{status: 'open'|'unavailable', acceptsApplications: bool, message: string|null} */
+    /**
+     * @return array{
+     *     status: 'open'|'not_started'|'paused'|'full'|'ended',
+     *     acceptsApplications: bool
+     * }
+     */
     public function availability(Job $job): array
     {
-        $acceptsApplications = $job->acceptsApplications();
+        $today = CarbonImmutable::instance(today());
+        $startsAt = $job->getRawOriginal('starts_at');
+        $endsAt = $job->getRawOriginal('ends_at');
 
-        return [
-            'status' => $acceptsApplications ? 'open' : 'unavailable',
-            'acceptsApplications' => $acceptsApplications,
-            'message' => $acceptsApplications
-                ? null
-                : 'Applications are no longer being accepted for this role.',
-        ];
+        if ($startsAt !== null && CarbonImmutable::parse($startsAt)->greaterThan($today)) {
+            return $this->availabilityState(
+                status: 'not_started',
+                acceptsApplications: false,
+            );
+        }
+
+        if ($endsAt !== null && CarbonImmutable::parse($endsAt)->lessThan($today)) {
+            return $this->availabilityState(
+                status: 'ended',
+                acceptsApplications: false,
+            );
+        }
+
+        if ($job->applications_paused) {
+            return $this->availabilityState(
+                status: 'paused',
+                acceptsApplications: false,
+            );
+        }
+
+        if ($this->applicationLimitReached($job)) {
+            return $this->availabilityState(
+                status: 'full',
+                acceptsApplications: false,
+            );
+        }
+
+        return $this->availabilityState(
+            status: 'open',
+            acceptsApplications: $job->acceptsApplications(),
+        );
     }
 
     public function descriptionExcerpt(Job $job): ?string
@@ -140,5 +173,30 @@ class PublicJobPageService
         return filled($job->description)
             ? RichContentRenderer::make($job->description)->toHtml()
             : null;
+    }
+
+    private function applicationLimitReached(Job $job): bool
+    {
+        if ($job->application_limit === null) {
+            return false;
+        }
+
+        $applicationCount = $job->relationLoaded('applications')
+            ? $job->applications->count()
+            : $job->applications()->count();
+
+        return $applicationCount >= $job->application_limit;
+    }
+
+    /**
+     * @param  'open'|'not_started'|'paused'|'full'|'ended'  $status
+     * @return array{status: 'open'|'not_started'|'paused'|'full'|'ended', acceptsApplications: bool}
+     */
+    private function availabilityState(string $status, bool $acceptsApplications): array
+    {
+        return [
+            'status' => $status,
+            'acceptsApplications' => $acceptsApplications,
+        ];
     }
 }

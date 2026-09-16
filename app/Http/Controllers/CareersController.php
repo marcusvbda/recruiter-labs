@@ -31,10 +31,13 @@ class CareersController extends Controller
 
         $canonicalUrl = route('careers.show', ['company' => $company->slug]);
         $description = $this->metaDescription($company);
+        $title = __('careers.meta.title', ['company' => $company->name]);
         $publicCompany = $this->publicJobPageService->company($company);
 
         return Inertia::render('careers/show', [
             'company' => $publicCompany,
+            'locale' => str_replace('_', '-', app()->getLocale()),
+            'translations' => __('careers'),
             'jobs' => $company->jobs()
                 ->acceptingApplications()
                 ->orderBy('name')
@@ -50,11 +53,11 @@ class CareersController extends Controller
                 'canonical' => $canonicalUrl,
             ],
             'meta' => [
-                'title' => "Careers at {$company->name}",
+                'title' => $title,
                 'description' => $description,
                 'canonicalUrl' => $canonicalUrl,
                 'openGraph' => [
-                    'title' => "Careers at {$company->name}",
+                    'title' => $title,
                     'description' => $description,
                     'url' => $canonicalUrl,
                     'imageUrl' => $this->publicJobPageService->metadataImageUrl($company),
@@ -85,6 +88,10 @@ class CareersController extends Controller
         ]);
         $availability = $this->publicJobPageService->availability($job);
         $description = $this->jobMetaDescription($job, $company);
+        $title = __('job_application.meta.title', [
+            'job' => $job->name,
+            'company' => $company->name,
+        ]);
         $publicCompany = $this->publicJobPageService->company($company);
 
         return Inertia::render('careers/job', [
@@ -101,11 +108,11 @@ class CareersController extends Controller
                 'application' => $canonicalUrl,
             ],
             'meta' => [
-                'title' => "{$job->name} at {$company->name}",
+                'title' => $title,
                 'description' => $description,
                 'canonicalUrl' => $canonicalUrl,
                 'openGraph' => [
-                    'title' => "{$job->name} at {$company->name}",
+                    'title' => $title,
                     'description' => $description,
                     'url' => $canonicalUrl,
                     'imageUrl' => $this->publicJobPageService->metadataImageUrl($company),
@@ -119,14 +126,17 @@ class CareersController extends Controller
     {
         return filled($company->careers_description)
             ? Str::limit(Str::squish($company->careers_description), 160)
-            : "Explore open roles at {$company->name}.";
+            : __('careers.meta.description', ['company' => $company->name]);
     }
 
     private function jobMetaDescription(Job $job, Company $company): string
     {
         $excerpt = $this->publicJobPageService->descriptionExcerpt($job);
 
-        return $excerpt ?? "Explore the {$job->name} opportunity at {$company->name}.";
+        return $excerpt ?? __('job_application.meta.description', [
+            'job' => $job->name,
+            'company' => $company->name,
+        ]);
     }
 
     private function jobUrl(Company $company, Job $job, Request $request): string

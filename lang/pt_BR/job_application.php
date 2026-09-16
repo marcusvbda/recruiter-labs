@@ -9,9 +9,21 @@ return [
     'description_empty' => 'Mais informações sobre esta oportunidade estarão disponíveis em breve.',
     'header' => [
         'careers_at' => 'Carreiras na :company',
+        'careers' => 'Carreiras',
         'tagline' => 'Encontre um trabalho que vale a pena',
         'preview_mode' => 'Modo de preview',
-        'applications_open' => 'Candidaturas abertas',
+        'company_fallback' => 'Empresa',
+        'company_logo_alt' => 'Logotipo da :company',
+    ],
+    'availability' => [
+        'unavailable_heading' => 'Candidaturas indisponíveis',
+        'statuses' => [
+            'open' => 'Candidaturas abertas',
+            'not_started' => 'As candidaturas ainda não estão abertas.',
+            'paused' => 'As candidaturas estão pausadas no momento.',
+            'full' => 'Esta vaga atingiu o limite de candidaturas.',
+            'ended' => 'As candidaturas para esta vaga foram encerradas.',
+        ],
     ],
     'alerts' => [
         'preview' => 'Modo de preview. Você pode visualizar e preencher o formulário, mas nenhuma candidatura será enviada.',

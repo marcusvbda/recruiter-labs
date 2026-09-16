@@ -9,9 +9,21 @@ return [
     'description_empty' => 'Pronto habrá más información disponible sobre esta oportunidad.',
     'header' => [
         'careers_at' => 'Trabaja en :company',
+        'careers' => 'Carreras',
         'tagline' => 'Encuentra un trabajo que valga la pena',
         'preview_mode' => 'Modo de vista previa',
-        'applications_open' => 'Postulaciones abiertas',
+        'company_fallback' => 'Empresa',
+        'company_logo_alt' => 'Logotipo de :company',
+    ],
+    'availability' => [
+        'unavailable_heading' => 'Postulaciones no disponibles',
+        'statuses' => [
+            'open' => 'Postulaciones abiertas',
+            'not_started' => 'Las postulaciones todavía no están abiertas.',
+            'paused' => 'Las postulaciones están pausadas actualmente.',
+            'full' => 'Este empleo alcanzó el límite de postulaciones.',
+            'ended' => 'Las postulaciones para este empleo han cerrado.',
+        ],
     ],
     'alerts' => [
         'preview' => 'Modo de vista previa. Puedes revisar y completar el formulario, pero no se enviará ninguna postulación.',

@@ -9,9 +9,21 @@ return [
     'description_empty' => 'More information about this opportunity will be available soon.',
     'header' => [
         'careers_at' => 'Careers at :company',
+        'careers' => 'Careers',
         'tagline' => 'Find work worth doing',
         'preview_mode' => 'Preview mode',
-        'applications_open' => 'Applications open',
+        'company_fallback' => 'Company',
+        'company_logo_alt' => ':company logo',
+    ],
+    'availability' => [
+        'unavailable_heading' => 'Applications unavailable',
+        'statuses' => [
+            'open' => 'Applications open',
+            'not_started' => 'Applications are not open yet.',
+            'paused' => 'Applications are currently paused.',
+            'full' => 'This role has reached its application limit.',
+            'ended' => 'Applications have closed for this role.',
+        ],
     ],
     'alerts' => [
         'preview' => 'Preview mode. You can inspect and fill the form, but no application can be submitted.',
