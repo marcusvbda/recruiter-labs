@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\PhoneCountry;
 use App\Models\User;
 use App\Services\JobService;
-use Filament\Forms\Components\RichEditor\RichContentRenderer;
+use App\Services\PublicJobPageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
 use Inertia\Inertia;
@@ -13,7 +13,10 @@ use Inertia\Response;
 
 class JobController extends Controller
 {
-    public function __construct(private readonly JobService $jobService) {}
+    public function __construct(
+        private readonly JobService $jobService,
+        private readonly PublicJobPageService $publicJobPageService,
+    ) {}
 
     public function show(Request $request, string $key): Response
     {
@@ -26,14 +29,36 @@ class JobController extends Controller
         }
         App::setLocale((string) $job->getRawOriginal('application_locale'));
 
-        $job->description = filled($job->description)
-            ? RichContentRenderer::make($job->description)->toHtml()
-            : null;
+        $availability = $this->publicJobPageService->availability($job);
+        $publicCompany = $this->publicJobPageService->company($job->company);
+        $canonicalUrl = $job->company?->careers_enabled && $availability['acceptsApplications']
+            ? route('careers.jobs.show', ['company' => $job->company->slug, 'key' => $job->key])
+            : route('job.show', ['key' => $job->key]);
+        $description = $this->publicJobPageService->descriptionExcerpt($job)
+            ?? "Explore the {$job->name} opportunity at {$publicCompany['name']}.";
 
         return Inertia::render('job/apply', [
-            'job' => $job,
+            'job' => $this->publicJobPageService->applicationJob($job),
             'phoneCountries' => PhoneCountry::applicationOptions(),
             'translations' => __('job_application'),
+            'availability' => $availability,
+            'urls' => [
+                'current' => $request->fullUrl(),
+                'canonical' => $canonicalUrl,
+                'application' => route('job.apply.store', ['key' => $job->key]),
+            ],
+            'meta' => [
+                'title' => "{$job->name} at {$publicCompany['name']}",
+                'description' => $description,
+                'canonicalUrl' => $canonicalUrl,
+                'openGraph' => [
+                    'title' => "{$job->name} at {$publicCompany['name']}",
+                    'description' => $description,
+                    'url' => $canonicalUrl,
+                    'imageUrl' => $this->publicJobPageService->metadataImageUrl($job->company),
+                ],
+                'robots' => $availability['acceptsApplications'] ? 'index,follow' : 'noindex,follow',
+            ],
         ]);
     }
 
@@ -49,15 +74,21 @@ class JobController extends Controller
 
         App::setLocale((string) $job->getRawOriginal('application_locale'));
 
-        $job->description = filled($job->description)
-            ? RichContentRenderer::make($job->description)->toHtml()
-            : null;
-
         return Inertia::render('job/apply', [
-            'job' => $job,
+            'job' => $this->publicJobPageService->applicationJob($job),
             'phoneCountries' => PhoneCountry::applicationOptions(),
             'translations' => __('job_application'),
             'preview' => true,
+            'availability' => [
+                'status' => 'open',
+                'acceptsApplications' => false,
+                'message' => 'Preview mode. Applications cannot be submitted from this page.',
+            ],
+            'urls' => [
+                'current' => $request->fullUrl(),
+                'canonical' => route('job.preview', ['key' => $job->key]),
+                'application' => route('job.apply.store', ['key' => $job->key]),
+            ],
         ]);
     }
 }

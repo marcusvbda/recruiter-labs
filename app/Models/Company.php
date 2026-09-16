@@ -27,15 +27,24 @@ use Illuminate\Support\Facades\DB;
  * the pool without invalidating its individual candidate results.
  *
  * @property int $candidate_pool_revision
+ * @property bool $careers_enabled
+ * @property string|null $careers_description
+ * @property string|null $careers_logo_path
  */
-#[Fillable(['name', 'slug', 'plan_id'])]
+#[Fillable(['name', 'slug', 'plan_id', 'careers_enabled', 'careers_description', 'careers_logo_path'])]
 class Company extends Model
 {
-    protected $attributes = ['candidate_pool_revision' => 0];
+    protected $attributes = [
+        'candidate_pool_revision' => 0,
+        'careers_enabled' => false,
+    ];
 
     protected function casts(): array
     {
-        return ['candidate_pool_revision' => 'integer'];
+        return [
+            'candidate_pool_revision' => 'integer',
+            'careers_enabled' => 'boolean',
+        ];
     }
 
     /** @use HasFactory<CompanyFactory> */

@@ -1,16 +1,51 @@
-import { useForm } from '@inertiajs/react';
+import { Link, useForm } from '@inertiajs/react';
 import { useRef, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
-import { store } from '@/actions/App/Http/Controllers/JobApplicationController';
 import type { Job } from '@/types/models/job';
 import type { Referral } from '@/types/models/referral';
 
+export interface PublicCompany {
+    name: string;
+    description?: string | null;
+    logoUrl?: string | null;
+}
+
+export interface JobApplicationAvailability {
+    status: 'open' | 'unavailable';
+    acceptsApplications: boolean;
+    message: string | null;
+}
+
+export interface JobApplicationUrls {
+    current: string;
+    canonical: string;
+    application: string;
+    careers?: string;
+}
+
+export interface JobApplicationMeta {
+    title: string;
+    description: string;
+    canonicalUrl: string;
+    openGraph: {
+        title: string;
+        description: string;
+        url: string;
+        imageUrl: string | null;
+    };
+    robots: string;
+}
+
 export interface JobApplicationProps {
     referral?: Referral;
+    company?: PublicCompany;
     job: Job;
     phoneCountries: PhoneCountryOption[];
     translations: JobApplicationTranslations;
     preview?: boolean;
+    availability: JobApplicationAvailability;
+    urls: JobApplicationUrls;
+    meta?: JobApplicationMeta;
 }
 
 export interface JobApplicationTranslations {
@@ -360,6 +395,8 @@ interface ApplicationFormData {
 }
 
 interface ApplicationFormProps {
+    applicationUrl: string;
+    acceptsApplications: boolean;
     job: Job;
     onBack: () => void;
     onSubmit: () => void;
@@ -370,6 +407,8 @@ interface ApplicationFormProps {
 }
 
 const ApplicationForm = ({
+    applicationUrl,
+    acceptsApplications,
     job,
     onBack,
     onSubmit,
@@ -386,7 +425,7 @@ const ApplicationForm = ({
     const {
         data,
         setData,
-        submit,
+        post,
         processing,
         progress,
         errors,
@@ -418,7 +457,12 @@ const ApplicationForm = ({
     function handleSubmission(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
 
-        if (preview || processing || submissionStartedRef.current) {
+        if (
+            preview ||
+            !acceptsApplications ||
+            processing ||
+            submissionStartedRef.current
+        ) {
             return;
         }
 
@@ -426,7 +470,7 @@ const ApplicationForm = ({
         setRequestError(null);
         clearErrors();
 
-        submit(store({ key: job.key }), {
+        post(applicationUrl, {
             forceFormData: true,
             preserveScroll: true,
             onSuccess: () => {
@@ -925,8 +969,10 @@ const ApplicationForm = ({
                     )}
                     <button
                         type="submit"
-                        disabled={preview || processing}
-                        aria-disabled={preview || processing}
+                        disabled={preview || !acceptsApplications || processing}
+                        aria-disabled={
+                            preview || !acceptsApplications || processing
+                        }
                         className="group inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 sm:w-auto"
                     >
                         {processing
@@ -934,7 +980,7 @@ const ApplicationForm = ({
                             : preview
                               ? translations.form.preview_only
                               : translations.form.submit_application}
-                        {!processing && !preview && (
+                        {!processing && !preview && acceptsApplications && (
                             <ArrowIcon className="size-4 transition group-hover:translate-x-0.5" />
                         )}
                     </button>
@@ -1055,22 +1101,31 @@ const SuccessStep = ({
 
 export const JobApplication = ({
     referral,
+    company,
     job,
     phoneCountries,
     translations,
     preview = false,
+    availability,
+    urls,
 }: JobApplicationProps) => {
     const [currentStep, setCurrentStep] =
         useState<ApplicationStep>('description');
     const [applicationSubmitted, setApplicationSubmitted] = useState(false);
     const applicationFlowRef = useRef<HTMLDivElement>(null);
-    const companyName = job.company?.name ?? 'Recruiter Labs';
+    const companyName = company?.name ?? job.company?.name ?? 'Company';
     const closingDate = formatDate(job.ends_at, translations.locale);
     const openingDate = formatDate(job.starts_at, translations.locale);
     const questions = job.application_questions ?? [];
     const cvTypes = job.accepted_cv_types ?? [];
+    const isUnavailable = !preview && !availability.acceptsApplications;
+    const showApplicationForm = preview || availability.acceptsApplications;
 
     function changeStep(step: ApplicationStep) {
+        if (step === 'form' && !showApplicationForm) {
+            return;
+        }
+
         setCurrentStep(
             applicationSubmitted && step === 'form' ? 'success' : step,
         );
@@ -1091,14 +1146,18 @@ export const JobApplication = ({
 
             <header className="relative mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-5 py-5 sm:px-8 sm:py-7 lg:px-10">
                 <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-                    <div className="px-3 py-2 shadow-sm">
+                    {company?.logoUrl ? (
                         <img
-                            src="/assets/image/logo-white.png"
-                            alt="RecruiterLabs"
-                            className="h-7 w-auto sm:h-9"
+                            src={company.logoUrl}
+                            alt={`${companyName} logo`}
+                            className="h-9 w-auto max-w-36 rounded object-contain sm:h-10"
                         />
-                    </div>
-                    <div className="hidden min-w-0 sm:block">
+                    ) : (
+                        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-sm font-bold text-white sm:size-11">
+                            {companyName.slice(0, 1).toUpperCase()}
+                        </span>
+                    )}
+                    <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">
                             {translate(translations.header.careers_at, {
                                 company: companyName,
@@ -1110,12 +1169,36 @@ export const JobApplication = ({
                     </div>
                 </div>
 
-                <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-300">
-                    <span className="size-2 rounded-full bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.12)]" />
-                    {preview
-                        ? translations.header.preview_mode
-                        : translations.header.applications_open}
-                </span>
+                <div className="flex shrink-0 items-center gap-3">
+                    {urls.careers && (
+                        <Link
+                            href={urls.careers}
+                            className="text-sm font-semibold text-blue-700 transition hover:text-blue-900 focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+                        >
+                            Careers
+                        </Link>
+                    )}
+                    <span
+                        className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm ${
+                            isUnavailable
+                                ? 'border-slate-200 bg-slate-100 text-slate-700 dark:border-white/10 dark:bg-white/10 dark:text-slate-200'
+                                : 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-300'
+                        }`}
+                    >
+                        <span
+                            className={`size-2 rounded-full ${
+                                isUnavailable
+                                    ? 'bg-slate-400'
+                                    : 'bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.12)]'
+                            }`}
+                        />
+                        {preview
+                            ? translations.header.preview_mode
+                            : isUnavailable
+                              ? 'Applications unavailable'
+                              : translations.header.applications_open}
+                    </span>
+                </div>
             </header>
 
             <main className="relative mx-auto w-full max-w-7xl px-5 pb-16 sm:px-8 sm:pb-20 lg:px-10">
@@ -1134,6 +1217,18 @@ export const JobApplication = ({
                             <SparklesIcon className="size-5" />
                         </span>
                         <p>{translations.alerts.referral}</p>
+                    </div>
+                )}
+
+                {isUnavailable && availability.message && (
+                    <div
+                        role="status"
+                        className="mb-5 flex items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm dark:border-white/10 dark:bg-slate-900 dark:text-slate-200"
+                    >
+                        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300">
+                            <BriefcaseIcon className="size-5" />
+                        </span>
+                        <p>{availability.message}</p>
                     </div>
                 )}
 
@@ -1167,29 +1262,32 @@ export const JobApplication = ({
                             </p>
 
                             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        changeStep(
-                                            currentStep === 'description'
-                                                ? 'form'
-                                                : 'description',
-                                        )
-                                    }
-                                    className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-blue-700 shadow-lg shadow-blue-950/15 transition hover:-translate-y-0.5 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-                                >
-                                    {currentStep === 'description'
-                                        ? translations.hero
-                                              .view_application_form
-                                        : translations.form.back_to_description}
-                                    <ArrowIcon
-                                        className={`size-4 transition ${
-                                            currentStep === 'description'
-                                                ? 'group-hover:translate-x-0.5'
-                                                : 'rotate-180 group-hover:-translate-x-0.5'
-                                        }`}
-                                    />
-                                </button>
+                                {showApplicationForm && (
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            changeStep(
+                                                currentStep === 'description'
+                                                    ? 'form'
+                                                    : 'description',
+                                            )
+                                        }
+                                        className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-blue-700 shadow-lg shadow-blue-950/15 transition hover:-translate-y-0.5 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                                    >
+                                        {currentStep === 'description'
+                                            ? translations.hero
+                                                  .view_application_form
+                                            : translations.form
+                                                  .back_to_description}
+                                        <ArrowIcon
+                                            className={`size-4 transition ${
+                                                currentStep === 'description'
+                                                    ? 'group-hover:translate-x-0.5'
+                                                    : 'rotate-180 group-hover:-translate-x-0.5'
+                                            }`}
+                                        />
+                                    </button>
+                                )}
                                 <span className="inline-flex items-center justify-center gap-2 text-sm text-blue-100 sm:justify-start">
                                     <CalendarIcon className="size-4" />
                                     {closingDate
@@ -1225,14 +1323,16 @@ export const JobApplication = ({
                 </section>
 
                 <div ref={applicationFlowRef} className="mt-7 scroll-mt-5">
-                    <StepNavigation
-                        currentStep={currentStep}
-                        onStepChange={changeStep}
-                        translations={translations.steps}
-                    />
+                    {showApplicationForm && (
+                        <StepNavigation
+                            currentStep={currentStep}
+                            onStepChange={changeStep}
+                            translations={translations.steps}
+                        />
+                    )}
 
                     <div
-                        className={`mt-5 grid items-start gap-7 ${
+                        className={`${showApplicationForm ? 'mt-5' : ''} grid items-start gap-7 ${
                             currentStep === 'description'
                                 ? 'lg:grid-cols-[minmax(0,1fr)_22rem]'
                                 : 'grid-cols-1'
@@ -1267,6 +1367,10 @@ export const JobApplication = ({
                                 </section>
                             ) : currentStep === 'form' ? (
                                 <ApplicationForm
+                                    applicationUrl={urls.application}
+                                    acceptsApplications={
+                                        availability.acceptsApplications
+                                    }
                                     job={job}
                                     onBack={() => changeStep('description')}
                                     onSubmit={() => {
@@ -1295,7 +1399,9 @@ export const JobApplication = ({
                                             <DocumentIcon className="size-6" />
                                         </span>
                                         <h2 className="mt-5 text-xl font-semibold tracking-tight">
-                                            {translations.sidebar.title}
+                                            {isUnavailable
+                                                ? 'Applications unavailable'
+                                                : translations.sidebar.title}
                                         </h2>
                                     </div>
 
@@ -1388,31 +1494,34 @@ export const JobApplication = ({
 
                                         <div className="h-px bg-slate-100 dark:bg-white/10" />
 
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                changeStep(
-                                                    currentStep ===
+                                        {showApplicationForm && (
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    changeStep(
+                                                        currentStep ===
+                                                            'description'
+                                                            ? 'form'
+                                                            : 'description',
+                                                    )
+                                                }
+                                                className="group inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+                                            >
+                                                {currentStep === 'description'
+                                                    ? translations.sidebar
+                                                          .apply_now
+                                                    : translations.form
+                                                          .back_to_description}
+                                                <ArrowIcon
+                                                    className={`size-4 transition ${
+                                                        currentStep ===
                                                         'description'
-                                                        ? 'form'
-                                                        : 'description',
-                                                )
-                                            }
-                                            className="group inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
-                                        >
-                                            {currentStep === 'description'
-                                                ? translations.sidebar.apply_now
-                                                : translations.form
-                                                      .back_to_description}
-                                            <ArrowIcon
-                                                className={`size-4 transition ${
-                                                    currentStep ===
-                                                    'description'
-                                                        ? 'group-hover:translate-x-0.5'
-                                                        : 'rotate-180 group-hover:-translate-x-0.5'
-                                                }`}
-                                            />
-                                        </button>
+                                                            ? 'group-hover:translate-x-0.5'
+                                                            : 'rotate-180 group-hover:-translate-x-0.5'
+                                                    }`}
+                                                />
+                                            </button>
+                                        )}
                                         <p className="text-center text-xs leading-5 text-slate-400">
                                             {translations.sidebar.privacy}
                                         </p>

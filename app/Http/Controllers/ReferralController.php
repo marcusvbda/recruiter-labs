@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use App\Enums\PhoneCountry;
 use App\Models\Job;
 use App\Services\JobService;
+use App\Services\PublicJobPageService;
 use App\Services\ReferralService;
-use Filament\Forms\Components\RichEditor\RichContentRenderer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
 use Inertia\Inertia;
@@ -17,6 +17,7 @@ class ReferralController extends Controller
     public function __construct(
         private readonly ReferralService $referralService,
         private readonly JobService $jobService,
+        private readonly PublicJobPageService $publicJobPageService,
     ) {}
 
     public function show(Request $request, string $key): Response
@@ -34,15 +35,17 @@ class ReferralController extends Controller
         }
         App::setLocale((string) $job->getRawOriginal('application_locale'));
 
-        $job->description = filled($job->description)
-            ? RichContentRenderer::make($job->description)->toHtml()
-            : null;
-
         return Inertia::render('job/apply', [
             'referral' => $referral,
-            'job' => $job,
+            'job' => $this->publicJobPageService->applicationJob($job),
             'phoneCountries' => PhoneCountry::applicationOptions(),
             'translations' => __('job_application'),
+            'availability' => $this->publicJobPageService->availability($job),
+            'urls' => [
+                'current' => $request->fullUrl(),
+                'canonical' => route('job.show', ['key' => $job->key]),
+                'application' => route('job.apply.store', ['key' => $job->key]),
+            ],
         ]);
     }
 }

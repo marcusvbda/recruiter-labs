@@ -38,7 +38,23 @@
         @viteReactRefresh
         @vite(['resources/css/app.css', 'resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
         <x-inertia::head>
-            <title>{{ config('app.name', 'Laravel') }}</title>
+            @php($meta = $page['props']['meta'] ?? null)
+
+            @if (is_array($meta))
+                <title>{{ $meta['title'] ?? config('app.name', 'Laravel') }}</title>
+                <meta name="description" content="{{ $meta['description'] ?? '' }}">
+                <link rel="canonical" href="{{ $meta['canonicalUrl'] ?? url()->current() }}">
+                <meta property="og:title" content="{{ data_get($meta, 'openGraph.title', $meta['title'] ?? config('app.name', 'Laravel')) }}">
+                <meta property="og:description" content="{{ data_get($meta, 'openGraph.description', $meta['description'] ?? '') }}">
+                <meta property="og:url" content="{{ data_get($meta, 'openGraph.url', $meta['canonicalUrl'] ?? url()->current()) }}">
+                <meta property="og:type" content="website">
+                @if (filled(data_get($meta, 'openGraph.imageUrl')))
+                    <meta property="og:image" content="{{ data_get($meta, 'openGraph.imageUrl') }}">
+                @endif
+                <meta name="robots" content="{{ $meta['robots'] ?? 'index,follow' }}">
+            @else
+                <title>{{ config('app.name', 'Laravel') }}</title>
+            @endif
         </x-inertia::head>
     </head>
     <body class="font-sans antialiased">

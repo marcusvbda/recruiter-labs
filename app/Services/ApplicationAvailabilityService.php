@@ -44,15 +44,6 @@ class ApplicationAvailabilityService
             ]);
         }
 
-        if (
-            $lockedJob->application_limit !== null
-            && $lockedJob->applications()->count() >= $lockedJob->application_limit
-        ) {
-            throw ValidationException::withMessages([
-                '_form' => __('job_application.errors.limit_reached'),
-            ]);
-        }
-
         return $lockedJob->setRelation('company', $company);
     }
 

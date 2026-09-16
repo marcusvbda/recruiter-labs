@@ -58,7 +58,11 @@ class SubmitJobApplication
                     'candidate_id' => $candidate->getKey(),
                     'status_id' => $this->availabilityService->initialStatus($job)->getKey(),
                     'referral_id' => $referral?->getKey(),
-                    'source' => $referral === null ? ApplicationSource::Direct : ApplicationSource::Referral,
+                    'source' => $referral === null
+                        ? ($data->source === ApplicationSource::CareerPage
+                            ? ApplicationSource::CareerPage
+                            : ApplicationSource::Direct)
+                        : ApplicationSource::Referral,
                     'cover_letter_type' => $coverLetterType,
                     'cover_letter_text' => $coverLetterType === ApplicationCoverLetterType::Text
                         ? Str::trim((string) $data->coverLetter)

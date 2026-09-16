@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 
 /**
  * @property int $id
@@ -131,8 +132,41 @@ class Job extends Model
     }
 
     /**
-     * Whether the public page may still take new candidates. Narrower than
-     * {@see scopeCurrentlyActive()}: pausing intake does not end the process.
+     * The jobs that may be offered to the public as accepting applications.
+     * Callers still constrain this scope to the requested company; eligibility
+     * itself is intentionally defined once here for every public surface.
+     *
+     * @param  Builder<Job>  $query
+     * @return Builder<Job>
+     */
+    public function scopeAcceptingApplications(Builder $query): Builder
+    {
+        $jobTable = $this->getTable();
+        $applicationTable = (new Application)->getTable();
+
+        return $query
+            ->currentlyActive()
+            ->where("{$jobTable}.applications_paused", false)
+            ->where(function (Builder $query) use ($jobTable, $applicationTable): void {
+                $query
+                    ->whereNull("{$jobTable}.application_limit")
+                    ->orWhere(
+                        "{$jobTable}.application_limit",
+                        '>',
+                        function (QueryBuilder $query) use ($jobTable, $applicationTable): void {
+                            $query
+                                ->from($applicationTable)
+                                ->selectRaw('count(*)')
+                                ->whereColumn("{$applicationTable}.job_id", "{$jobTable}.id");
+                        },
+                    );
+            });
+    }
+
+    /**
+     * Whether the public page may still take new candidates. This is the
+     * instance counterpart to {@see scopeAcceptingApplications()} for the
+     * locked submission path.
      */
     public function acceptsApplications(): bool
     {
@@ -143,7 +177,21 @@ class Job extends Model
         return $this->published
             && ! $this->applications_paused
             && ($startsAt === null || CarbonImmutable::parse($startsAt)->lessThanOrEqualTo($today))
-            && ($endsAt === null || CarbonImmutable::parse($endsAt)->greaterThanOrEqualTo($today));
+            && ($endsAt === null || CarbonImmutable::parse($endsAt)->greaterThanOrEqualTo($today))
+            && $this->hasApplicationCapacity();
+    }
+
+    private function hasApplicationCapacity(): bool
+    {
+        if ($this->application_limit === null) {
+            return true;
+        }
+
+        $applicationCount = $this->relationLoaded('applications')
+            ? $this->applications->count()
+            : $this->applications()->count();
+
+        return $applicationCount < $this->application_limit;
     }
 
     /** @return BelongsTo<Company, $this> */

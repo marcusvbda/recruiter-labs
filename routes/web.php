@@ -4,6 +4,8 @@ use App\Http\Controllers\ApplicationDocumentController;
 use App\Http\Controllers\CandidateImportReportController;
 use App\Http\Controllers\CandidateImportTemplateController;
 use App\Http\Controllers\CandidateMaterialController;
+use App\Http\Controllers\CareerJobApplicationController;
+use App\Http\Controllers\CareersController;
 use App\Http\Controllers\ConnectedIntegrationOAuthController;
 use App\Http\Controllers\JobApplicationController;
 use App\Http\Controllers\JobController;
@@ -22,6 +24,18 @@ Route::post('/job/{key}/apply', [JobApplicationController::class, 'store'])
     ->whereUuid('key')
     ->middleware('throttle:30,1')
     ->name('job.apply.store');
+
+Route::get('/careers/{company:slug}', [CareersController::class, 'show'])
+    ->name('careers.show');
+
+Route::get('/careers/{company:slug}/jobs/{key}', [CareersController::class, 'job'])
+    ->whereUuid('key')
+    ->name('careers.jobs.show');
+
+Route::post('/careers/{company:slug}/jobs/{key}', [CareerJobApplicationController::class, 'store'])
+    ->whereUuid('key')
+    ->middleware('throttle:30,1')
+    ->name('careers.jobs.apply.store');
 
 Route::get('/job/{key}/preview', [JobController::class, 'preview'])
     ->middleware(Authenticate::class)

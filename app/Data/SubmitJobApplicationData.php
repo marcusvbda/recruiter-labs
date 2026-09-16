@@ -2,6 +2,7 @@
 
 namespace App\Data;
 
+use App\Enums\ApplicationSource;
 use Illuminate\Http\UploadedFile;
 
 class SubmitJobApplicationData
@@ -21,5 +22,6 @@ class SubmitJobApplicationData
         public readonly ?string $referralKey,
         public readonly array $utmParameters,
         public readonly ?string $ipAddress,
+        public readonly ApplicationSource $source = ApplicationSource::Direct,
     ) {}
 }

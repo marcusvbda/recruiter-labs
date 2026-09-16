@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Data\SubmitJobApplicationData;
 use App\Enums\ApplicationQuestionType;
+use App\Enums\ApplicationSource;
 use App\Enums\CoverLetterType;
 use App\Enums\PhoneCountry;
 use App\Models\Job;
@@ -24,7 +25,7 @@ class SubmitJobApplicationRequest extends FormRequest
 
     private const MAX_TEXTAREA_ANSWER_LENGTH = 10_000;
 
-    private ?Job $submissionJob = null;
+    protected ?Job $submissionJob = null;
 
     public function authorize(): bool
     {
@@ -37,14 +38,7 @@ class SubmitJobApplicationRequest extends FormRequest
 
         abort_unless(Str::isUuid($key), 404);
 
-        $this->submissionJob = Job::query()
-            ->with([
-                'applicationQuestions:id,company_id,job_id,question,response_type,required,sort',
-                'acceptedCvTypes:id,extension',
-                'coverLetterFileTypes:id,extension',
-            ])
-            ->where('key', $key)
-            ->first();
+        $this->submissionJob = $this->resolveSubmissionJob($key);
 
         abort_unless($this->submissionJob instanceof Job, 404);
 
@@ -145,8 +139,10 @@ class SubmitJobApplicationRequest extends FormRequest
         return $this->submissionJob;
     }
 
-    public function toData(UtmParameterExtractor $utmParameterExtractor): SubmitJobApplicationData
-    {
+    public function toData(
+        UtmParameterExtractor $utmParameterExtractor,
+        ApplicationSource $source = ApplicationSource::Direct,
+    ): SubmitJobApplicationData {
         $validated = $this->validated();
         $cv = $this->file('cv');
 
@@ -168,7 +164,26 @@ class SubmitJobApplicationRequest extends FormRequest
                 Arr::get($validated, 'utm', []),
             ),
             ipAddress: $this->ip(),
+            source: $source,
         );
+    }
+
+    protected function resolveSubmissionJob(string $key): ?Job
+    {
+        return Job::query()
+            ->with($this->applicationSubmissionRelations())
+            ->where('key', $key)
+            ->first();
+    }
+
+    /** @return list<string> */
+    protected function applicationSubmissionRelations(): array
+    {
+        return [
+            'applicationQuestions:id,company_id,job_id,question,response_type,required,sort',
+            'acceptedCvTypes:id,extension',
+            'coverLetterFileTypes:id,extension',
+        ];
     }
 
     private function validateAnswers(Validator $validator): void

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Company;
 use App\Models\Job;
 use App\Models\JobClick;
 use App\Models\Referral;
@@ -65,13 +66,27 @@ class JobService
             ->first();
     }
 
+    public function retrieveForCareers(Company $company, string $key): ?Job
+    {
+        if (! Str::isUuid($key)) {
+            return null;
+        }
+
+        return Job::query()
+            ->with($this->applicationPageRelations())
+            ->whereBelongsTo($company)
+            ->where('key', $key)
+            ->where('published', true)
+            ->first();
+    }
+
     /**
      * @return array<int, string>
      */
     private function applicationPageRelations(): array
     {
         return [
-            'company:id,name',
+            'company:id,name,slug,careers_enabled,careers_description,careers_logo_path',
             'applicationQuestions:id,job_id,question,response_type,description,required,sort',
             'acceptedCvTypes:id,extension,sort',
             'coverLetterFileTypes:id,extension,sort',

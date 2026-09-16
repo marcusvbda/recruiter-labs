@@ -112,6 +112,11 @@ class ViewJob extends ViewRecord
     protected function getHeaderActions(): array
     {
         $job = $this->getJob();
+        $company = $job->company;
+
+        $publicUrl = $company !== null && $company->careers_enabled && $job->acceptsApplications()
+            ? route('careers.jobs.show', ['company' => $company->slug, 'key' => $job->key])
+            : route('job.show', ['key' => $job->key]);
 
         return [
             EditAction::make(),
@@ -121,7 +126,7 @@ class ViewJob extends ViewRecord
                 ->label(__('jobs.workspace.open_public_page'))
                 ->icon(Heroicon::OutlinedArrowTopRightOnSquare)
                 ->color('gray')
-                ->url(route('job.show', ['key' => $job->key]))
+                ->url($publicUrl)
                 ->openUrlInNewTab(),
             ActionGroup::make([
                 Action::make('openPipeline')

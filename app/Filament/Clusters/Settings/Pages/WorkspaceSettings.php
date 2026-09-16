@@ -9,7 +9,11 @@ use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Actions;
@@ -20,6 +24,7 @@ use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * @property-read Schema $form
@@ -56,7 +61,13 @@ class WorkspaceSettings extends Page
 
         Gate::authorize('update', $company);
 
-        $this->form->fill($company->only(['name', 'slug']));
+        $this->form->fill($company->only([
+            'name',
+            'slug',
+            'careers_enabled',
+            'careers_description',
+            'careers_logo_path',
+        ]));
     }
 
     protected function getHeaderActions(): array
@@ -117,6 +128,47 @@ class WorkspaceSettings extends Page
                             ->helperText(__('company.fields.slug_helper'))
                             ->unique(Company::class, 'slug', ignoreRecord: true),
                     ]),
+                Section::make(__('settings.workspace.careers.heading'))
+                    ->description(__('settings.workspace.careers.description'))
+                    ->columnSpanFull()
+                    ->columns(1)
+                    ->schema([
+                        Toggle::make('careers_enabled')
+                            ->label(__('settings.workspace.careers.enabled_label'))
+                            ->helperText(__('settings.workspace.careers.enabled_helper'))
+                            ->inline(false),
+                        TextEntry::make('careers_url')
+                            ->label(__('settings.workspace.careers.url_label'))
+                            ->state(fn (): string => $this->careersUrl($company))
+                            ->url(fn (): string => $this->careersUrl($company), shouldOpenInNewTab: true)
+                            ->copyable()
+                            ->copyMessage(__('settings.workspace.careers.url_copied'))
+                            ->helperText(__('settings.workspace.careers.url_helper')),
+                        Textarea::make('careers_description')
+                            ->label(__('settings.workspace.careers.description_label'))
+                            ->helperText(__('settings.workspace.careers.description_helper'))
+                            ->rows(4)
+                            ->maxLength(2000),
+                        FileUpload::make('careers_logo_path')
+                            ->label(__('settings.workspace.careers.logo_label'))
+                            ->helperText(__('settings.workspace.careers.logo_helper'))
+                            ->disk('public')
+                            ->directory("careers/{$company->getKey()}")
+                            ->visibility('public')
+                            ->preventFilePathTampering()
+                            ->image()
+                            ->acceptedFileTypes([
+                                'image/jpeg',
+                                'image/png',
+                                'image/webp',
+                            ])
+                            ->maxSize(2048)
+                            ->rules([
+                                'image',
+                                'dimensions:max_width=2000,max_height=2000',
+                            ])
+                            ->imagePreviewHeight('120'),
+                    ]),
             ])
             ->record($company)
             ->statePath('data');
@@ -128,8 +180,20 @@ class WorkspaceSettings extends Page
 
         Gate::authorize('update', $company);
 
+        $previousLogoPath = $company->getRawOriginal('careers_logo_path');
         $data = $this->form->getState();
-        $company->fill(['name' => $data['name'], 'slug' => $data['slug']])->save();
+
+        $company->fill([
+            'name' => $data['name'],
+            'slug' => $data['slug'],
+            'careers_enabled' => $data['careers_enabled'],
+            'careers_description' => $data['careers_description'],
+            'careers_logo_path' => $data['careers_logo_path'],
+        ])->save();
+
+        if (is_string($previousLogoPath) && $previousLogoPath !== '' && $previousLogoPath !== $company->careers_logo_path) {
+            Storage::disk('public')->delete($previousLogoPath);
+        }
 
         Notification::make()
             ->title(__('settings.notifications.saved'))
@@ -139,6 +203,11 @@ class WorkspaceSettings extends Page
         // The slug is the tenant's URL segment: after changing it, every later
         // request against the old segment would 404.
         $this->redirect(static::getUrl(tenant: $company->refresh()));
+    }
+
+    private function careersUrl(Company $company): string
+    {
+        return route('careers.show', ['company' => $company->slug]);
     }
 
     public function getCompany(): Company
