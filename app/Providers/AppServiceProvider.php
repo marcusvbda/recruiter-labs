@@ -6,6 +6,7 @@ use App\Contracts\OAuthIntegrationPlugin;
 use App\Jobs\AnalyzeApplicationFit;
 use App\Jobs\AnalyzeJobCriteria;
 use App\Jobs\SendRecruitmentEmail;
+use App\Jobs\SourceCandidatesForJob;
 use App\Jobs\SyncInterviewResponseJob;
 use App\Notifications\ResetPasswordNotification;
 use App\Notifications\VerifyEmailNotification;
@@ -41,12 +42,12 @@ class AppServiceProvider extends ServiceProvider
             $pluginClasses = config('connected-integrations.plugins', []);
 
             return new ConnectedIntegrationRegistry(array_map(
-                fn (string $pluginClass): OAuthIntegrationPlugin => $this->app->make($pluginClass),
+                fn(string $pluginClass): OAuthIntegrationPlugin => $this->app->make($pluginClass),
                 $pluginClasses,
             ));
         });
 
-        $this->app->singleton(RecruitmentEmailSenderRegistry::class, fn (): RecruitmentEmailSenderRegistry => new RecruitmentEmailSenderRegistry([
+        $this->app->singleton(RecruitmentEmailSenderRegistry::class, fn(): RecruitmentEmailSenderRegistry => new RecruitmentEmailSenderRegistry([
             $this->app->make(ResendRecruitmentEmailSender::class),
             $this->app->make(GmailRecruitmentEmailSender::class),
         ]));
@@ -60,20 +61,33 @@ class AppServiceProvider extends ServiceProvider
         $this->configureDefaults();
 
         if ($this->app->runningInConsole()) {
-            // The default `composer run dev` queue listener only watches the
-            // connection's default queue, so dedicated queues need their own
-            // listeners to actually run locally.
             DevCommands::artisan(
-                'queue:listen --queue='.AnalyzeJobCriteria::QUEUE.','.AnalyzeApplicationFit::QUEUE.' --tries=1 --timeout=0',
-                'ai-queue',
+                'queue:work database --queue=default',
+                'queue',
             );
             DevCommands::artisan(
-                'queue:listen --queue='.SendRecruitmentEmail::QUEUE.' --timeout=60',
-                'recruitment-email-queue',
+                'queue:work database --queue=' . AnalyzeApplicationFit::QUEUE,
+                'ai-application-analysis-queue',
             );
             DevCommands::artisan(
-                'queue:listen --queue='.SyncInterviewResponseJob::QUEUE.' --timeout=60',
+                'queue:work database --queue=' . AnalyzeJobCriteria::QUEUE,
+                'ai-criteria-extraction-queue',
+            );
+            DevCommands::artisan(
+                'queue:work database --queue=' . SourceCandidatesForJob::QUEUE,
+                'ai-sourcing-search-queue',
+            );
+            DevCommands::artisan(
+                'queue:work database --queue=' . SendRecruitmentEmail::QUEUE,
+                'recruitment-emails-queue',
+            );
+            DevCommands::artisan(
+                'queue:work database --queue=' . SyncInterviewResponseJob::QUEUE,
                 'interview-sync-queue',
+            );
+            DevCommands::artisan(
+                'schedule:work',
+                'scheduler',
             );
         }
     }
@@ -94,15 +108,15 @@ class AppServiceProvider extends ServiceProvider
         // reach tenant resolution in the first place.
         Route::pattern('tenant', '[a-z0-9]+(-[a-z0-9]+)*');
 
-        Password::defaults(fn (): ?Password => app()->isProduction()
-            ? Password::min(12)
+        Password::defaults(
+            fn(): ?Password => app()->isProduction()
+                ? Password::min(12)
                 ->mixedCase()
                 ->letters()
                 ->numbers()
                 ->symbols()
                 ->uncompromised()
-            : null,
+                : null,
         );
-
     }
 }
