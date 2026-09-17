@@ -285,28 +285,24 @@ const JobDescription = ({
     emptyMessage: string;
 }) => {
     if (!description) {
-        return (
-            <p className="leading-8 text-slate-600 dark:text-slate-300">
-                {emptyMessage}
-            </p>
-        );
+        return <p className="leading-8 text-slate-600">{emptyMessage}</p>;
     }
 
     return (
         <div
-            className="flex flex-col gap-5 leading-8 text-slate-600 dark:text-slate-300 [&_a]:font-medium [&_a]:text-blue-600 [&_a]:underline [&_a]:underline-offset-4 dark:[&_a]:text-blue-300 [&_blockquote]:border-l-4 [&_blockquote]:border-blue-200 [&_blockquote]:pl-4 dark:[&_blockquote]:border-blue-400/40 [&_code]:rounded [&_code]:bg-slate-100 [&_code]:px-1.5 [&_code]:py-0.5 dark:[&_code]:bg-white/10 [&_h2]:pt-3 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:tracking-tight [&_h2]:text-slate-950 dark:[&_h2]:text-white [&_h3]:pt-2 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-slate-950 dark:[&_h3]:text-white [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-6 [&_pre]:overflow-x-auto [&_pre]:rounded-2xl [&_pre]:bg-slate-950 [&_pre]:p-5 [&_pre]:text-slate-100 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-slate-200 [&_td]:p-3 dark:[&_td]:border-white/10 [&_th]:border [&_th]:border-slate-200 [&_th]:bg-slate-50 [&_th]:p-3 [&_th]:text-left dark:[&_th]:border-white/10 dark:[&_th]:bg-white/5 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-6"
+            className="flex flex-col gap-5 leading-8 text-slate-600 [&_a]:font-medium [&_a]:text-blue-600 [&_a]:underline [&_a]:underline-offset-4 [&_blockquote]:border-l-4 [&_blockquote]:border-blue-200 [&_blockquote]:pl-4 [&_code]:rounded [&_code]:bg-slate-100 [&_code]:px-1.5 [&_code]:py-0.5 [&_h2]:pt-3 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:tracking-tight [&_h2]:text-slate-950 [&_h3]:pt-2 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-slate-950 [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-6 [&_pre]:overflow-x-auto [&_pre]:rounded-2xl [&_pre]:bg-slate-950 [&_pre]:p-5 [&_pre]:text-slate-100 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-slate-200 [&_td]:p-3 [&_th]:border [&_th]:border-slate-200 [&_th]:bg-slate-50 [&_th]:p-3 [&_th]:text-left [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-6"
             dangerouslySetInnerHTML={{ __html: description }}
         />
     );
 };
 
 const fieldClassName =
-    'mt-2 block min-h-12 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-950 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500';
+    'mt-2 block min-h-12 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-950 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10';
 
-const fileFieldClassName = `${fieldClassName} cursor-pointer file:mr-4 file:cursor-pointer file:rounded-lg file:border-0 file:bg-blue-600 file:px-4 file:py-2 file:text-xs file:font-semibold file:text-white file:transition-colors hover:file:bg-blue-500 dark:file:bg-blue-500 dark:hover:file:bg-blue-400`;
+const fileFieldClassName = `${fieldClassName} cursor-pointer file:mr-4 file:cursor-pointer file:rounded-lg file:border-0 file:bg-blue-600 file:px-4 file:py-2 file:text-xs file:font-semibold file:text-white file:transition-colors hover:file:bg-blue-500`;
 
 const fieldErrorClassName =
-    'border-rose-400 focus:border-rose-500 focus:ring-rose-500/10 dark:border-rose-400/60';
+    'border-rose-400 focus:border-rose-500 focus:ring-rose-500/10';
 
 const FieldError = ({ id, message }: { id: string; message?: string }) => {
     if (!message) {
@@ -317,7 +313,7 @@ const FieldError = ({ id, message }: { id: string; message?: string }) => {
         <span
             id={id}
             role="alert"
-            className="mt-2 block text-xs font-medium text-rose-600 dark:text-rose-300"
+            className="mt-2 block text-xs font-medium text-rose-600"
         >
             {message}
         </span>
@@ -514,30 +510,30 @@ const ApplicationForm = ({
     return (
         <section
             id="application-form"
-            className="rounded-3xl border border-blue-100 bg-white p-6 shadow-xl shadow-blue-950/5 sm:p-8 lg:p-10 dark:border-blue-400/20 dark:bg-slate-900"
+            className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 lg:p-10"
         >
-            <div className="flex flex-col gap-3 border-b border-slate-100 pb-7 sm:flex-row sm:items-start sm:justify-between dark:border-white/10">
+            <div className="flex flex-col gap-3 border-b border-slate-200 pb-7 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                     <button
                         type="button"
                         onClick={onBack}
-                        className="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-blue-600 transition hover:text-blue-800 focus-visible:rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:text-blue-300 dark:hover:text-blue-200"
+                        className="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-blue-700 transition hover:text-blue-900 focus-visible:rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
                     >
                         <ArrowIcon className="size-4 rotate-180" />
                         {translations.form.back_to_description}
                     </button>
-                    <p className="text-xs font-semibold tracking-widest text-blue-600 uppercase dark:text-blue-300">
+                    <p className="text-xs font-semibold tracking-widest text-blue-700 uppercase">
                         {translations.form.eyebrow}
                     </p>
-                    <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">
+                    <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
                         {translations.form.title}
                     </h2>
-                    <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">
+                    <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
                         {translations.form.description}
                     </p>
                 </div>
                 {preview && (
-                    <span className="w-fit rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200 dark:bg-amber-400/10 dark:text-amber-300 dark:ring-amber-400/20">
+                    <span className="w-fit rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
                         {translations.form.preview_only}
                     </span>
                 )}
@@ -551,19 +547,19 @@ const ApplicationForm = ({
                 {(generalError || (hasErrors && !generalError)) && (
                     <div
                         role="alert"
-                        className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-200"
+                        className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700"
                     >
                         {generalError ?? translations.form.fix_errors}
                     </div>
                 )}
 
                 <fieldset disabled={processing}>
-                    <legend className="text-base font-semibold text-slate-950 dark:text-white">
+                    <legend className="text-base font-semibold text-slate-950">
                         {translations.form.contact_information}
                     </legend>
                     <div className="mt-5 grid gap-5 sm:grid-cols-2">
                         <label className="sm:col-span-2">
-                            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                            <span className="text-sm font-medium text-slate-700">
                                 {translations.form.full_name}{' '}
                                 <span className="text-rose-500">*</span>
                             </span>
@@ -590,7 +586,7 @@ const ApplicationForm = ({
                         </label>
 
                         <label>
-                            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                            <span className="text-sm font-medium text-slate-700">
                                 {translations.form.email_address}{' '}
                                 <span className="text-rose-500">*</span>
                             </span>
@@ -620,7 +616,7 @@ const ApplicationForm = ({
                         </label>
 
                         <div>
-                            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                            <span className="text-sm font-medium text-slate-700">
                                 {translations.form.phone}{' '}
                                 <span className="font-normal text-slate-400">
                                     ({translations.form.optional})
@@ -645,7 +641,7 @@ const ApplicationForm = ({
                                             phone: '',
                                         }));
                                     }}
-                                    className={`min-h-12 min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-950 shadow-sm transition outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-white/10 dark:bg-slate-950 dark:text-white ${errors.phone_country ? fieldErrorClassName : ''}`}
+                                    className={`min-h-12 min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-950 shadow-sm transition outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 ${errors.phone_country ? fieldErrorClassName : ''}`}
                                 >
                                     {phoneCountries.map((country) => (
                                         <option
@@ -659,8 +655,8 @@ const ApplicationForm = ({
                                         </option>
                                     ))}
                                 </select>
-                                <div className="flex min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 dark:border-white/10 dark:bg-slate-950">
-                                    <span className="flex items-center border-r border-slate-200 px-3 text-sm font-medium text-slate-500 dark:border-white/10 dark:text-slate-400">
+                                <div className="flex min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10">
+                                    <span className="flex items-center border-r border-slate-200 px-3 text-sm font-medium text-slate-500">
                                         {selectedPhoneCountry?.calling_code}
                                     </span>
                                     <input
@@ -691,7 +687,7 @@ const ApplicationForm = ({
                                                 ),
                                             )
                                         }
-                                        className="min-h-12 min-w-0 flex-1 bg-transparent px-3 py-3 text-sm text-slate-950 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-500"
+                                        className="min-h-12 min-w-0 flex-1 bg-transparent px-3 py-3 text-sm text-slate-950 outline-none placeholder:text-slate-400"
                                     />
                                 </div>
                             </div>
@@ -709,14 +705,14 @@ const ApplicationForm = ({
 
                 <fieldset
                     disabled={processing}
-                    className="border-t border-slate-100 pt-8 dark:border-white/10"
+                    className="border-t border-slate-200 pt-8"
                 >
-                    <legend className="text-base font-semibold text-slate-950 dark:text-white">
+                    <legend className="text-base font-semibold text-slate-950">
                         {translations.form.documents}
                     </legend>
                     <div className="mt-5 grid gap-5">
                         <label>
-                            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                            <span className="text-sm font-medium text-slate-700">
                                 {translations.form.cv_resume}{' '}
                                 <span className="text-rose-500">*</span>
                             </span>
@@ -739,7 +735,7 @@ const ApplicationForm = ({
                                 }
                                 className={`${fileFieldClassName} ${errors.cv ? fieldErrorClassName : ''}`}
                             />
-                            <span className="mt-2 block text-xs text-slate-500 dark:text-slate-400">
+                            <span className="mt-2 block text-xs text-slate-500">
                                 {translate(translations.form.accepted_formats, {
                                     formats: (job.accepted_cv_types ?? [])
                                         .map((fileType) =>
@@ -753,7 +749,7 @@ const ApplicationForm = ({
 
                         {job.cover_letter_type === 'file' ? (
                             <label>
-                                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                                <span className="text-sm font-medium text-slate-700">
                                     {translations.form.cover_letter}{' '}
                                     {job.cover_letter_required ? (
                                         <span className="text-rose-500">*</span>
@@ -784,7 +780,7 @@ const ApplicationForm = ({
                                     }
                                     className={`${fileFieldClassName} ${errors.cover_letter ? fieldErrorClassName : ''}`}
                                 />
-                                <span className="mt-2 block text-xs text-slate-500 dark:text-slate-400">
+                                <span className="mt-2 block text-xs text-slate-500">
                                     {translate(
                                         translations.form.accepted_formats,
                                         {
@@ -803,7 +799,7 @@ const ApplicationForm = ({
                             </label>
                         ) : (
                             <label>
-                                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                                <span className="text-sm font-medium text-slate-700">
                                     {translations.form.cover_letter}{' '}
                                     {job.cover_letter_required ? (
                                         <span className="text-rose-500">*</span>
@@ -853,9 +849,9 @@ const ApplicationForm = ({
                 {job.application_questions.length > 0 && (
                     <fieldset
                         disabled={processing}
-                        className="border-t border-slate-100 pt-8 dark:border-white/10"
+                        className="border-t border-slate-200 pt-8"
                     >
-                        <legend className="text-base font-semibold text-slate-950 dark:text-white">
+                        <legend className="text-base font-semibold text-slate-950">
                             {translations.form.role_questions}
                         </legend>
                         <div className="mt-5 grid gap-5">
@@ -867,7 +863,7 @@ const ApplicationForm = ({
 
                                 return (
                                     <label key={question.id}>
-                                        <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                                        <span className="text-sm font-medium text-slate-700">
                                             {question.question}{' '}
                                             {question.required ? (
                                                 <span className="text-rose-500">
@@ -948,7 +944,7 @@ const ApplicationForm = ({
                                             />
                                         )}
                                         {question.description && (
-                                            <span className="mt-2 block text-xs leading-5 text-slate-500 dark:text-slate-400">
+                                            <span className="mt-2 block text-xs leading-5 text-slate-500">
                                                 {question.description}
                                             </span>
                                         )}
@@ -963,14 +959,14 @@ const ApplicationForm = ({
                     </fieldset>
                 )}
 
-                <div className="border-t border-slate-100 pt-7 dark:border-white/10">
+                <div className="border-t border-slate-200 pt-7">
                     {progress && (
                         <div className="mb-5" role="status" aria-live="polite">
-                            <div className="mb-2 flex items-center justify-between gap-4 text-xs font-medium text-slate-500 dark:text-slate-400">
+                            <div className="mb-2 flex items-center justify-between gap-4 text-xs font-medium text-slate-500">
                                 <span>{translations.form.upload_progress}</span>
                                 <span>{progress.percentage}%</span>
                             </div>
-                            <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">
+                            <div className="h-2 overflow-hidden rounded-full bg-slate-100">
                                 <div
                                     className="h-full rounded-full bg-linear-to-r from-blue-600 to-cyan-500 transition-[width]"
                                     style={{ width: `${progress.percentage}%` }}
@@ -1031,7 +1027,7 @@ const StepNavigation = ({
     return (
         <nav
             aria-label={translations.label}
-            className="rounded-2xl border border-slate-200/80 bg-white p-2 shadow-sm dark:border-white/10 dark:bg-slate-900"
+            className="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm"
         >
             <ol className="grid grid-cols-2 gap-1.5">
                 {steps.map((step, index) => {
@@ -1048,8 +1044,8 @@ const StepNavigation = ({
                                     isActive
                                         ? 'bg-blue-600 text-white shadow-md shadow-blue-600/15'
                                         : isCompleted
-                                          ? 'text-blue-700 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-400/10'
-                                          : 'text-slate-500 hover:bg-slate-50 hover:text-blue-700 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-blue-300'
+                                          ? 'text-blue-700 hover:bg-blue-50'
+                                          : 'text-slate-500 hover:bg-slate-50 hover:text-blue-700'
                                 }`}
                             >
                                 <span
@@ -1057,8 +1053,8 @@ const StepNavigation = ({
                                         isActive
                                             ? 'bg-white text-blue-700'
                                             : isCompleted
-                                              ? 'bg-blue-100 text-blue-700 dark:bg-blue-400/15 dark:text-blue-300'
-                                              : 'bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-slate-400'
+                                              ? 'bg-blue-100 text-blue-700'
+                                              : 'bg-slate-100 text-slate-500'
                                     }`}
                                 >
                                     {isCompleted ? '✓' : index + 1}
@@ -1085,23 +1081,23 @@ const SuccessStep = ({
     translations: JobApplicationTranslations['success'];
 }) => {
     return (
-        <section className="flex min-h-[30rem] flex-col items-center justify-center rounded-3xl border border-emerald-200 bg-white px-6 py-12 text-center shadow-xl shadow-emerald-950/5 sm:px-10 dark:border-emerald-400/20 dark:bg-slate-900">
-            <span className="flex size-20 items-center justify-center rounded-full bg-emerald-100 text-4xl font-bold text-emerald-600 ring-8 ring-emerald-50 dark:bg-emerald-400/15 dark:text-emerald-300 dark:ring-emerald-400/5">
+        <section className="flex min-h-[30rem] flex-col items-center justify-center rounded-2xl border border-emerald-200 bg-white px-6 py-12 text-center shadow-sm sm:px-10">
+            <span className="flex size-20 items-center justify-center rounded-full bg-emerald-100 text-4xl font-bold text-emerald-600 ring-8 ring-emerald-50">
                 ✓
             </span>
-            <p className="mt-8 text-xs font-semibold tracking-[0.2em] text-emerald-600 uppercase dark:text-emerald-300">
+            <p className="mt-8 text-xs font-semibold tracking-[0.2em] text-emerald-600 uppercase">
                 {translations.eyebrow}
             </p>
-            <h2 className="mt-3 max-w-xl text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl dark:text-white">
+            <h2 className="mt-3 max-w-xl text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
                 {translations.title}
             </h2>
-            <p className="mt-4 max-w-xl text-base leading-7 text-slate-500 dark:text-slate-400">
+            <p className="mt-4 max-w-xl text-base leading-7 text-slate-600">
                 {translate(translations.description, { job: jobName })}
             </p>
             <button
                 type="button"
                 onClick={onBack}
-                className="mt-8 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-blue-400/10 dark:hover:text-blue-200"
+                className="mt-8 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
             >
                 <ArrowIcon className="size-4 rotate-180" />
                 {translations.back_to_description}
@@ -1156,10 +1152,8 @@ export const JobApplication = ({
     }
 
     return (
-        <div className="relative min-h-screen overflow-hidden bg-slate-50 text-slate-950 dark:bg-slate-950 dark:text-white">
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-[38rem] bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.12),transparent_42%),radial-gradient(circle_at_top_right,rgba(6,182,212,0.12),transparent_38%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.18),transparent_42%),radial-gradient(circle_at_top_right,rgba(6,182,212,0.14),transparent_38%)]" />
-
-            <header className="relative mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-5 py-5 sm:px-8 sm:py-7 lg:px-10">
+        <div className="min-h-screen bg-slate-50 text-slate-950">
+            <header className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 border-b border-slate-200 px-5 py-5 sm:px-8 sm:py-7">
                 <div className="flex min-w-0 items-center gap-3 sm:gap-4">
                     {company?.logoUrl ? (
                         <img
@@ -1168,20 +1162,20 @@ export const JobApplication = ({
                                 translations.header.company_logo_alt,
                                 { company: companyName },
                             )}
-                            className="h-9 w-auto max-w-36 rounded object-contain sm:h-10"
+                            className="h-11 w-auto max-w-40 rounded object-contain"
                         />
                     ) : (
-                        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-sm font-bold text-white sm:size-11">
+                        <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-sm font-bold text-white">
                             {companyName.slice(0, 1).toUpperCase()}
                         </span>
                     )}
                     <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">
+                        <p className="truncate text-sm font-semibold text-slate-900">
                             {translate(translations.header.careers_at, {
                                 company: companyName,
                             })}
                         </p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                        <p className="text-xs text-slate-500">
                             {translations.header.tagline}
                         </p>
                     </div>
@@ -1199,8 +1193,8 @@ export const JobApplication = ({
                     <span
                         className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm ${
                             isUnavailable
-                                ? 'border-slate-200 bg-slate-100 text-slate-700 dark:border-white/10 dark:bg-white/10 dark:text-slate-200'
-                                : 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-300'
+                                ? 'border-slate-200 bg-slate-100 text-slate-700'
+                                : 'border-emerald-200 bg-emerald-50 text-emerald-700'
                         }`}
                     >
                         <span
@@ -1219,9 +1213,9 @@ export const JobApplication = ({
                 </div>
             </header>
 
-            <main className="relative mx-auto w-full max-w-7xl px-5 pb-16 sm:px-8 sm:pb-20 lg:px-10">
+            <main className="mx-auto w-full max-w-5xl px-5 py-8 pb-16 sm:px-8 sm:py-10 sm:pb-20">
                 {preview && (
-                    <div className="mb-5 flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 shadow-sm dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-200">
+                    <div className="mb-5 flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 shadow-sm">
                         <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white">
                             <DocumentIcon className="size-5" />
                         </span>
@@ -1230,7 +1224,7 @@ export const JobApplication = ({
                 )}
 
                 {referral && (
-                    <div className="mb-5 flex items-center gap-3 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-800 shadow-sm dark:border-violet-400/20 dark:bg-violet-400/10 dark:text-violet-200">
+                    <div className="mb-5 flex items-center gap-3 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-800 shadow-sm">
                         <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white">
                             <SparklesIcon className="size-5" />
                         </span>
@@ -1241,9 +1235,9 @@ export const JobApplication = ({
                 {isUnavailable && (
                     <div
                         role="status"
-                        className="mb-5 flex items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm dark:border-white/10 dark:bg-slate-900 dark:text-slate-200"
+                        className="mb-5 flex items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm"
                     >
-                        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300">
+                        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
                             <BriefcaseIcon className="size-5" />
                         </span>
                         <p>
@@ -1256,18 +1250,15 @@ export const JobApplication = ({
                     </div>
                 )}
 
-                <section className="relative isolate overflow-hidden rounded-[2rem] bg-linear-to-br from-blue-700 via-blue-600 to-cyan-500 px-6 py-8 text-white shadow-2xl shadow-blue-950/15 sm:px-10 sm:py-11 lg:px-14 lg:py-14">
-                    <div className="absolute -top-36 -right-24 -z-10 size-96 rounded-full bg-white/15 blur-3xl" />
-                    <div className="absolute -bottom-48 left-1/3 -z-10 size-[28rem] rounded-full bg-cyan-200/20 blur-3xl" />
-
-                    <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-14">
+                <section className="rounded-2xl border border-slate-200 bg-white px-6 py-8 shadow-sm sm:px-10 sm:py-11 lg:px-12 lg:py-12">
+                    <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_18rem] lg:gap-12">
                         <div className="max-w-3xl">
                             <div className="flex flex-wrap items-center gap-2.5">
-                                <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-sm font-medium backdrop-blur-sm">
+                                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-medium text-slate-700">
                                     <BuildingIcon className="size-4" />
                                     {companyName}
                                 </span>
-                                <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-sm font-medium backdrop-blur-sm">
+                                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-medium text-slate-700">
                                     <BriefcaseIcon className="size-4" />
                                     {preview
                                         ? translations.hero.preview_badge
@@ -1275,13 +1266,13 @@ export const JobApplication = ({
                                 </span>
                             </div>
 
-                            <p className="mt-7 text-sm font-semibold tracking-[0.2em] text-cyan-100 uppercase">
+                            <p className="mt-7 text-sm font-semibold tracking-[0.2em] text-blue-700 uppercase">
                                 {translations.hero.eyebrow}
                             </p>
-                            <h1 className="mt-3 max-w-4xl text-4xl leading-tight font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl">
+                            <h1 className="mt-3 max-w-4xl text-4xl leading-tight font-semibold tracking-tight text-balance sm:text-5xl">
                                 {job.name}
                             </h1>
-                            <p className="mt-5 max-w-2xl text-base leading-7 text-blue-50 sm:text-lg">
+                            <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
                                 {translations.hero.introduction}
                             </p>
 
@@ -1296,7 +1287,7 @@ export const JobApplication = ({
                                                     : 'description',
                                             )
                                         }
-                                        className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-blue-700 shadow-lg shadow-blue-950/15 transition hover:-translate-y-0.5 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                                        className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
                                     >
                                         {currentStep === 'description'
                                             ? translations.hero
@@ -1313,7 +1304,7 @@ export const JobApplication = ({
                                     </button>
                                 )}
                                 {showOpenAvailability && (
-                                    <span className="inline-flex items-center justify-center gap-2 text-sm text-blue-100 sm:justify-start">
+                                    <span className="inline-flex items-center justify-center gap-2 text-sm text-slate-500 sm:justify-start">
                                         <CalendarIcon className="size-4" />
                                         {closingDate
                                             ? translate(
@@ -1326,22 +1317,22 @@ export const JobApplication = ({
                             </div>
                         </div>
 
-                        <div className="relative mx-auto hidden h-72 w-full max-w-sm lg:block">
-                            <div className="absolute inset-8 rounded-full border border-white/15 bg-white/5 backdrop-blur-sm" />
-                            <div className="absolute top-2 right-5 flex size-20 rotate-6 items-center justify-center rounded-3xl border border-white/25 bg-white/15 shadow-2xl backdrop-blur-md">
+                        <div className="relative mx-auto hidden h-64 w-full max-w-xs lg:block">
+                            <div className="absolute inset-8 rounded-full border border-blue-100 bg-blue-50" />
+                            <div className="absolute top-2 right-5 flex size-20 rotate-6 items-center justify-center rounded-3xl border border-blue-200 bg-blue-600 text-white shadow-lg shadow-blue-950/10">
                                 <SparklesIcon className="size-10" />
                             </div>
-                            <div className="absolute bottom-3 left-0 w-72 -rotate-3 rounded-3xl border border-white/25 bg-white/15 p-5 shadow-2xl backdrop-blur-md">
+                            <div className="absolute bottom-3 left-0 w-64 -rotate-3 rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
                                 <div className="flex items-center gap-2">
                                     <span className="size-2.5 rounded-full bg-rose-300" />
                                     <span className="size-2.5 rounded-full bg-amber-300" />
                                     <span className="size-2.5 rounded-full bg-emerald-300" />
                                 </div>
                                 <div className="mt-6 flex flex-col gap-3">
-                                    <span className="h-2 w-3/4 rounded-full bg-white/80" />
-                                    <span className="h-2 w-full rounded-full bg-cyan-100/45" />
-                                    <span className="h-2 w-5/6 rounded-full bg-cyan-100/45" />
-                                    <span className="mt-2 h-10 w-28 rounded-xl bg-white/20" />
+                                    <span className="h-2 w-3/4 rounded-full bg-slate-300" />
+                                    <span className="h-2 w-full rounded-full bg-slate-200" />
+                                    <span className="h-2 w-5/6 rounded-full bg-slate-200" />
+                                    <span className="mt-2 h-10 w-28 rounded-xl bg-blue-100" />
                                 </div>
                             </div>
                         </div>
@@ -1366,19 +1357,19 @@ export const JobApplication = ({
                     >
                         <div className="flex min-w-0 flex-col gap-7">
                             {currentStep === 'description' ? (
-                                <section className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm sm:p-8 lg:p-10 dark:border-white/10 dark:bg-slate-900">
-                                    <div className="mb-8 flex items-center gap-4 border-b border-slate-100 pb-6 dark:border-white/10">
-                                        <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-400/10 dark:text-blue-300">
+                                <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 lg:p-10">
+                                    <div className="mb-8 flex items-center gap-4 border-b border-slate-200 pb-6">
+                                        <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
                                             <BriefcaseIcon className="size-6" />
                                         </span>
                                         <div>
-                                            <p className="text-xs font-semibold tracking-widest text-blue-600 uppercase dark:text-blue-300">
+                                            <p className="text-xs font-semibold tracking-widest text-blue-700 uppercase">
                                                 {
                                                     translations.opportunity
                                                         .eyebrow
                                                 }
                                             </p>
-                                            <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">
+                                            <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">
                                                 {translations.opportunity.title}
                                             </h2>
                                         </div>
@@ -1419,12 +1410,12 @@ export const JobApplication = ({
 
                         {currentStep === 'description' && (
                             <aside className="lg:sticky lg:top-6">
-                                <div className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-xl shadow-slate-900/5 dark:border-white/10 dark:bg-slate-900 dark:shadow-black/20">
-                                    <div className="bg-linear-to-br from-slate-950 to-slate-800 p-6 text-white dark:from-blue-700 dark:to-cyan-600">
-                                        <span className="flex size-11 items-center justify-center rounded-2xl bg-white/10 text-cyan-200 ring-1 ring-white/15">
+                                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                                    <div className="border-b border-slate-200 bg-slate-50 p-6">
+                                        <span className="flex size-11 items-center justify-center rounded-2xl bg-blue-100 text-blue-700">
                                             <DocumentIcon className="size-6" />
                                         </span>
-                                        <h2 className="mt-5 text-xl font-semibold tracking-tight">
+                                        <h2 className="mt-5 text-xl font-semibold tracking-tight text-slate-950">
                                             {isUnavailable
                                                 ? translations.availability
                                                       .unavailable_heading
@@ -1434,11 +1425,11 @@ export const JobApplication = ({
 
                                     <div className="flex flex-col gap-5 p-6">
                                         <div className="flex items-start gap-3">
-                                            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600 dark:bg-violet-400/10 dark:text-violet-300">
+                                            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
                                                 <SparklesIcon className="size-5" />
                                             </span>
                                             <div>
-                                                <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                                                <p className="text-sm font-semibold text-slate-900">
                                                     {translate(
                                                         questions.length === 1
                                                             ? translations
@@ -1452,7 +1443,7 @@ export const JobApplication = ({
                                                         },
                                                     )}
                                                 </p>
-                                                <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                                                <p className="mt-1 text-xs leading-5 text-slate-500">
                                                     {
                                                         translations.sidebar
                                                             .questions_description
@@ -1462,11 +1453,11 @@ export const JobApplication = ({
                                         </div>
 
                                         <div className="flex items-start gap-3">
-                                            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600 dark:bg-cyan-400/10 dark:text-cyan-300">
+                                            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
                                                 <DocumentIcon className="size-5" />
                                             </span>
                                             <div className="min-w-0">
-                                                <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                                                <p className="text-sm font-semibold text-slate-900">
                                                     {
                                                         translations.sidebar
                                                             .resume_formats
@@ -1476,7 +1467,7 @@ export const JobApplication = ({
                                                     {cvTypes.map((fileType) => (
                                                         <span
                                                             key={fileType.id}
-                                                            className="rounded-lg bg-slate-100 px-2 py-1 text-[11px] font-bold tracking-wide text-slate-600 uppercase dark:bg-white/10 dark:text-slate-300"
+                                                            className="rounded-lg bg-slate-100 px-2 py-1 text-[11px] font-bold tracking-wide text-slate-600 uppercase"
                                                         >
                                                             {fileType.extension}
                                                         </span>
@@ -1487,11 +1478,11 @@ export const JobApplication = ({
 
                                         {showOpenAvailability && (
                                             <div className="flex items-start gap-3">
-                                                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-400/10 dark:text-amber-300">
+                                                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
                                                     <CalendarIcon className="size-5" />
                                                 </span>
                                                 <div>
-                                                    <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                                                    <p className="text-sm font-semibold text-slate-900">
                                                         {closingDate
                                                             ? translate(
                                                                   translations
@@ -1505,7 +1496,7 @@ export const JobApplication = ({
                                                                   .sidebar
                                                                   .open_ended}
                                                     </p>
-                                                    <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                                                    <p className="mt-1 text-xs leading-5 text-slate-500">
                                                         {openingDate
                                                             ? translate(
                                                                   translations
@@ -1523,7 +1514,7 @@ export const JobApplication = ({
                                             </div>
                                         )}
 
-                                        <div className="h-px bg-slate-100 dark:bg-white/10" />
+                                        <div className="h-px bg-slate-200" />
 
                                         {showApplicationForm && (
                                             <button
@@ -1564,9 +1555,9 @@ export const JobApplication = ({
                 </div>
             </main>
 
-            <footer className="border-t border-slate-200/80 bg-white/70 dark:border-white/10 dark:bg-slate-950/70">
-                <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between gap-3 px-5 py-7 text-center sm:flex-row sm:px-8 sm:text-left lg:px-10">
-                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            <footer className="border-t border-slate-200 bg-white">
+                <div className="mx-auto flex w-full max-w-5xl flex-col items-center justify-between gap-3 px-5 py-7 text-center sm:flex-row sm:px-8 sm:text-left">
+                    <p className="text-sm font-medium text-slate-700">
                         {companyName}
                     </p>
                     <p className="text-xs text-slate-400">
