@@ -1,7 +1,9 @@
 <x-filament::section
     :heading="__('communications.history.heading')"
     icon="heroicon-o-envelope"
-    @if ($has_in_flight_delivery) wire:poll.3s="$refresh" @endif
+    :attributes="new \Filament\Support\View\ComponentAttributeBag([
+        'wire:poll.3s' => $has_in_flight_delivery ? '$refresh' : false,
+    ])"
 >
     <x-slot name="description">
         {{ $context_job
