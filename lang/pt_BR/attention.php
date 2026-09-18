@@ -33,6 +33,16 @@ return [
             'explanation' => 'A avaliação do candidato terminou em erro, então não há aderência nem evidências para ler. A candidatura em si não foi alterada.',
             'action' => 'Abrir avaliação',
         ],
+        'candidate_communication_failed' => [
+            'title' => 'A comunicação com :candidate não foi entregue',
+            'explanation' => 'Não foi possível entregar uma mensagem autorizada. Revise a comunicação antes de decidir se deve tentar novamente.',
+            'action' => 'Abrir comunicação',
+        ],
+        'email_provider_needs_attention' => [
+            'title' => 'O provedor de e-mail precisa de atenção',
+            'explanation' => 'Uma comunicação autorizada com um candidato não pôde continuar porque o provedor de e-mail não está disponível ou precisa de nova autorização.',
+            'action' => 'Abrir configurações do provedor de e-mail',
+        ],
         'evaluation_blocked_by_quota' => [
             'title' => 'Avaliações aguardando limite de IA',
             'explanation' => '{1} 1 candidatura está na fila e não pode ser avaliada até o workspace ter limite disponível novamente.|[2,*] :count candidaturas estão na fila e não podem ser avaliadas até o workspace ter limite disponível novamente.',

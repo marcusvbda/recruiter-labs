@@ -324,6 +324,12 @@ class Job extends Model
         return $this->hasMany(SourcingMatch::class);
     }
 
+    /** @return HasMany<CandidateCommunicationThread, $this> */
+    public function communicationThreads(): HasMany
+    {
+        return $this->hasMany(CandidateCommunicationThread::class);
+    }
+
     /** @return HasMany<JobClick, $this> */
     public function clicks(): HasMany
     {

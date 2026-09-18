@@ -23,6 +23,12 @@ enum RecruitmentAttentionType: string
     /** The candidate evaluation errored and produced nothing. */
     case EvaluationFailed = 'evaluation_failed';
 
+    /** An authorised candidate message could not be delivered. */
+    case CandidateCommunicationFailed = 'candidate_communication_failed';
+
+    /** An authorised candidate message was blocked by unavailable email-provider settings. */
+    case EmailProviderNeedsAttention = 'email_provider_needs_attention';
+
     /** Evaluations are queued but the workspace has no AI allowance left. */
     case EvaluationBlockedByQuota = 'evaluation_blocked_by_quota';
 
@@ -74,6 +80,8 @@ enum RecruitmentAttentionType: string
             self::InterviewDeclined,
             self::InterviewCalendarFailed,
             self::CalendarReconnectRequired => RecruitmentAttentionSeverity::Critical,
+            self::CandidateCommunicationFailed,
+            self::EmailProviderNeedsAttention,
             self::EvaluationFailed,
             self::EvaluationBlockedByQuota,
             self::CriteriaPreparationFailed,
@@ -99,6 +107,8 @@ enum RecruitmentAttentionType: string
             self::InterviewDeclined => 'heroicon-m-calendar-days',
             self::InterviewCalendarFailed => 'heroicon-m-exclamation-triangle',
             self::CalendarReconnectRequired => 'heroicon-m-link-slash',
+            self::CandidateCommunicationFailed => 'heroicon-m-envelope-open',
+            self::EmailProviderNeedsAttention => 'heroicon-m-envelope',
             self::EvaluationFailed => 'heroicon-m-x-circle',
             self::EvaluationBlockedByQuota => 'heroicon-m-bolt-slash',
             self::CriteriaReadyForReview => 'heroicon-m-clipboard-document-check',

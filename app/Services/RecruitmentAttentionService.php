@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Data\RecruitmentAttentionItem;
 use App\Data\RecruitmentAttentionQueue;
 use App\Enums\ApplicationAnalysisStatus;
+use App\Enums\CandidateCommunicationMessageStatus;
 use App\Enums\ConnectedIntegrationStatus;
 use App\Enums\InterviewCalendarSyncStatus;
 use App\Enums\InterviewRsvpStatus;
@@ -14,9 +15,13 @@ use App\Enums\SourcingMatchState;
 use App\Enums\SourcingSearchStatus;
 use App\Filament\Clusters\Settings\Pages\AiSettings;
 use App\Filament\Clusters\Settings\Pages\CalendarSettings;
+use App\Filament\Clusters\Settings\Pages\EmailProviderSettings;
 use App\Filament\Resources\Applications\ApplicationResource;
+use App\Filament\Resources\Candidates\CandidateResource;
 use App\Filament\Resources\Jobs\JobResource;
 use App\Models\Application;
+use App\Models\CandidateCommunicationMessage;
+use App\Models\CandidateCommunicationThread;
 use App\Models\Company;
 use App\Models\ConnectedIntegration;
 use App\Models\Interview;
@@ -92,6 +97,7 @@ class RecruitmentAttentionService
         $signals = [
             ...$this->interviewSignals($company, $recruiter, $job),
             ...$this->applicationSignals($company, $job),
+            ...$this->communicationSignals($company, $job),
             ...$this->jobSignals($company, $job),
             ...$this->criteriaAndSourcingSignals($company, $job),
         ];
@@ -359,6 +365,93 @@ class RecruitmentAttentionService
             context: $application->job->name,
             jobId: (int) $application->job_id,
             applicationId: (int) $application->getKey(),
+        );
+    }
+
+    /**
+     * A communication item is raised only for a message a recruiter already
+     * authorised and that subsequently failed. Drafts, uncontacted sourced
+     * candidates, and a candidate's silence are intentionally not signals.
+     *
+     * @return list<array{items: list<RecruitmentAttentionItem>, total: int}>
+     */
+    private function communicationSignals(Company $company, ?Job $job): array
+    {
+        $jobId = $job?->getKey();
+        $failedMessages = CandidateCommunicationMessage::query()
+            ->whereBelongsTo($company)
+            ->where('status', CandidateCommunicationMessageStatus::Failed->value)
+            ->whereNotNull('authorized_at')
+            ->when($jobId !== null, fn (Builder $query): Builder => $query->whereHas(
+                'thread',
+                fn (Builder $threads): Builder => $threads->where('job_id', $jobId),
+            ))
+            ->with(['thread.candidate', 'thread.job', 'delivery'])
+            ->orderByDesc('updated_at');
+
+        $messages = (clone $failedMessages)->limit(self::MaxItemsPerSignal)->get();
+        $failedTotal = $messages->count() < self::MaxItemsPerSignal
+            ? $messages->count()
+            : (clone $failedMessages)->count();
+
+        $providerBlocked = (clone $failedMessages)
+            ->whereHas('delivery', fn (Builder $deliveries): Builder => $deliveries
+                ->where('last_exception_class', 'AuthorizedProviderUnavailable'))
+            ->exists();
+
+        return [
+            [
+                'items' => $messages
+                    ->map(fn (CandidateCommunicationMessage $message): ?RecruitmentAttentionItem => $this->candidateCommunicationFailedItem($message))
+                    ->filter()
+                    ->values()
+                    ->all(),
+                'total' => $failedTotal,
+            ],
+            $this->cap($providerBlocked ? [$this->emailProviderNeedsAttentionItem($company)] : []),
+        ];
+    }
+
+    private function candidateCommunicationFailedItem(CandidateCommunicationMessage $message): ?RecruitmentAttentionItem
+    {
+        $thread = $message->thread;
+
+        if (! $thread instanceof CandidateCommunicationThread || $thread->company_id !== $message->company_id) {
+            return null;
+        }
+
+        $candidate = $thread->candidate;
+
+        if ($candidate === null || $candidate->company_id !== $message->company_id) {
+            return null;
+        }
+
+        $job = $thread->job;
+
+        return new RecruitmentAttentionItem(
+            type: RecruitmentAttentionType::CandidateCommunicationFailed,
+            title: (string) __('attention.items.candidate_communication_failed.title', ['candidate' => $candidate->name]),
+            explanation: (string) __('attention.items.candidate_communication_failed.explanation'),
+            actionLabel: (string) __('attention.items.candidate_communication_failed.action'),
+            actionUrl: CandidateResource::getUrl(
+                'view',
+                array_filter(['record' => $candidate, 'communicationJob' => $thread->job_id]),
+                tenant: $message->company,
+            ),
+            context: $job?->name,
+            jobId: $thread->job_id,
+            applicationId: $thread->application_id,
+        );
+    }
+
+    private function emailProviderNeedsAttentionItem(Company $company): RecruitmentAttentionItem
+    {
+        return new RecruitmentAttentionItem(
+            type: RecruitmentAttentionType::EmailProviderNeedsAttention,
+            title: (string) __('attention.items.email_provider_needs_attention.title'),
+            explanation: (string) __('attention.items.email_provider_needs_attention.explanation'),
+            actionLabel: (string) __('attention.items.email_provider_needs_attention.action'),
+            actionUrl: EmailProviderSettings::getUrl(tenant: $company),
         );
     }
 

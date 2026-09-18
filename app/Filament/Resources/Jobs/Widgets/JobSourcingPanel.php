@@ -412,6 +412,16 @@ class JobSourcingPanel extends Widget
             'candidate_url' => $candidate instanceof Candidate
                 ? CandidateResource::getUrl('view', ['record' => $candidate], tenant: $job->company)
                 : null,
+            // Contacting a potential match stays deliberately separate from
+            // saving, dismissing, or adding them to this hiring process. The
+            // candidate workspace resolves the Candidate + Job thread only
+            // when the recruiter opens the composer.
+            'communication_url' => $candidate instanceof Candidate
+                ? CandidateResource::getUrl('view', [
+                    'record' => $candidate,
+                    'communicationJob' => $job->getKey(),
+                ], tenant: $job->company)
+                : null,
             'state' => $match->state->value,
             'already_in_job' => $alreadyInJob,
             'sufficient_information' => $match->sufficient_information,

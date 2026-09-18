@@ -542,7 +542,8 @@ const ApplicationForm = ({
             <form
                 onSubmit={handleSubmission}
                 noValidate
-                className="mt-8 space-y-9"
+                aria-disabled={preview}
+                className="relative mt-8 space-y-9"
             >
                 {(generalError || (hasErrors && !generalError)) && (
                     <div
@@ -553,7 +554,7 @@ const ApplicationForm = ({
                     </div>
                 )}
 
-                <fieldset disabled={processing}>
+                <fieldset disabled={processing || preview}>
                     <legend className="text-base font-semibold text-slate-950">
                         {translations.form.contact_information}
                     </legend>
@@ -704,7 +705,7 @@ const ApplicationForm = ({
                 </fieldset>
 
                 <fieldset
-                    disabled={processing}
+                    disabled={processing || preview}
                     className="border-t border-slate-200 pt-8"
                 >
                     <legend className="text-base font-semibold text-slate-950">
@@ -848,7 +849,7 @@ const ApplicationForm = ({
 
                 {job.application_questions.length > 0 && (
                     <fieldset
-                        disabled={processing}
+                        disabled={processing || preview}
                         className="border-t border-slate-200 pt-8"
                     >
                         <legend className="text-base font-semibold text-slate-950">
@@ -997,6 +998,12 @@ const ApplicationForm = ({
                             : translations.form.privacy_notice}
                     </p>
                 </div>
+                {preview && (
+                    <div
+                        aria-hidden="true"
+                        className="absolute inset-0 z-10 cursor-not-allowed"
+                    />
+                )}
             </form>
         </section>
     );

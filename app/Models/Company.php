@@ -332,6 +332,18 @@ class Company extends Model
         return $this->hasMany(CompanyEmailProviderSetting::class);
     }
 
+    /** @return HasMany<CandidateCommunicationThread, $this> */
+    public function communicationThreads(): HasMany
+    {
+        return $this->hasMany(CandidateCommunicationThread::class);
+    }
+
+    /** @return HasMany<CandidateCommunicationMessage, $this> */
+    public function communicationMessages(): HasMany
+    {
+        return $this->hasMany(CandidateCommunicationMessage::class);
+    }
+
     /** @return HasOne<CompanyEmailProviderSetting, $this> */
     public function defaultEmailProviderSetting(): HasOne
     {

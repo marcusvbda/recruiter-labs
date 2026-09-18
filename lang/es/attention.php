@@ -33,6 +33,16 @@ return [
             'explanation' => 'La evaluación del candidato terminó con error, así que no hay ajuste ni evidencia que leer. La candidatura en sí no se modificó.',
             'action' => 'Abrir evaluación',
         ],
+        'candidate_communication_failed' => [
+            'title' => 'La comunicación con :candidate no se entregó',
+            'explanation' => 'No se pudo entregar un mensaje autorizado. Revisa la comunicación antes de decidir si debes reintentarlo.',
+            'action' => 'Abrir comunicación',
+        ],
+        'email_provider_needs_attention' => [
+            'title' => 'El proveedor de correo necesita atención',
+            'explanation' => 'Una comunicación autorizada con un candidato no pudo continuar porque su proveedor de correo no está disponible o necesita reautorización.',
+            'action' => 'Abrir configuración del proveedor de correo',
+        ],
         'evaluation_blocked_by_quota' => [
             'title' => 'Evaluaciones esperando cupo de IA',
             'explanation' => '{1} 1 candidatura está en cola y no puede evaluarse hasta que el espacio de trabajo vuelva a tener cupo.|[2,*] :count candidaturas están en cola y no pueden evaluarse hasta que el espacio de trabajo vuelva a tener cupo.',

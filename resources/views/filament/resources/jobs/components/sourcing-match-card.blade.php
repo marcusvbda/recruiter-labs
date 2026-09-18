@@ -76,6 +76,12 @@
                     </x-filament::button>
                 @endif
 
+                @if ($match['communication_url'])
+                    <x-filament::button tag="a" :href="$match['communication_url']" color="gray" icon="heroicon-m-envelope" size="sm">
+                        {{ __('communications.actions.contact_candidate') }}
+                    </x-filament::button>
+                @endif
+
                 @if (! $match['already_in_job'])
                     <x-filament::button wire:click="addToJob({{ $match['id'] }})" icon="heroicon-m-user-plus" size="sm">
                         {{ __('sourcing.panel.add_to_job_action') }}

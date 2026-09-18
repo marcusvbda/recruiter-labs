@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Applications\Pages;
 use App\Actions\MoveApplicationToStatus;
 use App\Actions\ScheduleApplicationFitAnalysis;
 use App\Enums\ApplicationAnalysisStatus;
+use App\Enums\CandidateCommunicationMessageStatus;
 use App\Enums\CriterionEvidenceSource;
 use App\Enums\InterviewStatus;
 use App\Enums\PhoneCountry;
@@ -23,6 +24,8 @@ use App\Models\ApplicationDocument;
 use App\Models\ApplicationInterviewBriefItem;
 use App\Models\ApplicationUtmParameter;
 use App\Models\Candidate;
+use App\Models\CandidateCommunicationMessage;
+use App\Models\CandidateCommunicationThread;
 use App\Models\Interview;
 use App\Models\Status;
 use BackedEnum;
@@ -328,7 +331,50 @@ class ViewApplication extends ViewRecord
                 ])
                 ->persistTabInQueryString('section')
                 ->columnSpanFull(),
+            // Communication is contextual record history, not another
+            // recruitment decision step. Keeping it outside the stable
+            // decision-making tabs preserves their deep-link section keys.
+            View::make('filament.resources.applications.components.communications')
+                ->viewData(['communications' => $this->communicationsData($application)])
+                ->columnSpanFull(),
         ]);
+    }
+
+    /** @return array<string, mixed> */
+    private function communicationsData(Application $application): array
+    {
+        $thread = CandidateCommunicationThread::query()
+            ->where('company_id', $application->company_id)
+            ->where('candidate_id', $application->candidate_id)
+            ->where('job_id', $application->job_id)
+            ->with(['messages.authorizedBy'])
+            ->first();
+
+        return [
+            'candidate_name' => $application->candidate->name,
+            'candidate_url' => CandidateResource::getUrl('view', [
+                'record' => $application->candidate,
+                'communicationJob' => $application->job_id,
+            ], tenant: $application->company),
+            'is_do_not_contact' => $application->candidate->isDoNotContact(),
+            'has_in_flight_delivery' => $thread?->messages
+                ->contains(fn (CandidateCommunicationMessage $message): bool => in_array($message->status, [
+                    CandidateCommunicationMessageStatus::Queued,
+                    CandidateCommunicationMessageStatus::Sending,
+                ], true)) ?? false,
+            'messages' => $thread?->messages
+                ->sortByDesc('id')
+                ->map(fn (CandidateCommunicationMessage $message): array => [
+                    'subject' => $message->authorized_subject ?? $message->draft_subject,
+                    'status' => $message->status->value,
+                    'status_label' => __('communications.statuses.'.$message->status->value),
+                    'ai_assisted' => $message->ai_assisted,
+                    'authorized_by' => $message->authorized_by_name ?? $message->authorizedBy?->name,
+                    'sent_at' => ($message->sent_at ?? $message->send_requested_at ?? $message->created_at)?->translatedFormat('M j, Y · H:i'),
+                ])
+                ->values()
+                ->all() ?? [],
+        ];
     }
 
     /**

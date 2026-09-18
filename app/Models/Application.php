@@ -313,6 +313,12 @@ class Application extends Model
         return $this->hasMany(Interview::class);
     }
 
+    /** @return HasMany<CandidateCommunicationThread, $this> */
+    public function communicationThreads(): HasMany
+    {
+        return $this->hasMany(CandidateCommunicationThread::class);
+    }
+
     /**
      * Interviews that have not happened yet, which is what makes a candidate
      * "interviewing" — see {@see scopeInterviewing()}. Soonest first, so every

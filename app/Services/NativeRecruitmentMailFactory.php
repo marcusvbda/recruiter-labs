@@ -2,10 +2,12 @@
 
 namespace App\Services;
 
+use App\Data\CandidateCommunicationEmailContext;
 use App\Data\InterviewEmailContext;
 use App\Data\RecruitmentEmailContext;
 use App\Data\StatusEmailContext;
 use App\Enums\EmailNotificationType;
+use App\Mail\Recruitment\CandidateCommunicationMail;
 use App\Mail\Recruitment\InterviewCancelledMail;
 use App\Mail\Recruitment\InterviewRescheduledMail;
 use App\Mail\Recruitment\InterviewScheduledMail;
@@ -15,6 +17,11 @@ use LogicException;
 
 class NativeRecruitmentMailFactory
 {
+    public function makeCandidateCommunication(CandidateCommunicationEmailContext $context): RecruitmentMail
+    {
+        return new CandidateCommunicationMail($context);
+    }
+
     public function make(EmailNotificationType $type, RecruitmentEmailContext $context): RecruitmentMail
     {
         return match ($type) {

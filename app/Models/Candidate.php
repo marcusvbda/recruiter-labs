@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -23,6 +24,8 @@ use Illuminate\Validation\ValidationException;
  * @property string|null $normalized_email
  * @property string|null $phone
  * @property int $materials_revision
+ * @property Carbon|null $do_not_contact_at
+ * @property int|null $do_not_contact_by_id
  */
 #[Fillable(['company_id', 'name', 'email', 'phone', 'socials'])]
 class Candidate extends Model
@@ -37,6 +40,7 @@ class Candidate extends Model
         return [
             'socials' => 'array',
             'materials_revision' => 'integer',
+            'do_not_contact_at' => 'datetime',
         ];
     }
 
@@ -160,5 +164,22 @@ class Candidate extends Model
     public function sourcingMatches(): HasMany
     {
         return $this->hasMany(SourcingMatch::class);
+    }
+
+    public function isDoNotContact(): bool
+    {
+        return $this->do_not_contact_at !== null;
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function doNotContactBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'do_not_contact_by_id');
+    }
+
+    /** @return HasMany<CandidateCommunicationThread, $this> */
+    public function communicationThreads(): HasMany
+    {
+        return $this->hasMany(CandidateCommunicationThread::class);
     }
 }

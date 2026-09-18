@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * @property RecruitmentEmailDeliveryStatus $status
@@ -41,5 +42,11 @@ class RecruitmentEmailDelivery extends Model
     public function providerSetting(): BelongsTo
     {
         return $this->belongsTo(CompanyEmailProviderSetting::class, 'provider_setting_id');
+    }
+
+    /** @return HasOne<CandidateCommunicationMessage, $this> */
+    public function candidateCommunicationMessage(): HasOne
+    {
+        return $this->hasOne(CandidateCommunicationMessage::class, 'delivery_id');
     }
 }

@@ -33,6 +33,16 @@ return [
             'explanation' => 'The candidate evaluation ended in an error, so there is no fit or evidence to read. The application itself is untouched.',
             'action' => 'Open evaluation',
         ],
+        'candidate_communication_failed' => [
+            'title' => 'Communication to :candidate was not delivered',
+            'explanation' => 'An authorised message could not be delivered. Review the communication before deciding whether to retry.',
+            'action' => 'Open communication',
+        ],
+        'email_provider_needs_attention' => [
+            'title' => 'Email provider needs attention',
+            'explanation' => 'An authorised candidate communication could not proceed because its email provider is unavailable or needs reauthorisation.',
+            'action' => 'Open email provider settings',
+        ],
         'evaluation_blocked_by_quota' => [
             'title' => 'Evaluations are waiting for AI allowance',
             'explanation' => '{1} 1 application is queued and cannot be evaluated until the workspace has allowance again.|[2,*] :count applications are queued and cannot be evaluated until the workspace has allowance again.',
