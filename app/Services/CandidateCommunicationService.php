@@ -236,6 +236,38 @@ class CandidateCommunicationService
     }
 
     /**
+     * Discard only a working copy. Authorised snapshots and delivery records are
+     * intentionally never deletable through the recruiter composer boundary.
+     */
+    public function discardDraft(User $actor, CandidateCommunicationMessage $message): void
+    {
+        DB::transaction(function () use ($actor, $message): void {
+            $message = CandidateCommunicationMessage::query()
+                ->whereKey($message->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
+            $thread = $this->lockedThreadForActor(
+                $actor,
+                CandidateCommunicationThread::query()->findOrFail($message->thread_id),
+            );
+
+            if ($message->company_id !== $thread->company_id) {
+                throw CandidateCommunicationException::crossTenantContext();
+            }
+
+            if ($message->isAuthorized()) {
+                throw CandidateCommunicationException::alreadyAuthorized();
+            }
+
+            if ($message->status !== CandidateCommunicationMessageStatus::Draft) {
+                throw CandidateCommunicationException::draftCannotBeEdited();
+            }
+
+            $message->delete();
+        });
+    }
+
+    /**
      * Copy the recruiter's final draft into immutable, trusted send fields.
      * Provider availability is intentionally checked here, rather than while a
      * draft is created, so unavailable settings never destroy a useful draft.

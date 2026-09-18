@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Contracts\RecruitmentEmailSender;
 use App\Data\CandidateCommunicationEmailContext;
 use App\Data\InterviewEmailContext;
 use App\Data\RecruitmentEmailContext;
@@ -12,8 +13,10 @@ use App\Enums\EmailNotificationType;
 use App\Enums\RecruitmentEmailDeliveryStatus;
 use App\Mail\Recruitment\RecruitmentMail;
 use App\Models\Application;
+use App\Models\Candidate;
 use App\Models\CandidateCommunicationMessage;
 use App\Models\CandidateCommunicationThread;
+use App\Models\Company;
 use App\Models\CompanyEmailProviderSetting;
 use App\Models\Interview;
 use App\Models\RecruitmentEmailDelivery;
@@ -107,13 +110,17 @@ class SendRecruitmentEmail implements ShouldBeUnique, ShouldQueue
             : $mailFactory->make($this->type, $this->context);
 
         try {
-            $sender->send(
-                $providerSetting,
-                $mail,
-                $this->context->recipientEmail(),
-                $this->context->companyName(),
-                $this->providerIdempotencyKey(),
-            );
+            if ($this->context instanceof CandidateCommunicationEmailContext) {
+                $this->sendCandidateCommunication($providerSetting, $sender, $mail);
+            } else {
+                $sender->send(
+                    $providerSetting,
+                    $mail,
+                    $this->context->recipientEmail(),
+                    $this->context->companyName(),
+                    $this->providerIdempotencyKey(),
+                );
+            }
         } finally {
             $this->synchronizeCommunicationHistory($providerSetting, $mail);
         }
@@ -168,6 +175,88 @@ class SendRecruitmentEmail implements ShouldBeUnique, ShouldQueue
             ->where('company_id', $this->companyId)
             ->where('idempotency_key', $this->providerIdempotencyKey())
             ->first();
+    }
+
+    /**
+     * DNC is an operational boundary, not merely an authorization-time check.
+     * Hold the same company/candidate locks as SetCandidateDoNotContact through
+     * the provider call: either DNC wins and this job never sends, or an
+     * already-started send completes before DNC can be recorded. Procedural
+     * notifications deliberately bypass this discretionary-outreach guard.
+     */
+    private function sendCandidateCommunication(
+        CompanyEmailProviderSetting $providerSetting,
+        RecruitmentEmailSender $sender,
+        RecruitmentMail $mail,
+    ): void {
+        if (! $this->context instanceof CandidateCommunicationEmailContext) {
+            throw new \LogicException('Candidate communication sends require a candidate communication context.');
+        }
+
+        $context = $this->context;
+        $exception = null;
+
+        $failure = DB::transaction(function () use ($providerSetting, $sender, $mail, $context, &$exception): ?string {
+            Company::query()->whereKey($this->companyId)->lockForUpdate()->firstOrFail();
+
+            $message = CandidateCommunicationMessage::query()
+                ->whereKey($context->messageId)
+                ->where('company_id', $this->companyId)
+                ->where('idempotency_key', $context->idempotencyKey())
+                ->lockForUpdate()
+                ->first();
+            $thread = $message instanceof CandidateCommunicationMessage
+                ? CandidateCommunicationThread::query()
+                    ->whereKey($message->thread_id)
+                    ->where('company_id', $this->companyId)
+                    ->lockForUpdate()
+                    ->first()
+                : null;
+            $candidate = $thread instanceof CandidateCommunicationThread
+                ? Candidate::query()
+                    ->whereKey($thread->candidate_id)
+                    ->where('company_id', $this->companyId)
+                    ->lockForUpdate()
+                    ->first()
+                : null;
+
+            if (! $message instanceof CandidateCommunicationMessage
+                || ! $thread instanceof CandidateCommunicationThread
+                || ! $candidate instanceof Candidate) {
+                return 'CandidateCommunicationContextUnavailable';
+            }
+
+            if ($candidate->isDoNotContact()) {
+                return 'CandidateDoNotContact';
+            }
+
+            try {
+                $sender->send(
+                    $providerSetting,
+                    $mail,
+                    $context->recipientEmail(),
+                    $context->companyName(),
+                    $this->providerIdempotencyKey(),
+                );
+            } catch (Throwable $caught) {
+                // The sender records a retryable delivery state before throwing.
+                // Re-throw after this transaction commits so that state is not
+                // rolled back with the candidate lock.
+                $exception = $caught;
+            }
+
+            return null;
+        });
+
+        if ($failure !== null) {
+            $this->failCandidateCommunication($failure);
+
+            return;
+        }
+
+        if ($exception instanceof Throwable) {
+            throw $exception;
+        }
     }
 
     private function synchronizeCommunicationHistory(

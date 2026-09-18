@@ -121,13 +121,15 @@ class ViewCandidate extends ViewRecord
                 ? __('communications.dnc.allow_description')
                 : __('communications.dnc.block_description'))
             ->action(function (SetCandidateDoNotContact $doNotContact) use ($candidate): void {
-                $doNotContact->run($this->getCurrentUser(), $candidate, ! $candidate->isDoNotContact());
+                $isDoNotContact = ! $candidate->isDoNotContact();
+
+                $doNotContact->run($this->getCurrentUser(), $candidate, $isDoNotContact);
                 $this->refreshCandidateRecord();
 
                 Notification::make()
-                    ->title($candidate->isDoNotContact()
-                        ? __('communications.notifications.contact_allowed')
-                        : __('communications.notifications.do_not_contact_set'))
+                    ->title($isDoNotContact
+                        ? __('communications.notifications.do_not_contact_set')
+                        : __('communications.notifications.contact_allowed'))
                     ->success()
                     ->send();
             });
@@ -158,6 +160,12 @@ class ViewCandidate extends ViewRecord
                     $action->makeModalSubmitAction('saveCommunicationDraft', arguments: ['saveDraft' => true])
                         ->label(__('communications.actions.save_draft'))
                         ->color('gray'),
+                    $action->makeModalSubmitAction('discardCommunicationDraft', arguments: ['discardDraft' => true])
+                        ->label(__('communications.actions.discard_draft'))
+                        ->icon(Heroicon::OutlinedTrash)
+                        ->color('danger')
+                        ->requiresConfirmation()
+                        ->visible(fn (): bool => $this->communicationDraft() instanceof CandidateCommunicationMessage),
                 ];
 
                 if ($this->hasEligibleFollowUpContext()) {
@@ -238,17 +246,39 @@ class ViewCandidate extends ViewRecord
                     throw new Halt;
                 }
 
+                $draftId = $data['draft_id'] ?? null;
+                $draft = is_numeric($draftId)
+                    ? $thread->messages()->whereKey((int) $draftId)->first()
+                    : null;
+
+                if ($arguments['discardDraft'] ?? false) {
+                    if (! $draft instanceof CandidateCommunicationMessage) {
+                        Notification::make()->title(__('communications.errors.unavailable'))->danger()->send();
+
+                        return;
+                    }
+
+                    try {
+                        $communications->discardDraft($this->getCurrentUser(), $draft);
+                    } catch (CandidateCommunicationException $exception) {
+                        $this->notifyCommunicationException($exception);
+
+                        return;
+                    }
+
+                    $this->refreshCandidateRecord();
+
+                    Notification::make()->title(__('communications.notifications.draft_discarded'))->success()->send();
+
+                    return;
+                }
+
                 if (! ($arguments['saveDraft'] ?? false)
                     && (blank($data['subject'] ?? null) || blank($data['body'] ?? null))) {
                     Notification::make()->title(__('communications.errors.subject_and_body_required'))->danger()->send();
 
                     throw new Halt;
                 }
-
-                $draftId = $data['draft_id'] ?? null;
-                $draft = is_numeric($draftId)
-                    ? $thread->messages()->whereKey((int) $draftId)->first()
-                    : null;
 
                 try {
                     if ($draft instanceof CandidateCommunicationMessage) {
@@ -973,10 +1003,7 @@ class ViewCandidate extends ViewRecord
     /** @return array<string, mixed> */
     private function composerFormState(): array
     {
-        $draft = $this->communicationThread()?->messages()
-            ->where('status', CandidateCommunicationMessageStatus::Draft)
-            ->latest('id')
-            ->first();
+        $draft = $this->communicationDraft();
 
         return [
             'draft_id' => $draft?->getKey(),
@@ -985,6 +1012,14 @@ class ViewCandidate extends ViewRecord
             'subject' => $draft?->draft_subject,
             'body' => $draft?->draft_body,
         ];
+    }
+
+    private function communicationDraft(): ?CandidateCommunicationMessage
+    {
+        return $this->communicationThread()?->messages()
+            ->where('status', CandidateCommunicationMessageStatus::Draft)
+            ->latest('id')
+            ->first();
     }
 
     private function composerDescription(): string
