@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\CandidateCommunicationMessageKind;
 use App\Enums\CandidateCommunicationMessageStatus;
 use App\Exceptions\CandidateCommunicationException;
 use App\Models\Application;
@@ -106,6 +107,7 @@ class CandidateCommunicationService
 
             return $thread->messages()->create([
                 'company_id' => $thread->company_id,
+                'kind' => CandidateCommunicationMessageKind::RecruiterAuthored,
                 'draft_subject' => $subject,
                 'draft_body' => $body,
                 'ai_assisted' => $aiAssisted,
@@ -184,6 +186,7 @@ class CandidateCommunicationService
 
             return $thread->messages()->create([
                 'company_id' => $thread->company_id,
+                'kind' => CandidateCommunicationMessageKind::RecruiterAuthored,
                 'draft_subject' => $subject,
                 'draft_body' => $body,
                 'ai_assisted' => true,
@@ -264,6 +267,7 @@ class CandidateCommunicationService
             $providerSetting = $this->usableDefaultProvider($thread->company);
 
             $message->forceFill([
+                'kind' => CandidateCommunicationMessageKind::RecruiterAuthored,
                 'authorized_by_id' => $actor->getKey(),
                 'authorized_by_name' => $actor->name,
                 'provider_setting_id' => $providerSetting->getKey(),

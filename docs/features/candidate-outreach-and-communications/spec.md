@@ -1,6 +1,6 @@
 ---
-status: planned
-type: product-spec
+status: implemented
+type: as-built
 ---
 
 # Candidate outreach and communications
@@ -340,6 +340,18 @@ A message needs enough product-level information to answer:
 - what provider was used;
 - whether delivery succeeded;
 - whether sending failed.
+
+Each message also has explicit provenance independent of AI assistance:
+
+- recruiter message;
+- pipeline status notification;
+- interview scheduled notification;
+- interview rescheduled notification;
+- interview cancelled notification.
+
+Only recruiter messages carry recruiter authorization attribution. Automated
+notifications are immutable system-send snapshots, not recruiter-authorized
+communications.
 
 V1 messages may conceptually have states such as:
 

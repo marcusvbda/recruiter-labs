@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CandidateCommunicationMessageKind;
 use App\Enums\CandidateCommunicationMessageStatus;
 use App\Enums\EmailProvider;
 use App\Exceptions\CandidateCommunicationException;
@@ -16,14 +17,16 @@ use Illuminate\Support\Carbon;
  * trusted recipient/sender/provider identity are never rewritten.
  *
  * @property CandidateCommunicationMessageStatus $status
+ * @property CandidateCommunicationMessageKind|null $kind
  * @property bool $ai_assisted
  * @property Carbon|null $authorized_at
  */
-#[Fillable(['company_id', 'thread_id', 'draft_subject', 'draft_body', 'ai_assisted'])]
+#[Fillable(['company_id', 'thread_id', 'kind', 'draft_subject', 'draft_body', 'ai_assisted'])]
 class CandidateCommunicationMessage extends Model
 {
     /** @var list<string> */
     private const SNAPSHOT_ATTRIBUTES = [
+        'kind',
         'ai_assisted',
         'authorized_by_id',
         'authorized_by_name',
@@ -37,10 +40,30 @@ class CandidateCommunicationMessage extends Model
         'authorized_at',
     ];
 
+    /** @var list<string> */
+    private const SYSTEM_SNAPSHOT_ATTRIBUTES = [
+        'kind',
+        'ai_assisted',
+        'authorized_by_id',
+        'authorized_by_name',
+        'provider_setting_id',
+        'draft_subject',
+        'draft_body',
+        'authorized_subject',
+        'authorized_body',
+        'recipient_email',
+        'sender_email',
+        'provider',
+        'idempotency_key',
+        'send_requested_at',
+        'authorized_at',
+    ];
+
     protected function casts(): array
     {
         return [
             'status' => CandidateCommunicationMessageStatus::class,
+            'kind' => CandidateCommunicationMessageKind::class,
             'ai_assisted' => 'boolean',
             'provider' => EmailProvider::class,
             'authorized_at' => 'datetime',
@@ -52,11 +75,14 @@ class CandidateCommunicationMessage extends Model
     protected static function booted(): void
     {
         static::updating(function (CandidateCommunicationMessage $message): void {
-            if ($message->getRawOriginal('authorized_at') === null) {
-                return;
+            if ($message->getRawOriginal('authorized_at') !== null
+                && $message->isDirty(self::SNAPSHOT_ATTRIBUTES)) {
+                throw CandidateCommunicationException::alreadyAuthorized();
             }
 
-            if ($message->isDirty(self::SNAPSHOT_ATTRIBUTES)) {
+            if ($message->getRawOriginal('kind') !== null
+                && $message->getRawOriginal('kind') !== CandidateCommunicationMessageKind::RecruiterAuthored->value
+                && $message->isDirty(self::SYSTEM_SNAPSHOT_ATTRIBUTES)) {
                 throw CandidateCommunicationException::alreadyAuthorized();
             }
         });

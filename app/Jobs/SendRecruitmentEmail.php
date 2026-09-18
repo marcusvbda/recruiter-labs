@@ -6,9 +6,11 @@ use App\Data\CandidateCommunicationEmailContext;
 use App\Data\InterviewEmailContext;
 use App\Data\RecruitmentEmailContext;
 use App\Data\StatusEmailContext;
+use App\Enums\CandidateCommunicationMessageKind;
 use App\Enums\CandidateCommunicationMessageStatus;
 use App\Enums\EmailNotificationType;
 use App\Enums\RecruitmentEmailDeliveryStatus;
+use App\Mail\Recruitment\RecruitmentMail;
 use App\Models\Application;
 use App\Models\CandidateCommunicationMessage;
 use App\Models\CandidateCommunicationThread;
@@ -113,7 +115,7 @@ class SendRecruitmentEmail implements ShouldBeUnique, ShouldQueue
                 $this->providerIdempotencyKey(),
             );
         } finally {
-            $this->synchronizeCommunicationHistory($providerSetting);
+            $this->synchronizeCommunicationHistory($providerSetting, $mail);
         }
 
         $delivery = $this->delivery();
@@ -168,15 +170,17 @@ class SendRecruitmentEmail implements ShouldBeUnique, ShouldQueue
             ->first();
     }
 
-    private function synchronizeCommunicationHistory(?CompanyEmailProviderSetting $providerSetting = null): void
-    {
+    private function synchronizeCommunicationHistory(
+        ?CompanyEmailProviderSetting $providerSetting = null,
+        ?RecruitmentMail $mail = null,
+    ): void {
         $delivery = $this->delivery();
 
         if (! $delivery instanceof RecruitmentEmailDelivery) {
             return;
         }
 
-        DB::transaction(function () use ($delivery, $providerSetting): void {
+        DB::transaction(function () use ($delivery, $providerSetting, $mail): void {
             $delivery = RecruitmentEmailDelivery::query()->whereKey($delivery->getKey())->lockForUpdate()->sole();
 
             if ($this->context instanceof CandidateCommunicationEmailContext) {
@@ -198,9 +202,15 @@ class SendRecruitmentEmail implements ShouldBeUnique, ShouldQueue
                 return;
             }
 
-            $context = $this->systemCommunicationContext();
+            $context = $this->systemCommunicationContext($mail);
 
             if ($context === null) {
+                return;
+            }
+
+            $type = $this->type;
+
+            if (! $type instanceof EmailNotificationType) {
                 return;
             }
 
@@ -220,6 +230,7 @@ class SendRecruitmentEmail implements ShouldBeUnique, ShouldQueue
                 [
                     'company_id' => $this->companyId,
                     'thread_id' => $thread->getKey(),
+                    'kind' => CandidateCommunicationMessageKind::fromNotificationType($type),
                     'status' => $this->messageStatus($delivery->status),
                     'authorized_subject' => $subject,
                     'authorized_body' => $body,
@@ -227,7 +238,6 @@ class SendRecruitmentEmail implements ShouldBeUnique, ShouldQueue
                     'sender_email' => $providerSetting?->validSenderAddress(),
                     'provider' => $delivery->provider,
                     'idempotency_key' => 'system/'.$delivery->idempotency_key,
-                    'authorized_at' => $delivery->last_attempted_at,
                     'send_requested_at' => $delivery->last_attempted_at,
                     'sent_at' => $delivery->delivered_at,
                 ],
@@ -241,23 +251,22 @@ class SendRecruitmentEmail implements ShouldBeUnique, ShouldQueue
     }
 
     /** @return array{int, int, int, string, string|null}|null */
-    private function systemCommunicationContext(): ?array
+    private function systemCommunicationContext(?RecruitmentMail $mail): ?array
     {
+        if (! $mail instanceof RecruitmentMail || ! $this->type instanceof EmailNotificationType) {
+            return null;
+        }
+
         $applicationId = null;
 
         if ($this->context instanceof StatusEmailContext) {
             $applicationId = $this->context->applicationId;
-            $subject = $this->context->subject;
+            $subject = $mail->envelope()->subject;
             $body = $this->context->body;
         } elseif ($this->context instanceof InterviewEmailContext) {
-            $interview = Interview::query()->with('application')->find($this->context->interviewId);
+            $interview = Interview::query()->find($this->context->interviewId);
             $applicationId = $interview?->application_id;
-            $subject = match ($this->type) {
-                EmailNotificationType::InterviewScheduled => 'Interview scheduled for '.$this->context->jobTitle,
-                EmailNotificationType::InterviewRescheduled => 'Interview rescheduled for '.$this->context->jobTitle,
-                EmailNotificationType::InterviewCancelled => 'Your interview has been cancelled',
-                default => null,
-            };
+            $subject = $mail->envelope()->subject;
             // The existing interview mail owns its rendered content. Do not
             // manufacture a shorter historical body from current records.
             $body = null;

@@ -15,6 +15,7 @@ return [
     ],
     'fields' => [
         'recipient' => 'Recipient',
+        'sender' => 'From',
         'subject' => 'Subject',
         'body' => 'Message',
         'language' => 'Draft language',
@@ -22,7 +23,8 @@ return [
     'composer' => [
         'heading' => 'Contact :candidate',
         'job_context' => 'This message is about :job.',
-        'provider_unavailable' => 'Sending is unavailable until the workspace email provider is configured. You can still review and edit this draft.',
+        'provider_unavailable' => 'Sending is unavailable until a workspace sending identity is available. You can still review and edit this draft.',
+        'sender_unavailable' => 'Sending identity unavailable',
     ],
     'history' => [
         'heading' => 'Communication',
@@ -33,7 +35,12 @@ return [
         'empty_for_application' => 'No communication has been recorded for this application yet.',
         'untitled_draft' => 'Untitled draft',
         'ai_assisted' => 'AI-assisted',
-        'manual' => 'Manual',
+        'recruiter_message' => 'Recruiter message',
+        'pipeline_status_notification' => 'Pipeline status notification',
+        'interview_scheduled_notification' => 'Interview scheduled notification',
+        'interview_rescheduled_notification' => 'Interview rescheduled notification',
+        'interview_cancelled_notification' => 'Interview cancelled notification',
+        'recorded_message' => 'Recruiter Labs message',
         'authorized_by' => 'Authorized by :name',
         'direction' => ':sender to :recipient',
     ],

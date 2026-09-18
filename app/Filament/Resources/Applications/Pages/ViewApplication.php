@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Applications\Pages;
 use App\Actions\MoveApplicationToStatus;
 use App\Actions\ScheduleApplicationFitAnalysis;
 use App\Enums\ApplicationAnalysisStatus;
+use App\Enums\CandidateCommunicationMessageKind;
 use App\Enums\CandidateCommunicationMessageStatus;
 use App\Enums\CriterionEvidenceSource;
 use App\Enums\InterviewStatus;
@@ -368,13 +369,28 @@ class ViewApplication extends ViewRecord
                     'subject' => $message->authorized_subject ?? $message->draft_subject,
                     'status' => $message->status->value,
                     'status_label' => __('communications.statuses.'.$message->status->value),
-                    'ai_assisted' => $message->ai_assisted,
-                    'authorized_by' => $message->authorized_by_name ?? $message->authorizedBy?->name,
+                    'kind_label' => $this->communicationKindLabel($message),
+                    'ai_assisted' => $message->kind?->isRecruiterAuthored() && $message->ai_assisted,
+                    'authorized_by' => $message->kind?->isRecruiterAuthored()
+                        ? $message->authorized_by_name ?? $message->authorizedBy?->name
+                        : null,
                     'sent_at' => ($message->sent_at ?? $message->send_requested_at ?? $message->created_at)?->translatedFormat('M j, Y · H:i'),
                 ])
                 ->values()
                 ->all() ?? [],
         ];
+    }
+
+    private function communicationKindLabel(CandidateCommunicationMessage $message): string
+    {
+        return match ($message->kind) {
+            CandidateCommunicationMessageKind::RecruiterAuthored => __('communications.history.recruiter_message'),
+            CandidateCommunicationMessageKind::PipelineStatusNotification => __('communications.history.pipeline_status_notification'),
+            CandidateCommunicationMessageKind::InterviewScheduled => __('communications.history.interview_scheduled_notification'),
+            CandidateCommunicationMessageKind::InterviewRescheduled => __('communications.history.interview_rescheduled_notification'),
+            CandidateCommunicationMessageKind::InterviewCancelled => __('communications.history.interview_cancelled_notification'),
+            null => __('communications.history.recorded_message'),
+        };
     }
 
     /**

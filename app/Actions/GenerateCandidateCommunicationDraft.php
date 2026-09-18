@@ -7,6 +7,7 @@ use App\Data\AiProviderConfigurationData;
 use App\Enums\AiExecutionOrigin;
 use App\Enums\ApplicationLocale;
 use App\Enums\CandidateCommunicationDraftPurpose;
+use App\Enums\CandidateCommunicationMessageKind;
 use App\Enums\Limit;
 use App\Exceptions\CandidateCommunicationException;
 use App\Models\Candidate;
@@ -134,6 +135,7 @@ class GenerateCandidateCommunicationDraft
     private function priorOutboundMessages(CandidateCommunicationThread $thread, Candidate $candidate): array
     {
         return $thread->messages()
+            ->where('kind', CandidateCommunicationMessageKind::RecruiterAuthored)
             ->whereNotNull('authorized_at')
             ->whereNotNull('authorized_body')
             ->latest('authorized_at')

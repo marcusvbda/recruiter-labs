@@ -37,10 +37,9 @@
                                     <x-filament::badge :color="match ($message['status']) { 'sent' => 'success', 'failed', 'ambiguous' => 'danger', 'queued', 'sending' => 'warning', default => 'gray' }">
                                         {{ $message['status_label'] }}
                                     </x-filament::badge>
+                                    <x-filament::badge color="gray">{{ $message['kind_label'] }}</x-filament::badge>
                                     @if ($message['ai_assisted'])
                                         <x-filament::badge color="info">{{ __('communications.history.ai_assisted') }}</x-filament::badge>
-                                    @else
-                                        <x-filament::badge color="gray">{{ __('communications.history.manual') }}</x-filament::badge>
                                     @endif
                                 </div>
 

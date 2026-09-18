@@ -17,8 +17,9 @@
                 <li class="flex flex-wrap items-center gap-2 text-sm">
                     <span class="font-medium text-gray-950 dark:text-white">{{ $message['subject'] ?: __('communications.history.untitled_draft') }}</span>
                     <x-filament::badge :color="match ($message['status']) { 'sent' => 'success', 'failed', 'ambiguous' => 'danger', 'queued', 'sending' => 'warning', default => 'gray' }">{{ $message['status_label'] }}</x-filament::badge>
+                    <x-filament::badge color="gray">{{ $message['kind_label'] }}</x-filament::badge>
                     <span class="text-gray-500 dark:text-gray-400">
-                        {{ $message['ai_assisted'] ? __('communications.history.ai_assisted') : __('communications.history.manual') }}
+                        @if ($message['ai_assisted']) {{ __('communications.history.ai_assisted') }} @endif
                         @if ($message['authorized_by']) · {{ __('communications.history.authorized_by', ['name' => $message['authorized_by']]) }} @endif
                         @if ($message['sent_at']) · {{ $message['sent_at'] }} @endif
                     </span>

@@ -6,6 +6,7 @@ use App\Actions\GenerateCandidateCommunicationDraft;
 use App\Actions\SetCandidateDoNotContact;
 use App\Enums\ApplicationLocale;
 use App\Enums\CandidateCommunicationDraftPurpose;
+use App\Enums\CandidateCommunicationMessageKind;
 use App\Enums\CandidateCommunicationMessageStatus;
 use App\Enums\CandidateMaterialPreparationStatus;
 use App\Enums\InterviewStatus;
@@ -87,7 +88,10 @@ class ViewCandidate extends ViewRecord
             $actions[] = $this->composeCommunicationAction();
 
             $groupedActions[] = $this->prepareCommunicationDraftAction();
-            $groupedActions[] = $this->prepareCommunicationDraftAction(CandidateCommunicationDraftPurpose::FollowUp);
+
+            if ($this->hasEligibleFollowUpContext()) {
+                $groupedActions[] = $this->prepareCommunicationDraftAction(CandidateCommunicationDraftPurpose::FollowUp);
+            }
         }
 
         $groupedActions[] = $this->doNotContactAction();
@@ -144,8 +148,10 @@ class ViewCandidate extends ViewRecord
             ))
             ->extraModalFooterActions(function (Action $action): array {
                 $actions = [
-                    $action->makeModalSubmitAction('prepareCommunicationDraftFromComposer', arguments: ['prepareWithAi' => true])
-                        ->label(__('communications.actions.prepare_with_ai'))
+                    $action->makeModalSubmitAction('prepareCommunicationOutreachFromComposer', arguments: [
+                        'draftPurpose' => CandidateCommunicationDraftPurpose::InitialOutreach->value,
+                    ])
+                        ->label(__('communications.actions.prepare_outreach'))
                         ->icon(Heroicon::OutlinedSparkles)
                         ->color('gray')
                         ->disabled(fn (): bool => $this->getCandidate()->isDoNotContact()),
@@ -153,6 +159,16 @@ class ViewCandidate extends ViewRecord
                         ->label(__('communications.actions.save_draft'))
                         ->color('gray'),
                 ];
+
+                if ($this->hasEligibleFollowUpContext()) {
+                    $actions[] = $action->makeModalSubmitAction('prepareCommunicationFollowUpFromComposer', arguments: [
+                        'draftPurpose' => CandidateCommunicationDraftPurpose::FollowUp->value,
+                    ])
+                        ->label(__('communications.actions.prepare_follow_up'))
+                        ->icon(Heroicon::OutlinedSparkles)
+                        ->color('gray')
+                        ->disabled(fn (): bool => $this->getCandidate()->isDoNotContact());
+                }
 
                 if (! $this->hasUsableEmailProvider()) {
                     $actions[] = Action::make('configureEmailProvider')
@@ -168,6 +184,11 @@ class ViewCandidate extends ViewRecord
                 Hidden::make('draft_id'),
                 TextInput::make('recipient')
                     ->label(__('communications.fields.recipient'))
+                    ->disabled()
+                    ->dehydrated(false),
+                TextInput::make('sender')
+                    ->label(__('communications.fields.sender'))
+                    ->placeholder(__('communications.composer.sender_unavailable'))
                     ->disabled()
                     ->dehydrated(false),
                 TextInput::make('subject')
@@ -191,13 +212,9 @@ class ViewCandidate extends ViewRecord
                 // Halt: Filament unmounts the action and resets its data once
                 // the closure returns normally, which would discard whatever
                 // the recruiter is still reviewing.
-                if ($arguments['prepareWithAi'] ?? false) {
-                    $purpose = $thread->messages()
-                        ->whereNotNull('authorized_at')
-                        ->whereNotNull('authorized_body')
-                        ->exists()
-                        ? CandidateCommunicationDraftPurpose::FollowUp
-                        : CandidateCommunicationDraftPurpose::InitialOutreach;
+                $purpose = CandidateCommunicationDraftPurpose::tryFrom((string) ($arguments['draftPurpose'] ?? ''));
+
+                if ($purpose instanceof CandidateCommunicationDraftPurpose) {
 
                     try {
                         $drafts->handle(
@@ -624,8 +641,11 @@ class ViewCandidate extends ViewRecord
                             'body' => $message->authorized_body ?? $message->draft_body,
                             'status' => $message->status->value,
                             'status_label' => __('communications.statuses.'.$message->status->value),
-                            'ai_assisted' => $message->ai_assisted,
-                            'authorized_by' => $message->authorized_by_name ?? $message->authorizedBy?->name,
+                            'kind_label' => $this->communicationKindLabel($message),
+                            'ai_assisted' => $message->kind?->isRecruiterAuthored() && $message->ai_assisted,
+                            'authorized_by' => $message->kind?->isRecruiterAuthored()
+                                ? $message->authorized_by_name ?? $message->authorizedBy?->name
+                                : null,
                             'sender' => $message->sender_email,
                             'recipient' => $message->recipient_email,
                             'sent_at' => ($message->sent_at ?? $message->send_requested_at ?? $message->created_at)?->translatedFormat('M j, Y · H:i'),
@@ -947,13 +967,7 @@ class ViewCandidate extends ViewRecord
 
     private function hasUsableEmailProvider(): bool
     {
-        try {
-            app(CandidateCommunicationService::class)->usableDefaultProvider($this->getCompany());
-
-            return true;
-        } catch (CandidateCommunicationException) {
-            return false;
-        }
+        return $this->defaultCommunicationSender() !== null;
     }
 
     /** @return array<string, mixed> */
@@ -967,6 +981,7 @@ class ViewCandidate extends ViewRecord
         return [
             'draft_id' => $draft?->getKey(),
             'recipient' => $this->getCandidate()->email,
+            'sender' => $this->defaultCommunicationSender(),
             'subject' => $draft?->draft_subject,
             'body' => $draft?->draft_body,
         ];
@@ -981,6 +996,40 @@ class ViewCandidate extends ViewRecord
         }
 
         return $description;
+    }
+
+    private function defaultCommunicationSender(): ?string
+    {
+        try {
+            return app(CandidateCommunicationService::class)
+                ->usableDefaultProvider($this->getCompany())
+                ->validSenderAddress();
+        } catch (CandidateCommunicationException) {
+            return null;
+        }
+    }
+
+    private function hasEligibleFollowUpContext(): bool
+    {
+        $thread = $this->communicationThread();
+
+        return $thread?->messages()
+            ->where('kind', CandidateCommunicationMessageKind::RecruiterAuthored)
+            ->whereNotNull('authorized_at')
+            ->whereNotNull('authorized_body')
+            ->exists() ?? false;
+    }
+
+    private function communicationKindLabel(CandidateCommunicationMessage $message): string
+    {
+        return match ($message->kind) {
+            CandidateCommunicationMessageKind::RecruiterAuthored => __('communications.history.recruiter_message'),
+            CandidateCommunicationMessageKind::PipelineStatusNotification => __('communications.history.pipeline_status_notification'),
+            CandidateCommunicationMessageKind::InterviewScheduled => __('communications.history.interview_scheduled_notification'),
+            CandidateCommunicationMessageKind::InterviewRescheduled => __('communications.history.interview_rescheduled_notification'),
+            CandidateCommunicationMessageKind::InterviewCancelled => __('communications.history.interview_cancelled_notification'),
+            null => __('communications.history.recorded_message'),
+        };
     }
 
     private function communicationErrorKey(CandidateCommunicationException $exception): string
