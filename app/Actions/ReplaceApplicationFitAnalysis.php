@@ -13,6 +13,7 @@ use App\Models\JobCriterion;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
+use Marcusvbda\FilamentRealtimeDriver\RealtimeEvent;
 
 /**
  * Persists a candidate evaluation, deterministically.
@@ -98,6 +99,8 @@ class ReplaceApplicationFitAnalysis
                     'analysis_status' => ApplicationAnalysisStatus::AwaitingCriteria,
                 ])->saveQuietly();
 
+                $this->broadcastAnalysisUpdated($lockedApplication);
+
                 $application->setRawAttributes($lockedApplication->getAttributes(), true);
 
                 return false;
@@ -141,6 +144,8 @@ class ReplaceApplicationFitAnalysis
                 'analyzed_at' => now(),
             ])->saveQuietly();
 
+            $this->broadcastAnalysisUpdated($lockedApplication);
+
             // Captured only here, where a completed evaluation is persisted: this
             // is the single point in the action where the recruiter actually gains
             // a fit, coverage and confidence assessment to read. Failed,
@@ -149,6 +154,18 @@ class ReplaceApplicationFitAnalysis
 
             return true;
         });
+    }
+
+    /**
+     * Drives the application's AI analysis panel realtime refresh
+     * (ai-analysis-pending.blade.php / ai-analysis-processing.blade.php)
+     * instead of polling. Both writes above use `saveQuietly()` on purpose
+     * (see their own comments), so they bypass model events and must
+     * broadcast explicitly.
+     */
+    private function broadcastAnalysisUpdated(Application $application): void
+    {
+        RealtimeEvent::dispatch('application_analysis_'.$application->getKey(), 'ApplicationAnalysisUpdated');
     }
 
     /**

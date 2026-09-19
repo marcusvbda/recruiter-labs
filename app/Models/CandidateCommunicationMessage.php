@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
+use Marcusvbda\FilamentRealtimeDriver\RealtimeEvent;
 
 /**
  * The final candidate-facing content is snapshotted at authorization time.
@@ -85,6 +86,12 @@ class CandidateCommunicationMessage extends Model
                 && $message->isDirty(self::SYSTEM_SNAPSHOT_ATTRIBUTES)) {
                 throw CandidateCommunicationException::alreadyAuthorized();
             }
+        });
+
+        // Drives the candidate/application communications panel's realtime
+        // refresh instead of polling.
+        static::saved(function (CandidateCommunicationMessage $message): void {
+            RealtimeEvent::dispatch('candidate_communications_'.$message->thread->candidate_id, 'CandidateCommunicationMessageUpdated');
         });
     }
 

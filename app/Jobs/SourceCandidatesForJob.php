@@ -22,6 +22,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Str;
 use Laravel\Ai\Responses\StructuredAgentResponse;
+use Marcusvbda\FilamentRealtimeDriver\RealtimeEvent;
 use Throwable;
 use UnexpectedValueException;
 
@@ -375,10 +376,20 @@ class SourceCandidatesForJob implements ShouldBeUnique, ShouldQueue
      */
     private function updateCurrentGeneration(array $attributes): int
     {
-        return SourcingSearch::query()
+        $updated = SourcingSearch::query()
             ->where('job_id', $this->jobId)
             ->where('generation', $this->generation)
             ->update($attributes);
+
+        if ($updated > 0) {
+            // Drives the job sourcing panel's realtime refresh
+            // (job-sourcing-panel.blade.php) instead of polling. A query-builder
+            // update on purpose (see class docblock), so it bypasses model events
+            // and must broadcast explicitly.
+            RealtimeEvent::dispatch('job_sourcing_'.$this->jobId, 'SourcingSearchUpdated');
+        }
+
+        return $updated;
     }
 
     private function elapsedMilliseconds(int $startedAt): int

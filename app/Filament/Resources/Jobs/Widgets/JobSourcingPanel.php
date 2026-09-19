@@ -263,6 +263,7 @@ class JobSourcingPanel extends Widget
         $search = $this->currentSearch();
 
         return [
+            'jobId' => $job->getKey(),
             'operationalStatus' => $this->operationalStatus($search),
             'canFindMatches' => ! ($search instanceof SourcingSearch && $search->status->isInProgress()),
             'summary' => $this->summaryFor($search),

@@ -45,11 +45,6 @@ class ProgressCandidateImportBatch extends Page
         return __('candidate_imports.progress.title');
     }
 
-    public function isProcessing(): bool
-    {
-        return $this->batch->status === CandidateImportStatus::Processing;
-    }
-
     public function progress(): CandidateImportProgress
     {
         return app(CandidateImportExecution::class)->progress($this->batch);

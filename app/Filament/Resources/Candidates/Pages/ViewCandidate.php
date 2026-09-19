@@ -687,20 +687,12 @@ class ViewCandidate extends ViewRecord
             ->values()
             ->all();
 
-        $hasInFlightDelivery = $candidate->communicationThreads
-            ->pluck('messages')
-            ->flatten()
-            ->contains(fn (CandidateCommunicationMessage $message): bool => in_array($message->status, [
-                CandidateCommunicationMessageStatus::Queued,
-                CandidateCommunicationMessageStatus::Sending,
-            ], true));
-
         return [
             'threads' => $threads,
             'is_do_not_contact' => $candidate->isDoNotContact(),
             'has_valid_email' => is_string($candidate->email) && filter_var($candidate->email, FILTER_VALIDATE_EMAIL) !== false,
             'context_job' => $contextJob?->name,
-            'has_in_flight_delivery' => $hasInFlightDelivery,
+            'candidate_id' => $candidate->getKey(),
         ];
     }
 

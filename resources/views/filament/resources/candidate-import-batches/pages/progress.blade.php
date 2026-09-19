@@ -1,4 +1,9 @@
-<x-filament-panels::page @if ($this->isProcessing()) wire:poll.5s @endif>
+<x-filament-panels::page>
+    <x-filament-realtime-driver::listener
+        :channel="'candidate_import_batch_'.$batch->id"
+        event="CandidateImportBatchUpdated"
+        callback="$wire.$refresh()"
+    />
     <x-filament::section :heading="__('candidate_imports.progress.status_heading')">
         <p class="text-sm font-medium text-gray-700 dark:text-gray-200">
             {{ __('candidate_imports.statuses.'.$batch->status->value) }}

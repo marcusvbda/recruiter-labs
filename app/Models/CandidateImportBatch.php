@@ -65,6 +65,14 @@ class CandidateImportBatch extends Model
         static::deleted(function (CandidateImportBatch $batch): void {
             RealtimeEvent::dispatch('candidate_import_batches_'.$batch->company->slug, 'CandidateImportBatchUpdated');
         });
+
+        // Drives this one batch's progress page realtime refresh
+        // (progress.blade.php) instead of polling. Scoped by batch id rather
+        // than company, so unrelated batches in the same workspace don't
+        // trigger a spurious refresh of this page.
+        static::saved(function (CandidateImportBatch $batch): void {
+            RealtimeEvent::dispatch('candidate_import_batch_'.$batch->id, 'CandidateImportBatchUpdated');
+        });
     }
 
     protected function casts(): array

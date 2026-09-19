@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Marcusvbda\FilamentRealtimeDriver\RealtimeEvent;
 
 /**
  * The state of active candidate sourcing for one job.
@@ -43,6 +44,17 @@ class SourcingSearch extends Model
         'status' => SourcingSearchStatus::NotStarted->value,
         'generation' => 0,
     ];
+
+    protected static function booted(): void
+    {
+        // Drives the job sourcing panel's realtime refresh
+        // (job-sourcing-panel.blade.php) instead of polling. Mid-run progress
+        // is written via a query-builder update in SourceCandidatesForJob and
+        // broadcasts explicitly there instead, since it bypasses this hook.
+        static::saved(function (SourcingSearch $search): void {
+            RealtimeEvent::dispatch('job_sourcing_'.$search->job_id, 'SourcingSearchUpdated');
+        });
+    }
 
     protected function casts(): array
     {

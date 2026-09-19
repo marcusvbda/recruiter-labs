@@ -6,7 +6,6 @@ use App\Actions\MoveApplicationToStatus;
 use App\Actions\ScheduleApplicationFitAnalysis;
 use App\Enums\ApplicationAnalysisStatus;
 use App\Enums\CandidateCommunicationMessageKind;
-use App\Enums\CandidateCommunicationMessageStatus;
 use App\Enums\CriterionEvidenceSource;
 use App\Enums\InterviewStatus;
 use App\Enums\PhoneCountry;
@@ -358,11 +357,7 @@ class ViewApplication extends ViewRecord
                 'communicationJob' => $application->job_id,
             ], tenant: $application->company),
             'is_do_not_contact' => $application->candidate->isDoNotContact(),
-            'has_in_flight_delivery' => $thread?->messages
-                ->contains(fn (CandidateCommunicationMessage $message): bool => in_array($message->status, [
-                    CandidateCommunicationMessageStatus::Queued,
-                    CandidateCommunicationMessageStatus::Sending,
-                ], true)) ?? false,
+            'candidate_id' => $application->candidate_id,
             'messages' => $thread?->messages
                 ->sortByDesc('id')
                 ->map(fn (CandidateCommunicationMessage $message): array => [
@@ -838,6 +833,7 @@ class ViewApplication extends ViewRecord
         $status = $this->evaluationStateKey($application);
 
         $data = [
+            'application_id' => $application->getKey(),
             'status' => $status,
             'label' => __("applications.admin.ai.states.{$status}.label"),
             'title' => __("applications.admin.ai.states.{$status}.title"),

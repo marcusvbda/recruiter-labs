@@ -25,6 +25,7 @@ use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Laravel\Ai\Responses\StructuredAgentResponse;
+use Marcusvbda\FilamentRealtimeDriver\RealtimeEvent;
 use Throwable;
 use UnexpectedValueException;
 
@@ -140,6 +141,8 @@ class AnalyzeApplicationFit implements ShouldBeUnique, ShouldQueue
                 return;
             }
 
+            $this->broadcastAnalysisUpdated();
+
             // A cached answer is bound to its criteria revision exactly like a
             // fresh one: the fingerprint proves the request matched, the
             // revision check proves the job has not moved on since.
@@ -190,6 +193,8 @@ class AnalyzeApplicationFit implements ShouldBeUnique, ShouldQueue
 
             return;
         }
+
+        $this->broadcastAnalysisUpdated();
 
         $runtimeProvider = $credentialsResolver->registerRuntimeProvider($application->company, $configuration);
 
@@ -254,10 +259,26 @@ class AnalyzeApplicationFit implements ShouldBeUnique, ShouldQueue
 
     private function markCurrentGenerationAs(ApplicationAnalysisStatus $status): void
     {
-        Application::query()
+        $updated = Application::query()
             ->whereKey($this->applicationId)
             ->where('analysis_generation', $this->generation)
             ->update(['analysis_status' => $status]);
+
+        if ($updated > 0) {
+            $this->broadcastAnalysisUpdated();
+        }
+    }
+
+    /**
+     * Drives the application's AI analysis panel realtime refresh
+     * (ai-analysis-pending.blade.php / ai-analysis-processing.blade.php)
+     * instead of polling. Every status write here goes through a
+     * query-builder update, bypassing model events, so it broadcasts
+     * explicitly.
+     */
+    private function broadcastAnalysisUpdated(): void
+    {
+        RealtimeEvent::dispatch('application_analysis_'.$this->applicationId, 'ApplicationAnalysisUpdated');
     }
 
     /**

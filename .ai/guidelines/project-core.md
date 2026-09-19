@@ -22,6 +22,11 @@ The stack list itself is in `AGENTS.md`. Two expansions:
   equivalent Vite config). Do not write manual `useMemo`/`useCallback`/
   `React.memo` speculatively — the compiler already handles that optimization;
   use them only for a real, identified performance issue.
+- **Realtime updates, not polling.** `marcusvbda/filament-realtime-driver` is
+  installed and active on the admin panel specifically to replace
+  `wire:poll`/`->poll()` with WebSocket pushes. The rule and the concrete
+  patterns (Table/Widget/Blade) live in `.ai/roles/filament-admin.md` —
+  follow that when a Filament surface needs to react to a backend change.
 
 ## Deterministic verification commands
 

@@ -4,10 +4,13 @@
     never appears without Evidence Coverage and Confidence beside it — that is
     a hard product rule, not a layout choice.
 --}}
-<div
-    @if ($operationalStatus['key'] === 'searching') wire:poll.5s="$refresh" @endif
-    class="space-y-6"
->
+<x-filament-realtime-driver::listener
+    :channel="'job_sourcing_'.$jobId"
+    event="SourcingSearchUpdated"
+    callback="$wire.$refresh()"
+/>
+
+<div class="space-y-6">
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex items-center gap-2">
             <x-filament::badge :color="$operationalStatus['color']" :icon="$operationalStatus['icon']">

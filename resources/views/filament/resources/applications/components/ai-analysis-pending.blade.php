@@ -1,5 +1,10 @@
+<x-filament-realtime-driver::listener
+    :channel="'application_analysis_'.$analysis['application_id']"
+    event="ApplicationAnalysisUpdated"
+    callback="$wire.$refresh()"
+/>
+
 <div
-    wire:poll.5s="$refresh"
     class="relative overflow-hidden rounded-xl border border-gray-200 bg-gray-50 px-6 py-10 dark:border-gray-700 dark:bg-gray-800/40"
     data-state="{{ $analysis['status'] }}"
 >

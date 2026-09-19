@@ -1,9 +1,12 @@
+<x-filament-realtime-driver::listener
+    :channel="'candidate_communications_'.$communications['candidate_id']"
+    event="CandidateCommunicationMessageUpdated"
+    callback="$wire.$refresh()"
+/>
+
 <x-filament::section
     :heading="__('communications.history.heading')"
     icon="heroicon-o-envelope"
-    :attributes="new \Filament\Support\View\ComponentAttributeBag([
-        'wire:poll.3s' => $communications['has_in_flight_delivery'] ? '$refresh' : false,
-    ])"
 >
     <x-slot name="description">{{ __('communications.history.application_description') }}</x-slot>
 
