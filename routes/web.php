@@ -14,6 +14,7 @@ use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\ReferralController;
 use App\Http\Controllers\WorkspaceInvitationController;
 use App\Http\Middleware\SetLocale;
+use App\Livewire\RealtimeTestPage;
 use Filament\Http\Middleware\Authenticate;
 use Illuminate\Support\Facades\Route;
 
@@ -22,10 +23,15 @@ Route::get('/', fn() => redirect('/admin'))->name('home');
 // Test-only: fires the realtime driver's example event so it can be watched
 // while `php artisan filament-realtime-driver:listen` (or `composer dev`) is
 // running.
-// Route::get('/realtime-test', function () {
-//     broadcast(new RealtimeDriverTestEvent('Hello from /realtime-test at ' . now()));
-//     return 'Event dispatched.';
-// })->name('realtime-test');
+Route::get('/realtime-test', function () {
+    broadcast(new RealtimeDriverTestEvent('Hello from /realtime-test at ' . now()));
+
+    return 'Event dispatched.';
+})->middleware(Authenticate::class)->name('realtime-test');
+
+Route::get('/realtime-test-ui', RealtimeTestPage::class)
+    ->middleware(Authenticate::class)
+    ->name('realtime-test.ui');
 
 Route::get('/job/{key}', [JobController::class, 'show'])->name('job.show');
 

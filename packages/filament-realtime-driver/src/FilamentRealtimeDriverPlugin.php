@@ -31,7 +31,7 @@ class FilamentRealtimeDriverPlugin implements Plugin
         return 'filament-realtime-driver';
     }
 
-    public function socket(callable $init, ?string $server = null, array $auth = []): static
+    public function socket(?callable $init = null, ?string $server = null, array $auth = []): static
     {
         $this->init = $init;
         $this->server = $server;

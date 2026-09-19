@@ -114,11 +114,13 @@ class AdminPanelProvider extends PanelProvider
                 Authenticate::class,
             ])
             ->plugin(
-                FilamentRealtimeDriverPlugin::make()->socket(function (RealtimeConnection $listener) {
-                    $listener->watch("event.example", function ($params) {
-                        Log::info('Realtime event received: event.example', ['params' => $params]);
-                    });
-                })
+                FilamentRealtimeDriverPlugin::make()->socket(
+                    // function (RealtimeConnection $listener) {
+                    //     $listener->watch("event.example", function ($params) {
+                    //         Log::info('Realtime event received: event.example', ['params' => $params]);
+                    //     });
+                    // }
+                )
             );
     }
 

@@ -10,6 +10,8 @@ class RealtimeConnection
 
     protected array $events = [];
 
+    protected ?string $socketId = null;
+
     /** @var resource|null */
     protected $connection = null;
 
@@ -33,6 +35,7 @@ class RealtimeConnection
         $this->connection = $connection;
 
         $this->handshake($host, $port, $auth);
+        $this->awaitConnectionEstablished();
 
         return $this;
     }
@@ -48,14 +51,26 @@ class RealtimeConnection
      * Subscribe to a Pusher-protocol channel, so channel-scoped broadcasts
      * (e.g. events sent through Laravel's broadcast() on a Reverb driver)
      * start reaching this connection.
+     *
+     * `private-*` and `presence-*` channels are signed locally with this
+     * app's own Reverb key/secret (the same signature Laravel's
+     * /broadcasting/auth endpoint would return), since this connection runs
+     * inside the Laravel app itself. $channelData is only used for presence
+     * channels (the user info Reverb exposes to other subscribers).
      */
-    public function subscribe(string $channel): static
+    public function subscribe(string $channel, array $channelData = []): static
     {
         $this->ensureConnected();
 
+        $data = ['channel' => $channel];
+
+        if ($this->isProtectedChannel($channel)) {
+            $data += $this->authorize($channel, $channelData);
+        }
+
         $this->writeFrame(json_encode([
             'event' => 'pusher:subscribe',
-            'data' => ['channel' => $channel],
+            'data' => $data,
         ]));
 
         return $this;
@@ -158,6 +173,72 @@ class RealtimeConnection
         if (! is_resource($this->connection)) {
             throw new RuntimeException("Not connected to a realtime server. Call connect() first.");
         }
+    }
+
+    /**
+     * Read the first frame Reverb sends after a successful handshake, so the
+     * socket_id it carries is available for signing private/presence channel
+     * subscriptions. Any other frame received here is dispatched normally
+     * rather than dropped.
+     */
+    protected function awaitConnectionEstablished(): void
+    {
+        $payload = $this->readFrame();
+
+        if ($payload === null) {
+            return;
+        }
+
+        $message = json_decode($payload, true);
+
+        if (($message['event'] ?? null) !== 'pusher:connection_established') {
+            $this->dispatch($payload);
+
+            return;
+        }
+
+        $data = $message['data'] ?? null;
+
+        if (is_string($data)) {
+            $data = json_decode($data, true);
+        }
+
+        $this->socketId = $data['socket_id'] ?? null;
+    }
+
+    protected function isProtectedChannel(string $channel): bool
+    {
+        return str_starts_with($channel, 'private-') || str_starts_with($channel, 'presence-');
+    }
+
+    /**
+     * @return array{auth: string, channel_data?: string}
+     */
+    protected function authorize(string $channel, array $channelData): array
+    {
+        $key = config('broadcasting.connections.reverb.key');
+        $secret = config('broadcasting.connections.reverb.secret');
+
+        if (! $key || ! $secret) {
+            throw new RuntimeException("Cannot subscribe to protected channel [{$channel}]: Reverb key/secret is not configured.");
+        }
+
+        if (! $this->socketId) {
+            throw new RuntimeException("Cannot subscribe to protected channel [{$channel}]: no socket_id received from the server yet.");
+        }
+
+        $signaturePayload = "{$this->socketId}:{$channel}";
+        $result = [];
+
+        if (str_starts_with($channel, 'presence-')) {
+            $encodedChannelData = json_encode($channelData);
+            $signaturePayload .= ":{$encodedChannelData}";
+            $result['channel_data'] = $encodedChannelData;
+        }
+
+        $result['auth'] = $key . ':' . hash_hmac('sha256', $signaturePayload, $secret);
+
+        return $result;
     }
 
     protected function dispatch(string $payload): void
