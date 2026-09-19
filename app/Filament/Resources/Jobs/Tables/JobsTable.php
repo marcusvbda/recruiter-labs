@@ -5,44 +5,45 @@ namespace App\Filament\Resources\Jobs\Tables;
 use App\Filament\Actions\CopyTrackedUrlAction;
 use App\Filament\Resources\Jobs\Actions\JobStateActions;
 use App\Filament\Resources\Jobs\JobResource;
+use App\Models\Company;
 use App\Models\Job;
 use App\Services\RecruitmentProgressService;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Facades\Filament;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Auth;
 
 class JobsTable
 {
     public static function configure(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn(Builder $query): Builder => $query
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query
                 ->with('pipeline')
                 ->withCount(RecruitmentProgressService::ProgressCounts))
             // The primary click means "work on this hiring process", not "open a
             // menu". The rule itself lives on the resource, so the overview
             // enters a job exactly the same way.
-            ->recordUrl(fn(Job $record): string => JobResource::getWorkspaceUrl($record))
+            ->recordUrl(fn (Job $record): string => JobResource::getWorkspaceUrl($record))
             ->defaultSort('created_at', 'desc')
             ->columns([
                 TextColumn::make('name')
                     ->label(__('jobs.fields.name'))
                     ->weight('medium')
-                    ->description(fn(Job $record): ?string => $record->pipeline?->name)
+                    ->description(fn (Job $record): ?string => $record->pipeline?->name)
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('published')
                     ->label(__('jobs.fields.state'))
                     ->badge()
-                    ->state(fn(Job $record): string => self::stateLabel($record))
-                    ->color(fn(Job $record): string => self::stateColor($record)),
+                    ->state(fn (Job $record): string => self::stateLabel($record))
+                    ->color(fn (Job $record): string => self::stateColor($record)),
                 JobProgressColumn::make('progress'),
             ])
             ->filters([
@@ -62,7 +63,7 @@ class JobsTable
                         'stalled' => __('jobs.progress.filters.stalled'),
                         'no_applications' => __('jobs.progress.filters.no_applications'),
                     ])
-                    ->query(fn(Builder $query, array $data): Builder => self::applyProgressFilter($query, $data['value'] ?? null)),
+                    ->query(fn (Builder $query, array $data): Builder => self::applyProgressFilter($query, $data['value'] ?? null)),
                 SelectFilter::make('pipeline')
                     ->label(__('jobs.fields.pipeline'))
                     ->relationship('pipeline', 'name')
@@ -82,12 +83,18 @@ class JobsTable
                     DeleteBulkAction::make(),
                 ]),
             ])
-            // Realtime refresh instead of polling — see App\Events\JobUpdated
-            // and App\Models\Job::booted().
+            // Realtime refresh instead of polling — see App\Models\Job::booted().
             ->socket(
-                channel: 'jobs_' . Auth::id(),
+                channel: 'jobs_'.self::tenantSlug(),
                 event: 'JobUpdated',
             );
+    }
+
+    private static function tenantSlug(): string
+    {
+        $tenant = Filament::getTenant();
+
+        return $tenant instanceof Company ? $tenant->slug : '';
     }
 
     /**
@@ -101,8 +108,8 @@ class JobsTable
             // and the column cannot disagree.
             'target_reached' => $query->whereRaw(
                 '(select count(*) from applications'
-                    . ' inner join statuses on statuses.id = applications.status_id'
-                    . ' where applications.job_id = job_postings.id and statuses.is_hired = ?) >= job_postings.hiring_target',
+                    .' inner join statuses on statuses.id = applications.status_id'
+                    .' where applications.job_id = job_postings.id and statuses.is_hired = ?) >= job_postings.hiring_target',
                 [true],
             ),
             'waiting' => $query->has('overdueApplications'),

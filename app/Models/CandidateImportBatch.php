@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Marcusvbda\FilamentRealtimeDriver\RealtimeEvent;
 
 /**
  * @property int $id
@@ -52,6 +53,19 @@ class CandidateImportBatch extends Model
     ];
 
     protected $hidden = ['disk', 'csv_path'];
+
+    protected static function booted(): void
+    {
+        // Drives the Candidate import batches table's realtime refresh
+        // (CandidateImportBatchesTable::socket()) instead of polling.
+        static::saved(function (CandidateImportBatch $batch): void {
+            RealtimeEvent::dispatch('candidate_import_batches_'.$batch->company->slug, 'CandidateImportBatchUpdated');
+        });
+
+        static::deleted(function (CandidateImportBatch $batch): void {
+            RealtimeEvent::dispatch('candidate_import_batches_'.$batch->company->slug, 'CandidateImportBatchUpdated');
+        });
+    }
 
     protected function casts(): array
     {

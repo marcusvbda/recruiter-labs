@@ -4365,16 +4365,16 @@
         },
         {
             "name": "marcusvbda/filament-realtime-driver",
-            "version": "v0.1.1",
+            "version": "v0.1.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/marcusvbda/filament-realtime-driver.git",
-                "reference": "6fec697645d28232d1edddfe624f0c4cc7b83052"
+                "reference": "94c62471513cc09abe655960230c9661e819c8e3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/marcusvbda/filament-realtime-driver/zipball/6fec697645d28232d1edddfe624f0c4cc7b83052",
-                "reference": "6fec697645d28232d1edddfe624f0c4cc7b83052",
+                "url": "https://api.github.com/repos/marcusvbda/filament-realtime-driver/zipball/94c62471513cc09abe655960230c9661e819c8e3",
+                "reference": "94c62471513cc09abe655960230c9661e819c8e3",
                 "shasum": ""
             },
             "require": {
@@ -4401,9 +4401,9 @@
             "description": "Realtime WebSocket driver for Filament using Laravel Reverb, without Laravel Echo or pusher-js.",
             "support": {
                 "issues": "https://github.com/marcusvbda/filament-realtime-driver/issues",
-                "source": "https://github.com/marcusvbda/filament-realtime-driver/tree/v0.1.1"
+                "source": "https://github.com/marcusvbda/filament-realtime-driver/tree/v0.1.2"
             },
-            "time": "2026-09-19T16:10:39+00:00"
+            "time": "2026-09-19T17:11:17+00:00"
         },
         {
             "name": "monolog/monolog",

@@ -15,6 +15,7 @@ use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Marcusvbda\FilamentRealtimeDriver\RealtimeEvent;
 
 /**
  * @property int $id
@@ -56,8 +57,10 @@ class Candidate extends Model
     {
         return DB::transaction(function () use ($options): bool {
             $normalized = $this->normalized_email;
-            if ($normalized !== null && $normalized !== '' && isset($this->attributes['company_id'])
-                && (! $this->exists || $this->isDirty(['email', 'normalized_email', 'company_id']))) {
+            if (
+                $normalized !== null && $normalized !== '' && isset($this->attributes['company_id'])
+                && (! $this->exists || $this->isDirty(['email', 'normalized_email', 'company_id']))
+            ) {
                 $matches = static::matchingEmail($this->company_id, $normalized);
                 if ($this->exists) {
                     $matches->whereKeyNot($this->getKey());
@@ -87,6 +90,16 @@ class Candidate extends Model
         });
         static::deleting(function (Candidate $candidate): void {
             app(CandidateMaterialErasure::class)->eraseCandidate($candidate);
+        });
+
+        // Drives the Candidates table's realtime refresh (CandidatesTable::socket())
+        // instead of polling.
+        static::saved(function (Candidate $candidate): void {
+            RealtimeEvent::dispatch('candidates_'.$candidate->company->slug, 'CandidateUpdated');
+        });
+
+        static::deleted(function (Candidate $candidate): void {
+            RealtimeEvent::dispatch('candidates_'.$candidate->company->slug, 'CandidateUpdated');
         });
     }
 

@@ -3,10 +3,12 @@
 namespace App\Filament\Resources\Referrals\Tables;
 
 use App\Filament\Actions\CopyTrackedUrlAction;
+use App\Models\Company;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Facades\Filament;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -44,6 +46,18 @@ class ReferralsTable
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            // Realtime refresh instead of polling — see App\Models\Referral::booted().
+            ->socket(
+                channel: 'referrals_'.self::tenantSlug(),
+                event: 'ReferralUpdated',
+            );
+    }
+
+    private static function tenantSlug(): string
+    {
+        $tenant = Filament::getTenant();
+
+        return $tenant instanceof Company ? $tenant->slug : '';
     }
 }

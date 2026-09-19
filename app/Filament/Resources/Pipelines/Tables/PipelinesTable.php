@@ -3,12 +3,14 @@
 namespace App\Filament\Resources\Pipelines\Tables;
 
 use App\Filament\Resources\Pipelines\Actions\DuplicatePipelineAction;
+use App\Models\Company;
 use App\Models\Pipeline;
 use App\Models\Status;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
+use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
@@ -55,7 +57,19 @@ class PipelinesTable
                     self::setDefaultAction(),
                     self::deleteAction(),
                 ]),
-            ]);
+            ])
+            // Realtime refresh instead of polling — see App\Models\Pipeline::booted().
+            ->socket(
+                channel: 'pipelines_'.self::tenantSlug(),
+                event: 'PipelineUpdated',
+            );
+    }
+
+    private static function tenantSlug(): string
+    {
+        $tenant = Filament::getTenant();
+
+        return $tenant instanceof Company ? $tenant->slug : '';
     }
 
     /**

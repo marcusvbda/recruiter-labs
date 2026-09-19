@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Marcusvbda\FilamentRealtimeDriver\RealtimeEvent;
 
 /**
  * @property int $id
@@ -65,6 +66,16 @@ class Pipeline extends Model
                 ->first();
 
             $replacement?->update(['is_default' => true]);
+        });
+
+        // Drives the Pipelines table's realtime refresh (PipelinesTable::socket())
+        // instead of polling.
+        static::saved(function (Pipeline $pipeline): void {
+            RealtimeEvent::dispatch('pipelines_'.$pipeline->company->slug, 'PipelineUpdated');
+        });
+
+        static::deleted(function (Pipeline $pipeline): void {
+            RealtimeEvent::dispatch('pipelines_'.$pipeline->company->slug, 'PipelineUpdated');
         });
     }
 

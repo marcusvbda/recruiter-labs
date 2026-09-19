@@ -140,7 +140,19 @@ class CandidatesTable
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            // Realtime refresh instead of polling — see App\Models\Candidate::booted().
+            ->socket(
+                channel: 'candidates_'.self::tenantSlug(),
+                event: 'CandidateUpdated',
+            );
+    }
+
+    private static function tenantSlug(): string
+    {
+        $tenant = Filament::getTenant();
+
+        return $tenant instanceof Company ? $tenant->slug : '';
     }
 
     /**

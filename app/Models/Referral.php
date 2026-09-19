@@ -9,12 +9,26 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Marcusvbda\FilamentRealtimeDriver\RealtimeEvent;
 
 #[Fillable(['company_id', 'job_id', 'user_id', 'published', 'expires_at', 'max_applications'])]
 class Referral extends Model
 {
     /** @use HasFactory<ReferralFactory> */
     use HasFactory, HasUniqueKey;
+
+    protected static function booted(): void
+    {
+        // Drives the Referrals table's realtime refresh (ReferralsTable::socket())
+        // instead of polling.
+        static::saved(function (Referral $referral): void {
+            RealtimeEvent::dispatch('referrals_'.$referral->company->slug, 'ReferralUpdated');
+        });
+
+        static::deleted(function (Referral $referral): void {
+            RealtimeEvent::dispatch('referrals_'.$referral->company->slug, 'ReferralUpdated');
+        });
+    }
 
     /** @return array<string, string> */
     protected function casts(): array

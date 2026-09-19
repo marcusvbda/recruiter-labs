@@ -5,7 +5,9 @@ namespace App\Filament\Resources\CandidateImportBatches\Tables;
 use App\Enums\CandidateImportStatus;
 use App\Filament\Resources\CandidateImportBatches\CandidateImportBatchResource;
 use App\Models\CandidateImportBatch;
+use App\Models\Company;
 use Filament\Actions\Action;
+use Filament\Facades\Filament;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -59,7 +61,19 @@ class CandidateImportBatchesTable
                     ->label(__('candidate_imports.history.open'))
                     ->url(fn (CandidateImportBatch $record): ?string => self::destinationUrl($record))
                     ->visible(fn (CandidateImportBatch $record): bool => self::destinationUrl($record) !== null),
-            ]);
+            ])
+            // Realtime refresh instead of polling — see App\Models\CandidateImportBatch::booted().
+            ->socket(
+                channel: 'candidate_import_batches_'.self::tenantSlug(),
+                event: 'CandidateImportBatchUpdated',
+            );
+    }
+
+    private static function tenantSlug(): string
+    {
+        $tenant = Filament::getTenant();
+
+        return $tenant instanceof Company ? $tenant->slug : '';
     }
 
     private static function destinationUrl(CandidateImportBatch $record): ?string

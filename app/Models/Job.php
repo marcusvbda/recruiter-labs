@@ -21,7 +21,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Query\Builder as QueryBuilder;
-use Auth;
 use Marcusvbda\FilamentRealtimeDriver\RealtimeEvent;
 
 /**
@@ -92,8 +91,11 @@ class Job extends Model
         // Drives the Jobs table's realtime refresh (JobsTable::socket())
         // instead of polling.
         static::saved(function (Job $job): void {
-            Auth::id();
-            RealtimeEvent::dispatch('jobs_' . Auth::id(), 'JobUpdated', ['id' => $job->id]);
+            RealtimeEvent::dispatch('jobs_'.$job->company->slug, 'JobUpdated', ['id' => $job->id]);
+        });
+
+        static::deleted(function (Job $job): void {
+            RealtimeEvent::dispatch('jobs_'.$job->company->slug, 'JobUpdated', ['id' => $job->id]);
         });
     }
 
@@ -132,10 +134,10 @@ class Job extends Model
 
         return $query
             ->where('published', true)
-            ->where(fn(Builder $query): Builder => $query
+            ->where(fn (Builder $query): Builder => $query
                 ->whereNull('starts_at')
                 ->orWhereDate('starts_at', '<=', $today))
-            ->where(fn(Builder $query): Builder => $query
+            ->where(fn (Builder $query): Builder => $query
                 ->whereNull('ends_at')
                 ->orWhereDate('ends_at', '>=', $today));
     }
