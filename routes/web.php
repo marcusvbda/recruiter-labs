@@ -1,5 +1,6 @@
 <?php
 
+use App\Events\RealtimeDriverTestEvent;
 use App\Http\Controllers\ApplicationDocumentController;
 use App\Http\Controllers\CandidateImportReportController;
 use App\Http\Controllers\CandidateImportTemplateController;
@@ -16,7 +17,15 @@ use App\Http\Middleware\SetLocale;
 use Filament\Http\Middleware\Authenticate;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', fn () => redirect('/admin'))->name('home');
+Route::get('/', fn() => redirect('/admin'))->name('home');
+
+// Test-only: fires the realtime driver's example event so it can be watched
+// while `php artisan filament-realtime-driver:listen` (or `composer dev`) is
+// running.
+// Route::get('/realtime-test', function () {
+//     broadcast(new RealtimeDriverTestEvent('Hello from /realtime-test at ' . now()));
+//     return 'Event dispatched.';
+// })->name('realtime-test');
 
 Route::get('/job/{key}', [JobController::class, 'show'])->name('job.show');
 

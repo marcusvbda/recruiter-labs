@@ -13,7 +13,6 @@ use App\Http\Middleware\ApplyTenantScopes;
 use App\Http\Middleware\SetLocale;
 use App\Models\Company;
 use App\Services\CompanyTopbarSummary;
-use App\Services\WorkspaceActivationJourney;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Http\Middleware\Authenticate;
@@ -30,8 +29,11 @@ use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Number;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use RecruiterLabs\FilamentRealtimeDriver\FilamentRealtimeDriverPlugin;
+use RecruiterLabs\FilamentRealtimeDriver\RealtimeConnection;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -41,7 +43,7 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
-            ->favicon(asset('assets/image/favicon.png').'?v=2')
+            ->favicon(asset('assets/image/favicon.png') . '?v=2')
             ->brandLogo(asset('assets/image/logo.png'))
             ->brandLogoHeight('3rem')
             ->darkMode(false)
@@ -71,19 +73,19 @@ class AdminPanelProvider extends PanelProvider
             ->userMenuItems([
                 [
                     Action::make('settings')
-                        ->label(fn (): string => __('settings.account.navigation_label'))
+                        ->label(fn(): string => __('settings.account.navigation_label'))
                         ->icon('heroicon-o-cog-6-tooth')
-                        ->visible(fn (): bool => Filament::getTenant() !== null)
-                        ->url(fn (): string => Filament::getTenant() ? AccountSettings::getUrl() : '#'),
+                        ->visible(fn(): bool => Filament::getTenant() !== null)
+                        ->url(fn(): string => Filament::getTenant() ? AccountSettings::getUrl() : '#'),
                 ],
             ])
             ->renderHook(
                 PanelsRenderHook::USER_MENU_BEFORE,
-                fn (): string => $this->renderCompanyTopbarSummary(),
+                fn(): string => $this->renderCompanyTopbarSummary(),
             )
             ->renderHook(
                 PanelsRenderHook::USER_MENU_BEFORE,
-                fn (): string => view('filament.language-switcher', [
+                fn(): string => view('filament.language-switcher', [
                     'locales' => [
                         'en' => ['label' => 'English', 'flag' => '🇺🇸'],
                         'pt_BR' => ['label' => 'Português (Brasil)', 'flag' => '🇧🇷'],
@@ -94,7 +96,7 @@ class AdminPanelProvider extends PanelProvider
             )
             ->renderHook(
                 PanelsRenderHook::BODY_END,
-                fn (): string => $this->renderWorkspaceActivationLauncher(),
+                fn(): string => $this->renderWorkspaceActivationLauncher(),
             )
             ->middleware([
                 EncryptCookies::class,
@@ -110,7 +112,14 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
-            ]);
+            ])
+            ->plugin(
+                FilamentRealtimeDriverPlugin::make()->socket(function (RealtimeConnection $listener) {
+                    $listener->watch("event.example", function ($params) {
+                        Log::info('Realtime event received: event.example', ['params' => $params]);
+                    });
+                })
+            );
     }
 
     /**

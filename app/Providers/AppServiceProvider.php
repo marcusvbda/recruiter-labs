@@ -62,6 +62,14 @@ class AppServiceProvider extends ServiceProvider
 
         if ($this->app->runningInConsole()) {
             DevCommands::artisan(
+                'reverb:start --debug',
+                'reverb',
+            );
+            DevCommands::artisan(
+                'filament-realtime-driver:listen',
+                'realtime',
+            );
+            DevCommands::artisan(
                 'queue:work database --queue=default',
                 'queue',
             );
