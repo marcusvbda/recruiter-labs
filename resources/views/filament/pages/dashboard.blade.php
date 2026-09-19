@@ -429,5 +429,7 @@
                 @endif
             @endif
         </section>
+
+        @livewire(\App\Filament\Widgets\CurrentTimeWidget::class)
     </div>
 </x-filament-panels::page>
