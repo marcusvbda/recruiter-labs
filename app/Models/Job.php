@@ -21,6 +21,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Query\Builder as QueryBuilder;
+use RecruiterLabs\FilamentRealtimeDriver\RealtimeEvent;
+use Auth;
 
 /**
  * @property int $id
@@ -86,6 +88,13 @@ class Job extends Model
                 throw RecruitmentWorkflowException::pipelineLocked();
             }
         });
+
+        // Drives the Jobs table's realtime refresh (JobsTable::socket())
+        // instead of polling.
+        static::saved(function (Job $job): void {
+            Auth::id();
+            RealtimeEvent::dispatch('jobs_' . Auth::id(), 'JobUpdated', ['id' => $job->id]);
+        });
     }
 
     protected function casts(): array
@@ -123,10 +132,10 @@ class Job extends Model
 
         return $query
             ->where('published', true)
-            ->where(fn (Builder $query): Builder => $query
+            ->where(fn(Builder $query): Builder => $query
                 ->whereNull('starts_at')
                 ->orWhereDate('starts_at', '<=', $today))
-            ->where(fn (Builder $query): Builder => $query
+            ->where(fn(Builder $query): Builder => $query
                 ->whereNull('ends_at')
                 ->orWhereDate('ends_at', '>=', $today));
     }

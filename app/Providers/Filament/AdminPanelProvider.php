@@ -29,11 +29,10 @@ use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Number;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use RecruiterLabs\FilamentRealtimeDriver\FilamentRealtimeDriverPlugin;
-use RecruiterLabs\FilamentRealtimeDriver\RealtimeConnection;
+// use RecruiterLabs\FilamentRealtimeDriver\RealtimeConnection;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -62,6 +61,7 @@ class AdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Blue,
             ])
+            ->databaseNotifications()
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverClusters(in: app_path('Filament/Clusters'), for: 'App\Filament\Clusters')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
@@ -114,13 +114,15 @@ class AdminPanelProvider extends PanelProvider
                 Authenticate::class,
             ])
             ->plugin(
-                FilamentRealtimeDriverPlugin::make()->socket(
-                    // function (RealtimeConnection $listener) {
-                    //     $listener->watch("event.example", function ($params) {
-                    //         Log::info('Realtime event received: event.example', ['params' => $params]);
-                    //     });
-                    // }
-                )
+                FilamentRealtimeDriverPlugin::make()
+                    ->socket(
+                        // function (RealtimeConnection $listener) {
+                        //     $listener->watch("event.example", function ($params) {
+                        //         Log::info('Realtime event received: event.example', ['params' => $params]);
+                        //     });
+                        // }
+                    )
+                    ->databaseNotifications()
             );
     }
 
