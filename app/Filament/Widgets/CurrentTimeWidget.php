@@ -8,8 +8,6 @@ use Livewire\Attributes\On;
 
 class CurrentTimeWidget extends BaseWidget
 {
-    protected ?string $pollingInterval = null;
-
     protected function getStats(): array
     {
         return [
