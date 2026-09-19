@@ -11,7 +11,7 @@
         @if ($summary !== [])
             <p class="rl-overview-summary">
                 @foreach ($summary as $figure)
-                    @if (! $loop->first)
+                    @if (!$loop->first)
                         <span class="rl-overview-summary__separator" aria-hidden="true">&middot;</span>
                     @endif
 
@@ -41,7 +41,8 @@
                     {{-- A clear queue is information too, and it should cost the
                          page almost no vertical space. --}}
                     <p class="rl-overview-empty">
-                        <x-filament::icon icon="heroicon-m-check-circle" class="rl-overview-empty__icon" data-tone="success" aria-hidden="true" />
+                        <x-filament::icon icon="heroicon-m-check-circle" class="rl-overview-empty__icon"
+                            data-tone="success" aria-hidden="true" />
                         <span>
                             <span class="rl-overview-empty__title">{{ __('attention.empty_heading') }}</span>
                             <span class="rl-overview-empty__text">{{ __('attention.empty_description') }}</span>
@@ -51,13 +52,15 @@
                     <ul class="rl-attention-list">
                         @foreach ($attention as $item)
                             <li class="rl-attention-item" data-severity="{{ $item['severity'] }}">
-                                <x-filament::icon :icon="$item['icon']" class="rl-attention-item__icon" aria-hidden="true" />
+                                <x-filament::icon :icon="$item['icon']" class="rl-attention-item__icon"
+                                    aria-hidden="true" />
 
                                 <span class="min-w-0 flex-1">
                                     <span class="rl-attention-item__title">
                                         {{-- Severity is carried by the marker's colour, so it is
                                              also stated in words for anyone who cannot see it. --}}
-                                        <span class="sr-only">{{ __('attention.severities.' . $item['severity']) }}:</span>
+                                        <span
+                                            class="sr-only">{{ __('attention.severities.' . $item['severity']) }}:</span>
                                         {{ $item['title'] }}
                                     </span>
 
@@ -70,9 +73,7 @@
                                 </span>
 
                                 @if (in_array($item['action_intent'], ['start_sourcing', 'refresh_sourcing'], true) && $item['job_id'])
-                                    <x-filament::button
-                                        color="gray"
-                                        size="sm"
+                                    <x-filament::button color="gray" size="sm"
                                         wire:click="runSourcingFromAttention({{ $item['job_id'] }}, '{{ $item['action_intent'] }}')"
                                         wire:loading.attr="disabled"
                                         wire:target="runSourcingFromAttention({{ $item['job_id'] }}, '{{ $item['action_intent'] }}')"
@@ -80,9 +81,11 @@
                                         {{ $item['action_label'] }}
                                     </x-filament::button>
                                 @else
-                                    <a href="{{ $item['action_url'] }}" wire:navigate class="rl-overview-action rl-attention-item__action">
+                                    <a href="{{ $item['action_url'] }}" wire:navigate
+                                        class="rl-overview-action rl-attention-item__action">
                                         {{ $item['action_label'] }}
-                                        <x-filament::icon icon="heroicon-m-arrow-right" class="size-3.5 shrink-0" aria-hidden="true" />
+                                        <x-filament::icon icon="heroicon-m-arrow-right" class="size-3.5 shrink-0"
+                                            aria-hidden="true" />
                                     </a>
                                 @endif
                             </li>
@@ -113,7 +116,8 @@
 
                 @if ($agenda->isEmpty())
                     <p class="rl-overview-empty">
-                        <x-filament::icon icon="heroicon-m-calendar-days" class="rl-overview-empty__icon" aria-hidden="true" />
+                        <x-filament::icon icon="heroicon-m-calendar-days" class="rl-overview-empty__icon"
+                            aria-hidden="true" />
                         <span>
                             <span class="rl-overview-empty__title">{{ __('dashboard.agenda.empty_heading') }}</span>
                             <span class="rl-overview-empty__text">{{ __('dashboard.agenda.empty_description') }}</span>
@@ -153,11 +157,14 @@
                                                     <span class="rl-agenda-item__meta">{{ $interview['job'] }}</span>
                                                 @endif
 
-                                                <span class="rl-agenda-item__rsvp" data-tone="{{ $interview['rsvp_tone'] }}">
+                                                <span class="rl-agenda-item__rsvp"
+                                                    data-tone="{{ $interview['rsvp_tone'] }}">
                                                     @if ($interview['rsvp_tone'] === 'danger')
-                                                        <x-filament::icon icon="heroicon-m-x-circle" class="size-3.5 shrink-0" aria-hidden="true" />
+                                                        <x-filament::icon icon="heroicon-m-x-circle"
+                                                            class="size-3.5 shrink-0" aria-hidden="true" />
                                                     @elseif ($interview['rsvp_tone'] === 'success')
-                                                        <x-filament::icon icon="heroicon-m-check-circle" class="size-3.5 shrink-0" aria-hidden="true" />
+                                                        <x-filament::icon icon="heroicon-m-check-circle"
+                                                            class="size-3.5 shrink-0" aria-hidden="true" />
                                                     @endif
 
                                                     {{ $interview['rsvp_label'] }}
@@ -222,7 +229,8 @@
                         {{ __('onboarding.welcome.get_started') }}
                     </x-filament::button>
 
-                    <x-filament::button color="gray" wire:click="dismissOnboardingWelcome" wire:loading.attr="disabled">
+                    <x-filament::button color="gray" wire:click="dismissOnboardingWelcome"
+                        wire:loading.attr="disabled">
                         {{ __('onboarding.welcome.continue_later') }}
                     </x-filament::button>
                 </x-slot>
@@ -233,7 +241,7 @@
              and the recruiter's agenda already led the page above; this stays a
              single compact panel and disappears entirely once activated, so it
              never competes with live recruitment work for space. --}}
-        @if ($activation instanceof \App\Data\WorkspaceActivationProgress && ! $activation->isActivated())
+        @if ($activation instanceof \App\Data\WorkspaceActivationProgress && !$activation->isActivated())
             @php
                 $nextStepKey = $activation->nextStep()['key'] ?? null;
             @endphp
@@ -261,11 +269,7 @@
                 <ul class="rl-activation-list">
                     @foreach ($activation->primarySteps as $step)
                         <li class="rl-activation-item" data-complete="{{ $step['is_complete'] ? 'true' : 'false' }}">
-                            <x-filament::icon
-                                :icon="$step['is_complete'] ? 'heroicon-m-check-circle' : 'heroicon-o-check-circle'"
-                                class="rl-activation-item__icon"
-                                aria-hidden="true"
-                            />
+                            <x-filament::icon :icon="$step['is_complete'] ? 'heroicon-m-check-circle' : 'heroicon-o-check-circle'" class="rl-activation-item__icon" aria-hidden="true" />
 
                             <span class="min-w-0 flex-1">
                                 <span class="rl-activation-item__title">
@@ -280,14 +284,13 @@
                             </span>
 
                             @if ($step['url'])
-                                <a
-                                    href="{{ $step['url'] }}"
-                                    wire:navigate
-                                    class="rl-overview-action rl-activation-item__action"
-                                    @class(['rl-activation-item__action--primary' => $step['key'] === $nextStepKey])
-                                >
+                                <a href="{{ $step['url'] }}" wire:navigate
+                                    class="rl-overview-action rl-activation-item__action" @class([
+                                        'rl-activation-item__action--primary' => $step['key'] === $nextStepKey,
+                                    ])>
                                     {{ __('onboarding.checklist.steps.' . $step['key'] . '.action') }}
-                                    <x-filament::icon icon="heroicon-m-arrow-right" class="size-3.5 shrink-0" aria-hidden="true" />
+                                    <x-filament::icon icon="heroicon-m-arrow-right" class="size-3.5 shrink-0"
+                                        aria-hidden="true" />
                                 </a>
                             @endif
                         </li>
@@ -310,13 +313,15 @@
 
                                 @if ($optional['is_done'])
                                     <span class="rl-activation-optional-item__state" data-tone="success">
-                                        <x-filament::icon icon="heroicon-m-check-circle" class="size-3.5 shrink-0" aria-hidden="true" />
+                                        <x-filament::icon icon="heroicon-m-check-circle" class="size-3.5 shrink-0"
+                                            aria-hidden="true" />
                                         {{ __('onboarding.checklist.optional_done') }}
                                     </span>
                                 @elseif ($optional['is_actionable'])
                                     <a href="{{ $optional['url'] }}" wire:navigate class="rl-overview-action">
                                         {{ __('onboarding.checklist.optional.' . $optional['key'] . '.action') }}
-                                        <x-filament::icon icon="heroicon-m-arrow-right" class="size-3.5 shrink-0" aria-hidden="true" />
+                                        <x-filament::icon icon="heroicon-m-arrow-right" class="size-3.5 shrink-0"
+                                            aria-hidden="true" />
                                     </a>
                                 @else
                                     <span class="rl-activation-optional-item__state">
@@ -345,7 +350,8 @@
 
             @if ($processes === [])
                 <p class="rl-overview-empty">
-                    <x-filament::icon icon="heroicon-m-briefcase" class="rl-overview-empty__icon" aria-hidden="true" />
+                    <x-filament::icon icon="heroicon-m-briefcase" class="rl-overview-empty__icon"
+                        aria-hidden="true" />
                     <span>
                         <span class="rl-overview-empty__title">{{ __('dashboard.processes.empty_heading') }}</span>
                         <span class="rl-overview-empty__text">{{ __('dashboard.processes.empty_description') }}</span>
@@ -367,20 +373,23 @@
                                          Applicants always shows: zero applicants is a signal. --}}
                                     <span class="rl-process-item__metrics">
                                         <span>
-                                            <span class="rl-process-item__value">{{ $progress['applications'] }}</span>
+                                            <span
+                                                class="rl-process-item__value">{{ $progress['applications'] }}</span>
                                             {{ trans_choice('jobs.progress.applicants', $progress['applications']) }}
                                         </span>
 
                                         @if ($progress['interviewing'] > 0)
                                             <span>
-                                                <span class="rl-process-item__value">{{ $progress['interviewing'] }}</span>
+                                                <span
+                                                    class="rl-process-item__value">{{ $progress['interviewing'] }}</span>
                                                 {{ trans_choice('jobs.progress.interviewing', $progress['interviewing']) }}
                                             </span>
                                         @endif
 
                                         @if ($progress['finalists'] > 0)
                                             <span>
-                                                <span class="rl-process-item__value">{{ $progress['finalists'] }}</span>
+                                                <span
+                                                    class="rl-process-item__value">{{ $progress['finalists'] }}</span>
                                                 {{ trans_choice('jobs.progress.finalists', $progress['finalists']) }}
                                             </span>
                                         @endif
@@ -393,7 +402,8 @@
                                          set out to hire four. --}}
                                     <span class="rl-process-item__hires" @class(['rl-process-item__hires--none' => $progress['hired'] === 0])>
                                         {{ $progress['hired'] }}/{{ $progress['hiring_target'] }}
-                                        <span class="rl-process-item__hires-label">{{ __('jobs.progress.hired') }}</span>
+                                        <span
+                                            class="rl-process-item__hires-label">{{ __('jobs.progress.hired') }}</span>
                                     </span>
 
                                     {{-- One state at a time: the most consequential one. --}}
@@ -430,6 +440,5 @@
             @endif
         </section>
 
-        @livewire(\App\Filament\Widgets\CurrentTimeWidget::class)
     </div>
 </x-filament-panels::page>

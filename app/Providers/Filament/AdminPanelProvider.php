@@ -31,8 +31,7 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Number;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
-use RecruiterLabs\FilamentRealtimeDriver\FilamentRealtimeDriverPlugin;
-// use RecruiterLabs\FilamentRealtimeDriver\RealtimeConnection;
+use Marcusvbda\FilamentRealtimeDriver\FilamentRealtimeDriverPlugin;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -115,13 +114,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->plugin(
                 FilamentRealtimeDriverPlugin::make()
-                    ->socket(
-                        // function (RealtimeConnection $listener) {
-                        //     $listener->watch("event.example", function ($params) {
-                        //         Log::info('Realtime event received: event.example', ['params' => $params]);
-                        //     });
-                        // }
-                    )
+                    ->socket()
                     ->databaseNotifications()
             );
     }
