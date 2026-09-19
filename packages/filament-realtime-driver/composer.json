@@ -1,6 +1,6 @@
 {
     "name": "recruiter-labs/filament-realtime-driver",
-    "description": "Minimal Filament plugin skeleton for a future realtime driver integration.",
+    "description": "Realtime updates for Filament panels over Laravel Reverb, without Laravel Echo or pusher-js.",
     "type": "library",
     "license": "MIT",
     "version": "0.1.0",
