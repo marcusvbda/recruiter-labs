@@ -387,9 +387,8 @@ class ViewApplication extends ViewRecord
     }
 
     /**
-     * The exact Pipeline column order {@see JobPipelineKanban}
-     * itself uses for that stage: longest-waiting-first by `status_entered_at`,
-     * with `created_at`/`id` as deterministic tie-breakers. Returns `null` when
+     * The exact Pipeline column order ({@see Application::scopeInBoardOrder()},
+     * shared with {@see JobPipelineKanban}) for that stage. Returns `null` when
      * the stage in the URL no longer resolves to a real status of this Job's
      * pipeline (e.g. the pipeline configuration changed since the link was
      * generated), so the caller falls back to the Job's operational order
@@ -412,9 +411,7 @@ class ViewApplication extends ViewRecord
             ->whereBelongsTo($application->job, 'job')
             ->where('company_id', $application->company_id)
             ->where('status_id', $status->getKey())
-            ->orderBy('status_entered_at')
-            ->orderBy('created_at')
-            ->orderBy('id')
+            ->inBoardOrder()
             ->pluck('id')
             ->map(fn (mixed $id): int => (int) $id)
             ->all());
@@ -438,9 +435,7 @@ class ViewApplication extends ViewRecord
             ->join('statuses', 'statuses.id', '=', 'applications.status_id')
             ->orderBy('statuses.order')
             ->orderBy('statuses.id')
-            ->orderBy('applications.status_entered_at')
-            ->orderBy('applications.created_at')
-            ->orderBy('applications.id')
+            ->inBoardOrder()
             ->pluck('applications.id')
             ->map(fn (mixed $id): int => (int) $id)
             ->all());

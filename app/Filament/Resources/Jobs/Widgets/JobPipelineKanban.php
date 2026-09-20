@@ -354,20 +354,8 @@ class JobPipelineKanban extends StateKanbanBoard
     }
 
     /**
-     * Longest waiting in the stage first — operational work state, never AI fit.
-     *
-     * A column *is* a status, so every card in it shares that stage's own
-     * `attention_after_days` threshold. Ordering by `status_entered_at` ascending
-     * therefore puts the genuinely overdue candidates at the top of the column by
-     * construction, without a second query or a derived priority column.
-     *
-     * Fit deliberately takes no part in this. Sorting the board by
-     * `analysis_score` would make "highest AI score first" the default order a
-     * recruiter reads candidates in, which is an automated hiring recommendation
-     * wearing a layout's clothes. Fit stays on the card as context.
-     *
-     * `created_at` then `id` are deterministic tie-breakers, so two candidates who
-     * entered a stage in the same second do not swap places between renders.
+     * The board's within-column order lives on {@see Application::scopeInBoardOrder()}
+     * so the sequential candidate review shares the exact same definition.
      *
      * @template TModel of Model
      *
@@ -376,10 +364,7 @@ class JobPipelineKanban extends StateKanbanBoard
      */
     private function applyCardOrdering(Builder $query): Builder
     {
-        return $query
-            ->orderBy('status_entered_at')
-            ->orderBy('created_at')
-            ->orderBy('id');
+        return Application::orderInBoardOrder($query);
     }
 
     /**

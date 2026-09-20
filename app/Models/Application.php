@@ -139,6 +139,51 @@ class Application extends Model
     }
 
     /**
+     * Longest waiting in the stage first — operational work state, never AI fit.
+     *
+     * A Pipeline column *is* a status, so every card in it shares that stage's own
+     * `attention_after_days` threshold. Ordering by `status_entered_at` ascending
+     * therefore puts the genuinely overdue candidates at the top of the column by
+     * construction, without a second query or a derived priority column.
+     *
+     * Fit deliberately takes no part in this. Sorting by `analysis_score` would make
+     * "highest AI score first" the default order a recruiter reads candidates in,
+     * which is an automated hiring recommendation wearing a layout's clothes. Fit
+     * stays on the card as context.
+     *
+     * `created_at` then `id` are deterministic tie-breakers, so two candidates who
+     * entered a stage in the same second do not swap places between renders.
+     *
+     * This is the single definition of within-stage order: the Kanban board and the
+     * sequential candidate review both use it, so they cannot drift apart. Columns
+     * are qualified so it stays safe to combine with a join.
+     *
+     * @param  Builder<Application>  $query
+     * @return Builder<Application>
+     */
+    public function scopeInBoardOrder(Builder $query): Builder
+    {
+        return self::orderInBoardOrder($query);
+    }
+
+    /**
+     * {@see scopeInBoardOrder()} for callers that hold a query builder typed
+     * more loosely than an Application query (the Kanban widget's).
+     *
+     * @template TModel of Model
+     *
+     * @param  Builder<TModel>  $query
+     * @return Builder<TModel>
+     */
+    public static function orderInBoardOrder(Builder $query): Builder
+    {
+        return $query
+            ->orderBy('applications.status_entered_at')
+            ->orderBy('applications.created_at')
+            ->orderBy('applications.id');
+    }
+
+    /**
      * Candidates who have been sitting in their current stage longer than that
      * stage's configured expectation. A stage without
      * {@see Status::$attention_after_days} never qualifies, and a stage that
