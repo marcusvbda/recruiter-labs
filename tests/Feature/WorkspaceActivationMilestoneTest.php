@@ -1,8 +1,8 @@
 <?php
 
-use App\Actions\ConfirmJobCriteria;
 use App\Actions\RecordCompanyMilestone;
 use App\Actions\ReplaceApplicationFitAnalysis;
+use App\Actions\ReplaceJobCriteria;
 use App\Enums\ApplicationAnalysisStatus;
 use App\Enums\CompanyMilestone;
 use App\Enums\JobCriteriaProcessingStatus;
@@ -12,7 +12,6 @@ use App\Models\Company;
 use App\Models\CompanyMilestone as CompanyMilestoneRecord;
 use App\Models\Job;
 use App\Models\Plan;
-use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
@@ -60,15 +59,6 @@ function milestoneReachedAt(Company $company, CompanyMilestone $milestone): ?str
     return $achievedAt === null ? null : CarbonImmutable::parse($achievedAt)->toDateTimeString();
 }
 
-/** A workspace member — the human every criteria confirmation requires. */
-function activationRecruiter(Company $company): User
-{
-    $recruiter = User::factory()->create();
-    $recruiter->companies()->attach($company);
-
-    return $recruiter;
-}
-
 /**
  * A structurally valid evaluation response for every current criterion of the
  * job, so persistence exercises the real action instead of a stub.
@@ -100,20 +90,24 @@ test('creating a workspace records the first milestone with no help from onboard
 });
 
 test('the real product actions record each primary milestone, and only then', function (): void {
+    Queue::fake();
+
     $company = Company::factory()->create();
-    $recruiter = activationRecruiter($company);
 
-    $job = Job::factory()->withCriteriaAwaitingReview([
-        ['criterion' => 'Production Laravel experience', 'weight' => 10],
-    ])->create(['company_id' => $company->getKey()]);
+    $job = Job::factory()->create([
+        'company_id' => $company->getKey(),
+        'criteria_processing_status' => JobCriteriaProcessingStatus::Processing,
+        'criteria_generation' => 1,
+    ]);
 
+    // Setup is the first job: preparing the criteria is the system's work, not a
+    // second thing the workspace has to be asked for.
     expect(reachedMilestones($company))->toBe([
         CompanyMilestone::WorkspaceCreated->value,
         CompanyMilestone::FirstJobCreated->value,
+        CompanyMilestone::WorkspaceSetupCompleted->value,
     ]);
 
-    // Deliberately before the criteria are confirmed: an application can arrive
-    // while hiring intent is still being agreed, and setup must not be claimed.
     $application = Application::factory()->create([
         'company_id' => $company->getKey(),
         'job_id' => $job->getKey(),
@@ -121,15 +115,15 @@ test('the real product actions record each primary milestone, and only then', fu
     ]);
 
     expect(reachedMilestones($company))->toContain(CompanyMilestone::FirstApplicationCreated->value)
-        ->and(reachedMilestones($company))->not->toContain(CompanyMilestone::WorkspaceSetupCompleted->value);
+        // No evaluation has run, so the workspace is set up, not activated.
+        ->and(reachedMilestones($company))->not->toContain(CompanyMilestone::WorkspaceActivated->value);
 
-    expect(app(ConfirmJobCriteria::class)->handle($job->fresh(), $recruiter))->toBeTrue();
+    // The extraction succeeding is what makes the criteria govern evaluation.
+    expect(app(ReplaceJobCriteria::class)->handle($job, [
+        ['criterion' => 'Production Laravel experience', 'weight' => 10, 'reason' => 'Core of the role.'],
+    ], [], 1))->toBeTrue();
 
     expect(reachedMilestones($company))->toContain(CompanyMilestone::FirstCriteriaConfirmed->value)
-        // Setup is the composite of first job + confirmed criteria, and this is
-        // the moment both are finally true.
-        ->and(reachedMilestones($company))->toContain(CompanyMilestone::WorkspaceSetupCompleted->value)
-        // The evaluation has not run, so the workspace is set up, not activated.
         ->and(reachedMilestones($company))->not->toContain(CompanyMilestone::WorkspaceActivated->value);
 
     $job->refresh();
@@ -149,32 +143,37 @@ test('the real product actions record each primary milestone, and only then', fu
         ->and(reachedMilestones($company))->toContain(CompanyMilestone::WorkspaceActivated->value);
 });
 
-test('setup completion needs a confirmed criteria revision, not merely stored criteria', function (): void {
+test('setup completion follows the first job, with no separate criteria step', function (): void {
     $company = Company::factory()->create();
 
-    // Criteria exist and are editable, but no human has signed off on them —
-    // exactly the state every pre-existing workspace was pushed into.
-    Job::factory()->withCriteriaAwaitingReview()->create(['company_id' => $company->getKey()]);
+    Job::factory()->create(['company_id' => $company->getKey()]);
 
     expect(reachedMilestones($company))->toBe([
         CompanyMilestone::WorkspaceCreated->value,
         CompanyMilestone::FirstJobCreated->value,
-    ])->and(reachedMilestones($company))->not->toContain(CompanyMilestone::WorkspaceSetupCompleted->value);
+        CompanyMilestone::WorkspaceSetupCompleted->value,
+    ])
+        // Setup no longer waits on a human criteria step, but it is still not
+        // activation: nothing has been evaluated.
+        ->and(reachedMilestones($company))->not->toContain(CompanyMilestone::FirstCriteriaConfirmed->value)
+        ->and(reachedMilestones($company))->not->toContain(CompanyMilestone::WorkspaceActivated->value);
 });
 
-test('a confirmation that confirmed nothing records nothing', function (): void {
+test('an activation that activated nothing records nothing', function (): void {
     $company = Company::factory()->create();
-    $recruiter = activationRecruiter($company);
 
-    // No criteria stored at all, so there is nothing to confirm.
+    // The extraction finished for a revision the job has already moved on from,
+    // so no criteria are stored and nothing became current.
     $job = Job::factory()->create([
         'company_id' => $company->getKey(),
-        'criteria_processing_status' => JobCriteriaProcessingStatus::NotStarted,
+        'criteria_processing_status' => JobCriteriaProcessingStatus::Processing,
+        'criteria_generation' => 3,
     ]);
 
-    expect(app(ConfirmJobCriteria::class)->handle($job, $recruiter))->toBeFalse()
-        ->and(reachedMilestones($company))->not->toContain(CompanyMilestone::FirstCriteriaConfirmed->value)
-        ->and(reachedMilestones($company))->not->toContain(CompanyMilestone::WorkspaceSetupCompleted->value);
+    expect(app(ReplaceJobCriteria::class)->handle($job, [
+        ['criterion' => 'Production Laravel experience', 'weight' => 10, 'reason' => 'Core of the role.'],
+    ], [], 2))->toBeFalse()
+        ->and(reachedMilestones($company))->not->toContain(CompanyMilestone::FirstCriteriaConfirmed->value);
 });
 
 test('activation needs setup, an application and a successful evaluation together', function (): void {
@@ -207,13 +206,11 @@ test('an evaluation without setup never activates the workspace', function (): v
 
 test('a failed evaluation does not complete the evaluation milestone', function (): void {
     $company = Company::factory()->create();
-    $recruiter = activationRecruiter($company);
-    $job = Job::factory()->withCriteriaAwaitingReview()->create(['company_id' => $company->getKey()]);
+    $job = Job::factory()->withConfirmedCriteria()->create(['company_id' => $company->getKey()]);
     $application = Application::factory()->create([
         'company_id' => $company->getKey(),
         'job_id' => $job->getKey(),
     ]);
-    app(ConfirmJobCriteria::class)->handle($job->fresh(), $recruiter);
 
     $application->forceFill(['analysis_status' => ApplicationAnalysisStatus::Failed])->save();
 
@@ -223,15 +220,13 @@ test('a failed evaluation does not complete the evaluation milestone', function 
 
 test('an answer discarded because the criteria revision moved on is not an evaluation', function (): void {
     $company = Company::factory()->create();
-    $recruiter = activationRecruiter($company);
-    $job = Job::factory()->withCriteriaAwaitingReview([
+    $job = Job::factory()->withConfirmedCriteria([
         ['criterion' => 'Production Laravel experience', 'weight' => 10],
     ])->create(['company_id' => $company->getKey()]);
     $application = Application::factory()->create([
         'company_id' => $company->getKey(),
         'job_id' => $job->getKey(),
     ]);
-    app(ConfirmJobCriteria::class)->handle($job->fresh(), $recruiter);
 
     $job->refresh();
     [$scores, $brief] = evaluationPayloadFor($job);
@@ -275,7 +270,10 @@ test('reporting the same milestone repeatedly records one row and emits one even
             ->where('milestone', CompanyMilestone::FirstJobCreated->value)
             ->count())->toBe(1);
 
-    Event::assertDispatchedTimes(WorkspaceMilestoneReached::class, 1);
+    // Two events, both from the first call: the milestone itself, and the
+    // composite it completes (a first job is now all setup requires). The two
+    // repeats emit nothing.
+    Event::assertDispatchedTimes(WorkspaceMilestoneReached::class, 2);
 });
 
 test('a repeated report cannot rewrite when a milestone was reached', function (): void {
@@ -323,15 +321,13 @@ test('a composite is dated at the later of the milestones that complete it', fun
 
 test('milestone history survives the records that produced it changing or being deleted', function (): void {
     $company = Company::factory()->create();
-    $recruiter = activationRecruiter($company);
-    $job = Job::factory()->withCriteriaAwaitingReview([
+    $job = Job::factory()->withConfirmedCriteria([
         ['criterion' => 'Production Laravel experience', 'weight' => 10],
     ])->create(['company_id' => $company->getKey(), 'published' => true]);
     $application = Application::factory()->create([
         'company_id' => $company->getKey(),
         'job_id' => $job->getKey(),
     ]);
-    app(ConfirmJobCriteria::class)->handle($job->fresh(), $recruiter);
 
     $job->refresh();
     [$scores, $brief] = evaluationPayloadFor($job);
@@ -370,6 +366,7 @@ test('workspaces reach milestones independently of each other', function (): voi
     expect(reachedMilestones($company))->toBe([
         CompanyMilestone::WorkspaceCreated->value,
         CompanyMilestone::FirstJobCreated->value,
+        CompanyMilestone::WorkspaceSetupCompleted->value,
     ])->and(reachedMilestones($other))->toBe([CompanyMilestone::WorkspaceCreated->value]);
 });
 

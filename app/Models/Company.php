@@ -266,6 +266,16 @@ class Company extends Model
         return $this->hasMany(Pipeline::class);
     }
 
+    /**
+     * The workspace's reusable candidate email templates.
+     *
+     * @return HasMany<EmailTemplate, $this>
+     */
+    public function emailTemplates(): HasMany
+    {
+        return $this->hasMany(EmailTemplate::class);
+    }
+
     /** @return HasOne<Pipeline, $this> */
     public function defaultPipeline(): HasOne
     {

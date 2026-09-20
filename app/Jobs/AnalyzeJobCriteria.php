@@ -11,6 +11,7 @@ use App\Enums\Limit;
 use App\Models\AiAgentResponseCache;
 use App\Models\AiUsageRecord;
 use App\Models\Job;
+use App\Services\AiActivityService;
 use App\Services\AiCredentialsResolver;
 use App\Services\AiUsageTracker;
 use App\Services\LimitManager;
@@ -108,6 +109,8 @@ class AnalyzeJobCriteria implements ShouldBeUnique, ShouldQueue
                 return;
             }
 
+            AiActivityService::broadcast($job->company);
+
             $replaceJobCriteria->handle($job, $criteria, $reviewAlerts, $this->generation);
 
             return;
@@ -142,6 +145,8 @@ class AnalyzeJobCriteria implements ShouldBeUnique, ShouldQueue
 
             return;
         }
+
+        AiActivityService::broadcast($job->company);
 
         $runtimeProvider = $credentialsResolver->registerRuntimeProvider($job->company, $configuration);
 
@@ -187,12 +192,19 @@ class AnalyzeJobCriteria implements ShouldBeUnique, ShouldQueue
             ->update(['status' => AiUsageStatus::Failed]);
     }
 
+    /**
+     * These write through the query builder on purpose (they must only touch
+     * the generation they were queued for), which bypasses model events — so
+     * the AI Activity indicator is told explicitly instead.
+     */
     private function markCurrentGenerationAsFailed(): void
     {
         Job::query()
             ->whereKey($this->jobId)
             ->where('criteria_generation', $this->generation)
             ->update(['criteria_processing_status' => JobCriteriaProcessingStatus::Failed]);
+
+        AiActivityService::broadcastForJob($this->jobId);
     }
 
     private function markCurrentGenerationAsPendingQuota(): void
@@ -201,6 +213,8 @@ class AnalyzeJobCriteria implements ShouldBeUnique, ShouldQueue
             ->whereKey($this->jobId)
             ->where('criteria_generation', $this->generation)
             ->update(['criteria_processing_status' => JobCriteriaProcessingStatus::PendingQuota]);
+
+        AiActivityService::broadcastForJob($this->jobId);
     }
 
     private function elapsedMilliseconds(int $startedAt): int

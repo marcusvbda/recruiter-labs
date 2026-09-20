@@ -103,36 +103,4 @@
             @endforelse
         </div>
     </div>
-
-    <div class="flex flex-col gap-3">
-        <div>
-            <h3 class="text-sm font-semibold text-gray-950 dark:text-white">
-                {{ __('applications.admin.ai.interview_brief.heading') }}</h3>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                {{ __('applications.admin.ai.interview_brief.description') }}</p>
-        </div>
-
-        @forelse ($analysis['interview_brief_items'] as $briefItem)
-            <div class="rounded-lg border border-gray-200 p-4 dark:border-white/10">
-                <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                    <p class="text-sm font-medium text-gray-950 dark:text-white">{{ $briefItem['criterion'] }}</p>
-                    <x-filament::badge :color="$briefItem['priority'] === 'high'
-                        ? 'danger'
-                        : ($briefItem['priority'] === 'medium' ? 'warning' : 'gray')">
-                        {{ __('applications.admin.ai.interview_brief.priority_label') }}
-                        {{ __("applications.admin.ai.interview_brief.priority.{$briefItem['priority']}") }}
-                    </x-filament::badge>
-                </div>
-                <p class="mt-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                    {{ __('applications.admin.ai.interview_brief.reason_label') }}</p>
-                <p class="mt-1 text-sm leading-6 text-gray-600 dark:text-gray-300">{{ $briefItem['reason'] }}</p>
-                <p class="mt-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                    {{ __('applications.admin.ai.interview_brief.question_label') }}</p>
-                <p class="mt-1 text-sm font-medium leading-6 text-gray-950 dark:text-white">{{ $briefItem['question'] }}</p>
-            </div>
-        @empty
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-                {{ __('applications.admin.ai.interview_brief.empty') }}</p>
-        @endforelse
-    </div>
 </div>

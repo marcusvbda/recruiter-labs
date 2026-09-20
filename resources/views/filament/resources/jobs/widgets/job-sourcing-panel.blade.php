@@ -42,6 +42,11 @@
         </p>
     @else
         @if ($summary !== null)
+            {{-- Section-level provenance for the sourcing analysis (AC58). --}}
+            <div class="mb-2">
+                <x-ai-generated-badge />
+            </div>
+
             <p class="text-sm leading-6 text-gray-600 dark:text-gray-300">
                 {{ __('sourcing.panel.summary', [
                     'considered' => $summary['considered'],

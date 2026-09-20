@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Applications\Pages;
 use App\Actions\MoveApplicationToStatus;
 use App\Actions\ScheduleApplicationFitAnalysis;
 use App\Enums\ApplicationAnalysisStatus;
+use App\Enums\ApplicationDocumentType;
 use App\Enums\CandidateCommunicationMessageKind;
 use App\Enums\CriterionEvidenceSource;
 use App\Enums\InterviewStatus;
@@ -17,11 +18,11 @@ use App\Filament\Resources\Applications\Pages\Concerns\ManagesInterviewFeedback;
 use App\Filament\Resources\Applications\Pages\Concerns\PresentsInterviewEvidence;
 use App\Filament\Resources\Candidates\CandidateResource;
 use App\Filament\Resources\Jobs\JobResource;
+use App\Filament\Resources\Jobs\Widgets\JobPipelineKanban;
 use App\Models\Application;
 use App\Models\ApplicationAnswer;
 use App\Models\ApplicationCriterionScore;
 use App\Models\ApplicationDocument;
-use App\Models\ApplicationInterviewBriefItem;
 use App\Models\ApplicationUtmParameter;
 use App\Models\Candidate;
 use App\Models\CandidateCommunicationMessage;
@@ -29,6 +30,7 @@ use App\Models\CandidateCommunicationThread;
 use App\Models\Interview;
 use App\Models\Status;
 use BackedEnum;
+use Closure;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Facades\Filament;
@@ -58,6 +60,23 @@ class ViewApplication extends ViewRecord
     use PresentsInterviewEvidence;
 
     protected static string $resource = ApplicationResource::class;
+
+    /**
+     * The Pipeline column the recruiter was looking at when they opened this
+     * Application, threaded through the URL by
+     * {@see JobPipelineKanban::getApplicationUrl()}
+     * — never session state, same convention as `?section=`/`?communicationJob=`.
+     */
+    public ?int $pipelineStageId = null;
+
+    public function mount(int|string $record): void
+    {
+        parent::mount($record);
+
+        $stageId = request()->integer('pipelineStage');
+
+        $this->pipelineStageId = $stageId > 0 ? $stageId : null;
+    }
 
     public function getTitle(): string|Htmlable
     {
@@ -94,6 +113,7 @@ class ViewApplication extends ViewRecord
         $nextInterview = $this->nextInterview($application);
         $status = $application->status;
         $evaluationFailed = $application->analysis_status === ApplicationAnalysisStatus::Failed;
+        $neighbors = $this->reviewQueueNeighbors($application);
 
         $primary = [];
         $secondary = [];
@@ -139,8 +159,22 @@ class ViewApplication extends ViewRecord
             }
         }
 
+        // A deliberate fast path (AC33): the same stage-move action, continuing
+        // straight to the next Application in the recruiter's review context
+        // instead of staying on this one. Only offered when there genuinely is
+        // a next candidate to continue to.
+        if ($neighbors['next'] !== null) {
+            $secondary[] = $this->moveStatusAndReviewNextAction($application, $neighbors['next']);
+        }
+
+        $sequentialReview = array_values(array_filter([
+            $this->previousApplicationAction($neighbors),
+            $this->skipApplicationAction($neighbors),
+        ]));
+
         return [
             ...$primary,
+            ...$sequentialReview,
             ActionGroup::make([
                 ...$secondary,
                 Action::make('backToPipeline')
@@ -193,8 +227,14 @@ class ViewApplication extends ViewRecord
      * The name is a parameter because the summary tab offers the same action
      * again as the recommended next step; Filament identifies mounted actions by
      * name, so the second button needs its own.
+     *
+     * `$afterMove` lets a caller replace the default "refresh this page and
+     * notify" behaviour with its own follow-up — used by
+     * {@see moveStatusAndReviewNextAction()} to continue straight to the next
+     * Application in the review queue (AC33) without duplicating the move
+     * itself, its authorization or its schema.
      */
-    private function moveStatusAction(Application $application, string $name = 'moveStatus'): Action
+    private function moveStatusAction(Application $application, string $name = 'moveStatus', ?Closure $afterMove = null): Action
     {
         return Action::make($name)
             ->label(__('applications.admin.actions.move_status'))
@@ -208,7 +248,7 @@ class ViewApplication extends ViewRecord
                     ->native(false)
                     ->required(),
             ])
-            ->action(function (array $data) use ($application): void {
+            ->action(function (array $data) use ($application, $afterMove): void {
                 Gate::authorize('update', $application);
 
                 $status = Status::query()
@@ -218,6 +258,12 @@ class ViewApplication extends ViewRecord
 
                 app(MoveApplicationToStatus::class)->handle($application, $status);
 
+                if ($afterMove !== null) {
+                    $afterMove();
+
+                    return;
+                }
+
                 $this->record = ApplicationResource::getEloquentQuery()
                     ->findOrFail((int) $application->getKey());
 
@@ -226,6 +272,187 @@ class ViewApplication extends ViewRecord
                     ->success()
                     ->send();
             });
+    }
+
+    /**
+     * Move & review next (AC33): the same move, but continuing straight to the
+     * next Application in the current review queue instead of staying on this
+     * one. `$nextApplicationId` is resolved from the queue captured *before*
+     * the move runs, so the continuation always reflects what the recruiter was
+     * actually looking at.
+     */
+    private function moveStatusAndReviewNextAction(Application $application, int $nextApplicationId, string $name = 'moveStatusAndReviewNext'): Action
+    {
+        $nextUrl = $this->reviewQueueUrl($nextApplicationId);
+
+        return $this->moveStatusAction($application, $name, function () use ($nextUrl): void {
+            Notification::make()
+                ->title(__('applications.admin.actions.status_updated'))
+                ->success()
+                ->send();
+
+            $this->redirect($nextUrl, navigate: false);
+        })->label(__('applications.admin.actions.move_status_and_review_next'));
+    }
+
+    /**
+     * Pure navigation to the previous Application in the current review queue
+     * (AC30/AC32) — a plain URL action, so it never mutates the Application
+     * being left behind.
+     *
+     * @param  array{previous: int|null, next: int|null}  $neighbors
+     */
+    private function previousApplicationAction(array $neighbors, string $name = 'reviewQueuePrevious'): ?Action
+    {
+        if ($neighbors['previous'] === null) {
+            return null;
+        }
+
+        return Action::make($name)
+            ->label(__('applications.admin.actions.previous_candidate'))
+            ->icon(Heroicon::OutlinedChevronLeft)
+            ->color('gray')
+            ->url($this->reviewQueueUrl($neighbors['previous']));
+    }
+
+    /**
+     * Skip (AC30/AC32): move on to the next Application in the current review
+     * queue without acting on this one. A plain URL action, deliberately with
+     * no `->action()` closure, so it cannot touch `status`,
+     * `status_entered_at`, `analysis_*` or any other field on the Application
+     * being skipped.
+     *
+     * @param  array{previous: int|null, next: int|null}  $neighbors
+     */
+    private function skipApplicationAction(array $neighbors, string $name = 'reviewQueueSkip'): ?Action
+    {
+        if ($neighbors['next'] === null) {
+            return null;
+        }
+
+        return Action::make($name)
+            ->label(__('applications.admin.actions.skip_candidate'))
+            ->icon(Heroicon::OutlinedChevronRight)
+            ->color('gray')
+            ->url($this->reviewQueueUrl($neighbors['next']));
+    }
+
+    /**
+     * The immediate previous/next neighbours of this Application inside its
+     * current review queue (AC30/AC31): the originating Pipeline column when
+     * that context survived navigation, otherwise the Job's own operational
+     * order. Never AI-fit-ordered.
+     *
+     * @return array{previous: int|null, next: int|null}
+     */
+    private function reviewQueueNeighbors(Application $application): array
+    {
+        $ids = $this->reviewQueueIds($application);
+        $index = array_search($application->getKey(), $ids, true);
+
+        if ($index === false) {
+            return ['previous' => null, 'next' => null];
+        }
+
+        return [
+            'previous' => $ids[$index - 1] ?? null,
+            'next' => $ids[$index + 1] ?? null,
+        ];
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function reviewQueueIds(Application $application): array
+    {
+        if ($this->pipelineStageId !== null) {
+            $ids = $this->pipelineStageApplicationIds($application, $this->pipelineStageId);
+
+            if ($ids !== null) {
+                return $ids;
+            }
+        }
+
+        return $this->jobOperationalApplicationIds($application);
+    }
+
+    /**
+     * The exact Pipeline column order {@see JobPipelineKanban}
+     * itself uses for that stage: longest-waiting-first by `status_entered_at`,
+     * with `created_at`/`id` as deterministic tie-breakers. Returns `null` when
+     * the stage in the URL no longer resolves to a real status of this Job's
+     * pipeline (e.g. the pipeline configuration changed since the link was
+     * generated), so the caller falls back to the Job's operational order
+     * instead of silently reviewing the wrong column.
+     *
+     * @return list<int>|null
+     */
+    private function pipelineStageApplicationIds(Application $application, int $statusId): ?array
+    {
+        $status = Status::query()
+            ->where('company_id', $application->company_id)
+            ->where('pipeline_id', $application->job->pipeline_id)
+            ->find($statusId);
+
+        if (! $status instanceof Status) {
+            return null;
+        }
+
+        return array_values(Application::query()
+            ->whereBelongsTo($application->job, 'job')
+            ->where('company_id', $application->company_id)
+            ->where('status_id', $status->getKey())
+            ->orderBy('status_entered_at')
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->pluck('id')
+            ->map(fn (mixed $id): int => (int) $id)
+            ->all());
+    }
+
+    /**
+     * Fallback review order (AC31) used when no Pipeline column context
+     * survived navigation (a deep link, a direct search result, a bookmark):
+     * every Application of this Job, in the workflow's own configured stage
+     * order, and within each stage the same longest-waiting-first order the
+     * Kanban board itself uses. This is still the Job's normal operational
+     * board — never an AI ranking.
+     *
+     * @return list<int>
+     */
+    private function jobOperationalApplicationIds(Application $application): array
+    {
+        return array_values(Application::query()
+            ->whereBelongsTo($application->job, 'job')
+            ->where('applications.company_id', $application->company_id)
+            ->join('statuses', 'statuses.id', '=', 'applications.status_id')
+            ->orderBy('statuses.order')
+            ->orderBy('statuses.id')
+            ->orderBy('applications.status_entered_at')
+            ->orderBy('applications.created_at')
+            ->orderBy('applications.id')
+            ->pluck('applications.id')
+            ->map(fn (mixed $id): int => (int) $id)
+            ->all());
+    }
+
+    /**
+     * The URL for another Application in the same review queue, preserving the
+     * originating Pipeline-column context (if any) so a chain of
+     * previous/next/Move & review next clicks keeps reviewing the same column
+     * instead of losing context after the first navigation.
+     */
+    private function reviewQueueUrl(int $applicationId): string
+    {
+        $application = $this->getApplication();
+
+        $parameters = ['record' => $applicationId];
+
+        if ($this->pipelineStageId !== null) {
+            $parameters['pipelineStage'] = $this->pipelineStageId;
+        }
+
+        return ApplicationResource::getUrl('view', $parameters, tenant: $application->company);
     }
 
     private function reprocessApplicationAnalysisAction(Application $application, string $name = 'reprocessApplicationAnalysis'): Action
@@ -254,7 +481,7 @@ class ViewApplication extends ViewRecord
 
                 $this->redirect(ApplicationResource::getUrl('view', [
                     'record' => $application,
-                    'section' => 'evaluation',
+                    'section' => 'review',
                 ], tenant: $application->company), navigate: false);
             });
     }
@@ -285,20 +512,20 @@ class ViewApplication extends ViewRecord
                 ->viewData(['header' => $this->headerData($application)]),
             Tabs::make('application-details-tabs')
                 ->tabs([
-                    Tab::make(__('applications.admin.tabs.summary'))
-                        ->id('summary')
-                        ->key('summary')
-                        ->icon(Heroicon::OutlinedUserCircle)
+                    // Review merges what used to be two tabs (Summary,
+                    // Evaluation) into one scannable surface: where the
+                    // candidate stands, the recommended next step, and the
+                    // criterion-level evidence behind their fit. The full
+                    // Interview Brief stays exclusively on Interviews (AC19) —
+                    // this tab only points at unresolved areas.
+                    Tab::make(__('applications.admin.tabs.review'))
+                        ->id('review')
+                        ->key('review')
+                        ->icon(Heroicon::OutlinedClipboardDocumentCheck)
                         ->schema([
                             $this->nextActionSection($application),
                             View::make('filament.resources.applications.components.summary')
                                 ->viewData(['summary' => $this->summaryData($application)]),
-                        ]),
-                    Tab::make(__('applications.admin.tabs.evaluation'))
-                        ->id('evaluation')
-                        ->key('evaluation')
-                        ->icon(Heroicon::OutlinedClipboardDocumentCheck)
-                        ->schema([
                             View::make(@$this->analysisViewName($application))
                                 ->viewData(['analysis' => $this->analysisData($application)]),
                         ]),
@@ -311,20 +538,17 @@ class ViewApplication extends ViewRecord
                             View::make('filament.resources.applications.components.interviews')
                                 ->viewData(['interviews' => $this->interviewsData($application)]),
                         ]),
+                    // Application folds in what used to be a separate
+                    // Documents tab: the submitted materials belong beside the
+                    // rest of what the candidate submitted.
                     Tab::make(__('applications.admin.tabs.application'))
                         ->id('application')
                         ->key('application')
                         ->icon(Heroicon::OutlinedClipboardDocumentList)
+                        ->badge($application->documents->count())
                         ->schema([
                             View::make('filament.resources.applications.components.application')
                                 ->viewData(['applicationDetails' => $this->applicationData($application)]),
-                        ]),
-                    Tab::make(__('applications.admin.tabs.documents'))
-                        ->id('documents')
-                        ->key('documents')
-                        ->icon(Heroicon::OutlinedFolderOpen)
-                        ->badge($application->documents->count())
-                        ->schema([
                             View::make('filament.resources.applications.components.documents')
                                 ->viewData(['documents' => $this->documentsData($application)]),
                         ]),
@@ -474,15 +698,17 @@ class ViewApplication extends ViewRecord
         return match ($key) {
             'review_candidate' => [
                 $this->moveStatusAction($application, 'nextActionMoveStatus')->color('primary'),
-                $this->openTabAction('nextActionOpenEvaluation', 'evaluation', Heroicon::OutlinedClipboardDocumentCheck),
+                $this->openTabAction('nextActionOpenReview', 'review', Heroicon::OutlinedClipboardDocumentCheck),
                 $this->scheduleInterviewAction($application, 'nextActionScheduleInterview')->color('gray'),
             ],
+            // The Interview Brief itself lives exclusively on Interviews
+            // (AC19), so "open interviews" is the one link this branch needs —
+            // it is not duplicated by also linking into Review.
             'prepare_interview' => array_values(array_filter([
                 $nextInterview?->meeting_url === null
                     ? null
                     : $this->joinInterviewAction($nextInterview, 'nextActionJoinInterview'),
                 $this->openTabAction('nextActionOpenInterviews', 'interviews', Heroicon::OutlinedCalendarDays),
-                $this->openTabAction('nextActionOpenBrief', 'evaluation', Heroicon::OutlinedClipboardDocumentCheck),
             ])),
             'decide' => [
                 $this->moveStatusAction($application, 'nextActionMoveStatus')->color('primary'),
@@ -498,17 +724,18 @@ class ViewApplication extends ViewRecord
                     ->icon(Heroicon::OutlinedBolt)
                     ->color('primary')
                     ->url(AiSettings::getUrl(tenant: $application->company)),
-                $this->openTabAction('nextActionOpenEvaluation', 'evaluation', Heroicon::OutlinedClipboardDocumentCheck),
+                $this->openTabAction('nextActionOpenReview', 'review', Heroicon::OutlinedClipboardDocumentCheck),
             ],
             'await_evaluation' => [
-                $this->openTabAction('nextActionOpenEvaluation', 'evaluation', Heroicon::OutlinedClipboardDocumentCheck),
+                $this->openTabAction('nextActionOpenReview', 'review', Heroicon::OutlinedClipboardDocumentCheck),
             ],
-            // The evaluation is blocked on a decision nobody has made yet: the
-            // job's criteria still need reviewing and confirming.
+            // The job has no criteria governing it yet, which only happens when
+            // preparing them has not run or could not finish. The criteria tab
+            // is where it is started again or recovered.
             'awaiting_criteria' => array_values(array_filter([
                 JobResource::canEdit($application->job)
                     ? Action::make('nextActionReviewJobCriteria')
-                        ->label(__('jobs.criteria.confirm_action'))
+                        ->label(__('jobs.criteria.prepare_action'))
                         ->icon(Heroicon::OutlinedClipboardDocumentCheck)
                         ->color('primary')
                         ->url(JobResource::getUrl('edit', [
@@ -566,9 +793,7 @@ class ViewApplication extends ViewRecord
      */
     private function summaryData(Application $application): array
     {
-        $fit = $this->fitSummary($application);
         $nextInterview = $this->nextInterview($application);
-        $analysisStatus = $this->enumValue($application->analysis_status);
         $daysInStage = $application->daysInCurrentStage();
         $threshold = $application->status->attention_after_days;
 
@@ -584,18 +809,11 @@ class ViewApplication extends ViewRecord
                     ? null
                     : trans_choice('attention.days', $threshold, ['count' => $threshold]),
             ],
-            'fit' => [
-                'status' => $analysisStatus,
-                'label' => __("applications.admin.ai.states.{$this->evaluationStateKey($application)}.label"),
-                'score' => $fit['score'],
-                'coverage' => $fit['coverage'],
-                'needs_validation_count' => $fit['needs_validation_count'],
-                'supported_count' => $fit['supported_count'],
-                'url' => ApplicationResource::getUrl('view', [
-                    'record' => $application,
-                    'section' => 'evaluation',
-                ], tenant: $application->company),
-            ],
+            // Fit and coverage are shown exactly once in this tab, in the
+            // evaluation view below — repeating them here in a second card
+            // would present the same uncertainty in two different visual
+            // languages (AC28).
+            'document' => $this->primaryDocumentData($application),
             'interview' => $nextInterview === null ? null : [
                 'scheduled_at' => $nextInterview->scheduled_at
                     ->setTimezone($nextInterview->timezone)
@@ -768,34 +986,56 @@ class ViewApplication extends ViewRecord
     {
         $documents = $application->documents
             ->sortBy(fn (ApplicationDocument $document): string => $this->enumValue($document->type))
-            ->map(function (ApplicationDocument $document) use ($application): array {
-                $type = $this->enumValue($document->type);
-
-                return [
-                    'type' => (string) __("applications.admin.documents.types.{$type}"),
-                    'original_name' => $document->original_name,
-                    'mime_type' => $document->mime_type,
-                    'extension' => Str::upper($document->extension),
-                    'size' => Number::fileSize($document->size),
-                    'uploaded_at' => $this->formatDate($document->getAttribute('uploaded_at'))
-                        ?? $document->created_at->translatedFormat('M j, Y · H:i'),
-                    'can_preview' => Str::lower($document->extension) === 'pdf',
-                    'view_url' => route('application-documents.view', [
-                        'company' => $application->company,
-                        'application' => $application,
-                        'document' => $document,
-                    ]),
-                    'download_url' => route('application-documents.download', [
-                        'company' => $application->company,
-                        'application' => $application,
-                        'document' => $document,
-                    ]),
-                ];
-            })
+            ->map(fn (ApplicationDocument $document): array => $this->documentData($application, $document))
             ->values()
             ->all();
 
         return array_values($documents);
+    }
+
+    /**
+     * The one submitted document Review links to directly (AC29), so a
+     * recruiter can open the candidate's CV without leaving the tab. The CV
+     * leads when present; otherwise the earliest-uploaded document stands in
+     * for it, since some form of submitted material is still worth a direct
+     * link.
+     *
+     * @return array<string, bool|int|string|null>|null
+     */
+    private function primaryDocumentData(Application $application): ?array
+    {
+        $document = $application->documents
+            ->sortBy(fn (ApplicationDocument $document): int => $document->type === ApplicationDocumentType::Cv ? 0 : 1)
+            ->first();
+
+        return $document === null ? null : $this->documentData($application, $document);
+    }
+
+    /** @return array<string, bool|int|string|null> */
+    private function documentData(Application $application, ApplicationDocument $document): array
+    {
+        $type = $this->enumValue($document->type);
+
+        return [
+            'type' => (string) __("applications.admin.documents.types.{$type}"),
+            'original_name' => $document->original_name,
+            'mime_type' => $document->mime_type,
+            'extension' => Str::upper($document->extension),
+            'size' => Number::fileSize($document->size),
+            'uploaded_at' => $this->formatDate($document->getAttribute('uploaded_at'))
+                ?? $document->created_at->translatedFormat('M j, Y · H:i'),
+            'can_preview' => Str::lower($document->extension) === 'pdf',
+            'view_url' => route('application-documents.view', [
+                'company' => $application->company,
+                'application' => $application,
+                'document' => $document,
+            ]),
+            'download_url' => route('application-documents.download', [
+                'company' => $application->company,
+                'application' => $application,
+                'document' => $document,
+            ]),
+        ];
     }
 
     /**
@@ -846,7 +1086,7 @@ class ViewApplication extends ViewRecord
             return $data;
         }
 
-        $application->loadMissing(['criterionScores', 'interviewBriefItems']);
+        $application->loadMissing('criterionScores');
 
         // The two evidence layers live on two tabs. This one shows only what the
         // submitted application supported, and points at the human interview
@@ -910,14 +1150,9 @@ class ViewApplication extends ViewRecord
             'supported_count' => count($supported),
         ];
 
-        $data['interview_brief_items'] = $application->interviewBriefItems
-            ->map(fn (ApplicationInterviewBriefItem $item): array => [
-                'criterion' => $item->criterion,
-                'priority' => $item->priority,
-                'reason' => $item->reason,
-                'question' => $item->question,
-            ])
-            ->all();
+        // The Interview Brief itself is not duplicated here: its detail stays
+        // exclusively on Interviews (AC19). Review only surfaces the
+        // application-only criterion evidence and unresolved areas above.
 
         return $data;
     }

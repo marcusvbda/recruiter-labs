@@ -48,7 +48,9 @@ class WorkspaceActivationJourney
     private const array PrimarySteps = [
         'workspace_created' => CompanyMilestone::WorkspaceCreated,
         'create_first_job' => CompanyMilestone::FirstJobCreated,
-        'confirm_hiring_criteria' => CompanyMilestone::FirstCriteriaConfirmed,
+        // Hiring criteria are no longer a step of their own: a job with real
+        // role context prepares and activates them automatically, so the
+        // journey goes straight from the first job to the first application.
         'add_first_application' => CompanyMilestone::FirstApplicationCreated,
         'evaluate_first_application' => CompanyMilestone::FirstApplicationEvaluated,
     ];
@@ -146,31 +148,10 @@ class WorkspaceActivationJourney
     {
         return match ($key) {
             'create_first_job' => JobResource::getUrl('create', tenant: $company),
-            'confirm_hiring_criteria' => $this->criteriaConfirmationUrl($company),
             'add_first_application' => $this->applicationIntakeUrl($company),
             'evaluate_first_application' => $this->evaluationUrl($company),
             default => null,
         };
-    }
-
-    /**
-     * The job edit screen, where the existing criteria review and confirmation
-     * live. Preference goes to a job whose criteria are already waiting to be
-     * reviewed — that one can be confirmed immediately — then to the oldest job
-     * still without confirmed criteria, and finally to the jobs list when the
-     * workspace has no job to confirm anything for.
-     */
-    private function criteriaConfirmationUrl(Company $company): string
-    {
-        $jobs = $this->jobs($company);
-
-        $job = $jobs->first(fn (Job $job): bool => $job->criteriaAwaitReview())
-            ?? $jobs->first(fn (Job $job): bool => ! $job->hasConfirmedCriteria())
-            ?? $jobs->first();
-
-        return $job instanceof Job
-            ? JobResource::getUrl('edit', ['record' => $job], tenant: $company)
-            : JobResource::getUrl(tenant: $company);
     }
 
     /**
@@ -215,8 +196,8 @@ class WorkspaceActivationJourney
     /**
      * The workspace's jobs, oldest first, read once per call. Which job a CTA
      * should open is decided with the job model's own criteria semantics
-     * ({@see Job::hasConfirmedCriteria()}, {@see Job::criteriaAwaitReview()})
-     * rather than a second definition of "confirmed" written in SQL here.
+     * ({@see Job::hasConfirmedCriteria()}) rather than a second definition of
+     * "current criteria" written in SQL here.
      *
      * @return Collection<int, Job>
      */

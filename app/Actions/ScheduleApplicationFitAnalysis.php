@@ -15,9 +15,10 @@ use Illuminate\Support\Facades\DB;
  *
  * Two gates, both enforced here rather than in the UI. The criteria gate is
  * {@see Job::hasConfirmedCriteria()}: a candidate is never evaluated against
- * criteria no recruiter has confirmed, and until then the application waits in
- * {@see ApplicationAnalysisStatus::AwaitingCriteria}, which
- * {@see ConfirmJobCriteria} releases. The process gate is the application's own
+ * criteria that do not currently govern the job, and until then the application
+ * waits in {@see ApplicationAnalysisStatus::AwaitingCriteria}, which
+ * {@see ReleaseApplicationsForCurrentCriteria} releases once a revision becomes
+ * current. The process gate is the application's own
  * stage: a terminal outcome — hired, rejected, withdrawn, disqualified — means
  * the decision has been made, and spending AI allowance on it is waste no
  * matter which surface asked. A hidden button must not be the only thing

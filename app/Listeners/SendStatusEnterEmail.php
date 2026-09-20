@@ -2,6 +2,7 @@
 
 namespace App\Listeners;
 
+use App\Data\EmailTemplateContext;
 use App\Data\StatusEmailContext;
 use App\Enums\EmailNotificationType;
 use App\Events\ApplicationEnteredStatus;
@@ -43,6 +44,8 @@ class SendStatusEnterEmail
             return;
         }
 
+        $context = EmailTemplateContext::forApplication($application);
+
         $this->dispatcher->dispatch(
             $application->company,
             EmailNotificationType::PipelineStatus,
@@ -51,8 +54,8 @@ class SendStatusEnterEmail
                 statusId: (int) $status->getKey(),
                 candidateEmail: (string) $application->candidate?->email,
                 employerName: $application->company->name,
-                subject: $this->renderer->render($status->email_subject, $application),
-                body: $this->renderer->render($status->email_body, $application, escape: true),
+                subject: $this->renderer->render($status->email_subject, $context),
+                body: $this->renderer->render($status->email_body, $context, escape: true),
                 enteredAt: now()->getTimestamp(),
             ),
         );

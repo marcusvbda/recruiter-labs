@@ -2,19 +2,15 @@
 
 namespace App\Filament\Resources\Jobs\Schemas;
 
-use App\Actions\ConfirmJobCriteria;
 use App\Actions\ScheduleJobCriteriaExtraction;
-use App\Enums\ApplicationAnalysisStatus;
 use App\Enums\ApplicationLocale;
 use App\Enums\ApplicationQuestionType;
 use App\Enums\CoverLetterType;
 use App\Enums\JobCriteriaProcessingStatus;
-use App\Filament\Resources\Jobs\JobResource;
 use App\Models\Company;
 use App\Models\CvFileType;
 use App\Models\Job;
 use App\Models\Pipeline;
-use App\Models\User;
 use Closure;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
@@ -26,7 +22,6 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Actions;
 use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Section;
@@ -288,10 +283,11 @@ class JobForm
     }
 
     /**
-     * The criteria area has to make the ownership obvious: AI *suggests* the
-     * criteria, the recruiter reviews and edits them, the recruiter confirms
-     * them, and only then do they govern candidate evaluation. A finished
-     * extraction is a draft, so it is presented as one.
+     * The criteria area has to make the ownership obvious: AI *generates* the
+     * criteria and they start governing candidate evaluation as soon as the
+     * extraction succeeds, clearly labelled as AI-generated and editable by the
+     * recruiter, whose edits apply the moment they are saved. What stays human
+     * is the decision: nothing here moves, rejects or hires anybody.
      *
      * @return array<Component>
      */
@@ -313,14 +309,6 @@ class JobForm
                     JobCriteriaProcessingStatus::Failed,
                     JobCriteriaProcessingStatus::PendingQuota,
                 ], strict: true)),
-            View::make('filament.resources.jobs.components.ai-criteria-awaiting-review')
-                ->viewData(fn (Job $record): array => [
-                    'wasConfirmedBefore' => $record->criteria_confirmed_generation !== null,
-                    'waitingApplications' => $record->applications()
-                        ->where('analysis_status', ApplicationAnalysisStatus::AwaitingCriteria)
-                        ->count(),
-                ])
-                ->visible(fn (Job $record): bool => $record->criteriaAwaitReview()),
             View::make('filament.resources.jobs.components.ai-criteria-confirmed')
                 ->viewData(fn (Job $record): array => [
                     'confirmedAt' => $record->criteria_confirmed_at?->translatedFormat('M j, Y · H:i'),
@@ -330,7 +318,6 @@ class JobForm
             // Actions are always rendered, each individually visible for its own status, so
             // that a hidden action while processing is still "hidden" rather than "missing".
             Actions::make([
-                self::confirmEvaluationCriteriaAction(),
                 self::runAiCriteriaAnalysisAction(
                     'startAiCriteriaAnalysis',
                     __('jobs.criteria.start_action'),
@@ -396,54 +383,7 @@ class JobForm
                         ->reorderable(false),
                 ])
                 ->visible(fn (Job $record): bool => $record->criteria_processing_status->hasCriteria()),
-            View::make('filament.resources.jobs.components.ai-review-alerts')
-                ->viewData(fn (Job $record): array => [
-                    'alerts' => $record->reviewAlerts()
-                        ->orderBy('sort_order')
-                        ->get(),
-                ])
-                ->visible(fn (Job $record): bool => $record->criteria_processing_status->hasCriteria()),
         ];
-    }
-
-    /**
-     * The product-integrity step, not a compliance ceremony: one clear action
-     * that says these criteria will be used to evaluate candidates. Confirming
-     * also releases the candidates whose evaluation was waiting for it, which is
-     * why the copy mentions it rather than leaving it as a surprise.
-     */
-    private static function confirmEvaluationCriteriaAction(): Action
-    {
-        return Action::make('confirmEvaluationCriteria')
-            ->label(__('jobs.criteria.confirm_action'))
-            ->icon(Heroicon::OutlinedCheckCircle)
-            ->button()
-            ->visible(fn (Job $record): bool => $record->criteriaAwaitReview())
-            ->requiresConfirmation()
-            ->modalHeading(__('jobs.criteria.confirm_modal_heading'))
-            ->modalDescription((string) __('jobs.criteria.confirm_modal_description'))
-            ->modalSubmitActionLabel(__('jobs.criteria.confirm_action'))
-            ->action(function (Job $record): void {
-                // Jobs have no policy in this application; editability is the
-                // resource's own gate, which is what every other job-level
-                // write checks (see JobPipelineKanban::authorizeMoveRecord()).
-                abort_unless(JobResource::canEdit($record), 403);
-
-                // AI proposes criteria; a human confirms them. The action
-                // requires that human, so there is no signed-out path to a
-                // confirmed revision.
-                $user = Filament::auth()->user();
-                abort_unless($user instanceof User, 403);
-
-                app(ConfirmJobCriteria::class)->handle($record, $user);
-
-                Notification::make()
-                    ->title(__('jobs.criteria.confirmed_notification'))
-                    ->success()
-                    ->send();
-
-                $record->refresh();
-            });
     }
 
     private static function runAiCriteriaAnalysisAction(

@@ -5,11 +5,11 @@ namespace App\Enums;
 /**
  * Where a job's evaluation criteria stand.
  *
- * The AI never owns the criteria that govern candidate evaluation: extraction
- * finishing is *not* the same thing as the criteria being approved. A finished
- * extraction lands in {@see self::AwaitingReview}, and only a recruiter's
- * explicit confirmation moves it to {@see self::Completed}, which is the single
- * state in which candidate evaluation may run.
+ * A successful extraction lands directly in {@see self::Completed}, the single
+ * state in which candidate evaluation may run: preparing the criteria is the
+ * system's work, and a recruiter's edits to them apply as soon as they are
+ * saved. {@see self::AwaitingReview} is a legacy state, kept for revisions
+ * stored before activation became automatic.
  */
 enum JobCriteriaProcessingStatus: string
 {
@@ -17,17 +17,17 @@ enum JobCriteriaProcessingStatus: string
     case Pending = 'pending';
     case Processing = 'processing';
 
-    /** Criteria are stored and editable, but no human has confirmed them yet. */
+    /** Legacy: criteria stored before a revision activated itself on success. */
     case AwaitingReview = 'awaiting_review';
 
-    /** A recruiter confirmed this revision: it governs candidate evaluation. */
+    /** This revision is current: it governs candidate evaluation. */
     case Completed = 'completed';
     case Failed = 'failed';
 
     /** The platform allowance was exhausted before extraction could begin. */
     case PendingQuota = 'pending_quota';
 
-    /** Whether criteria exist and can be read, edited and confirmed. */
+    /** Whether criteria exist and can be read and edited. */
     public function hasCriteria(): bool
     {
         return $this === self::AwaitingReview || $this === self::Completed;

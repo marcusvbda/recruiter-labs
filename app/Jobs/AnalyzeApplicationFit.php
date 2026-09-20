@@ -14,6 +14,7 @@ use App\Models\AiAgentResponseCache;
 use App\Models\AiUsageRecord;
 use App\Models\Application;
 use App\Models\Job;
+use App\Services\AiActivityService;
 use App\Services\AiCredentialsResolver;
 use App\Services\AiUsageTracker;
 use App\Services\CandidateEvaluationContextSanitizer;
@@ -279,6 +280,10 @@ class AnalyzeApplicationFit implements ShouldBeUnique, ShouldQueue
     private function broadcastAnalysisUpdated(): void
     {
         RealtimeEvent::dispatch('application_analysis_'.$this->applicationId, 'ApplicationAnalysisUpdated');
+
+        // The same write also changes what the workspace-wide AI Activity
+        // indicator should say.
+        AiActivityService::broadcastForApplication($this->applicationId);
     }
 
     /**

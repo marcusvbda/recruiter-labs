@@ -72,15 +72,16 @@ function reachedMilestoneValues(Company $company): array
 }
 
 test('an unactivated workspace shows the checklist, the welcome and the launcher', function (): void {
+    // A workspace with no job at all: the first step of the journey is still
+    // ahead of it, now that criteria are no longer a step of their own.
     [$company, $owner] = activationWorkspace();
-    Job::factory()->withCriteriaAwaitingReview()->create(['company_id' => $company->getKey()]);
 
     $this->actingAs($owner)
         ->get(Dashboard::getUrl(tenant: $company))
         ->assertOk()
         ->assertSee(__('onboarding.checklist.heading'))
         // The next useful action, and the value of taking it.
-        ->assertSee(__('onboarding.checklist.steps.confirm_hiring_criteria.action'))
+        ->assertSee(__('onboarding.checklist.steps.create_first_job.action'))
         ->assertSee(__('onboarding.checklist.optional_heading'))
         ->assertSee(__('onboarding.welcome.heading'))
         ->assertSee(__('onboarding.welcome.continue_later'))
@@ -169,9 +170,9 @@ test('optional setup never counts toward progress, setup or activation', functio
     // Inviting a teammate is already done here — the workspace has two members —
     // and it still moves nothing: only the workspace milestones do.
     expect(collect($progress->optionalSteps)->firstWhere('key', 'invite_teammate')['is_done'])->toBeTrue()
-        ->and($progress->totalCount())->toBe(5)
+        ->and($progress->totalCount())->toBe(4)
         ->and($progress->completedCount())->toBe(1)
-        ->and($progress->percentage())->toBe(20)
+        ->and($progress->percentage())->toBe(25)
         ->and($progress->isSetupComplete())->toBeFalse()
         ->and($progress->isActivated())->toBeFalse();
 });
@@ -191,9 +192,10 @@ test('each workspace shows only its own progress, through one service instance',
     $first = $journey->for($company->fresh(), $owner);
     $second = $journey->for($other->fresh(), $owner);
 
-    expect($first->isSetupComplete())->toBeFalse()
+    // Both workspaces have their first job, which is all setup now requires.
+    expect($first->isSetupComplete())->toBeTrue()
         ->and($second->isSetupComplete())->toBeTrue()
-        ->and($first->nextStep()['key'])->toBe('confirm_hiring_criteria')
+        ->and($first->nextStep()['key'])->toBe('add_first_application')
         ->and($second->nextStep()['key'])->toBe('add_first_application')
         // Each workspace's CTA leads into that workspace, never the other one.
         ->and($first->nextStep()['url'])->toContain($company->slug)

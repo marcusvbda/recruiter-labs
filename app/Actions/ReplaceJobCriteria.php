@@ -2,22 +2,38 @@
 
 namespace App\Actions;
 
+use App\Enums\CompanyMilestone;
 use App\Enums\JobCriteriaProcessingStatus;
 use App\Models\Job;
+use App\Services\AiActivityService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 /**
- * Stores the criteria and job review an extraction produced.
+ * Stores the criteria and job review an extraction produced, and makes them the
+ * criteria that govern candidate evaluation.
  *
- * The result is a *suggestion*: it lands in
- * {@see JobCriteriaProcessingStatus::AwaitingReview}, editable and clearly
- * AI-assisted, and no candidate evaluation runs against it. A recruiter has to
- * confirm it first — {@see ConfirmJobCriteria} — because extraction finishing is
- * not the same thing as evaluation criteria being approved.
+ * A successful extraction activates itself: the revision lands in
+ * {@see JobCriteriaProcessingStatus::Completed} with the confirmation columns
+ * pointing at the generation that was just written, so every existing reader of
+ * `Job::hasConfirmedCriteria()` keeps working unchanged. The criteria stay
+ * editable and clearly labelled as AI-generated, and a recruiter edit is
+ * authoritative the moment it is saved — there is no separate approval click.
+ * `criteria_confirmed_by_id` is null because no human confirmed anything: the
+ * activation is the system's, and attributing it to a user would invent a
+ * decision nobody made.
+ *
+ * Human ownership is unchanged where it matters: the AI still proposes, and
+ * nothing here moves, rejects, hires or closes an application. It only releases
+ * the evaluations that were waiting for criteria to exist.
  */
 class ReplaceJobCriteria
 {
+    public function __construct(
+        private readonly ReleaseApplicationsForCurrentCriteria $releaseApplicationsForCurrentCriteria,
+        private readonly CaptureCompanyMilestone $captureCompanyMilestone,
+    ) {}
+
     /**
      * @param  array<int, mixed>  $criteria
      * @param  array<int, mixed>  $reviewAlerts
@@ -75,13 +91,26 @@ class ReplaceJobCriteria
             $lockedJob->reviewAlerts()->createMany($alertRows);
 
             $lockedJob->forceFill([
-                'criteria_processing_status' => JobCriteriaProcessingStatus::AwaitingReview,
+                'criteria_processing_status' => JobCriteriaProcessingStatus::Completed,
+                'criteria_confirmed_generation' => $lockedJob->criteria_generation,
+                'criteria_confirmed_at' => now(),
+                'criteria_confirmed_by_id' => null,
             ])->saveQuietly();
 
             $job->setRawAttributes($lockedJob->getAttributes(), true);
 
             return true;
         });
+
+        if ($replaced) {
+            // The activation write above is a `saveQuietly()` on purpose, so it
+            // bypasses model events: the AI Activity indicator is told here.
+            AiActivityService::broadcast($job->company);
+
+            $this->captureCompanyMilestone->handle((int) $job->company_id, CompanyMilestone::FirstCriteriaConfirmed);
+
+            $this->releaseApplicationsForCurrentCriteria->handle($job, trigger: 'criteria_activated');
+        }
 
         return $replaced;
     }

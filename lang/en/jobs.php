@@ -93,7 +93,7 @@ return [
     ],
     'criteria' => [
         'section_title' => 'Evaluation criteria',
-        'section_description' => 'AI suggests these criteria from the job; you decide which ones govern candidate evaluation. Edit anything that does not match how you actually evaluate, then confirm. Editing them later asks for confirmation again.',
+        'section_description' => 'AI prepares these criteria from the job and they govern candidate evaluation as soon as they are ready. Edit anything that does not match how you actually evaluate — your changes apply as soon as you save, and candidates still in process are evaluated again against them.',
         'criterion' => 'Criterion',
         'weight' => 'Weight',
         'reason' => 'Reason',
@@ -123,19 +123,8 @@ return [
         'start_action' => 'Analyze job',
         'retry_action' => 'Try again',
         'rerun_action' => 'Suggest criteria again',
-        'overwrite_confirmation' => 'The current criteria and job review will be replaced once processing completes, and the new criteria will need confirming before any candidate is evaluated against them.',
-        'confirm_action' => 'Confirm evaluation criteria',
-        'confirm_modal_heading' => 'Confirm evaluation criteria',
-        'confirm_modal_description' => 'These criteria and weights will be used to evaluate candidates for this job. Candidates already waiting are evaluated straight after.',
-        'confirmed_notification' => 'Evaluation criteria confirmed.',
-        'awaiting_review' => [
-            'badge' => 'AI-suggested draft',
-            'title' => 'Review these suggested criteria',
-            'description' => 'AI drafted them from this job. Edit the wording and weights until they match how you evaluate, then confirm them — no candidate is evaluated until you do.',
-            'changed_title' => 'These criteria changed since you confirmed them',
-            'changed_description' => 'Confirm them again to make them govern candidate evaluation. Until then, evaluations produced against the previous version are no longer shown as current.',
-            'waiting_applications' => '{1} :count candidate is waiting for this confirmation.|[2,*] :count candidates are waiting for this confirmation.',
-        ],
+        'overwrite_confirmation' => 'The current criteria and job review will be replaced once processing completes. The new criteria take effect automatically, and any candidate still in process is evaluated again against them.',
+        'prepare_action' => 'Prepare evaluation criteria',
         'confirmed' => [
             'badge' => 'Confirmed',
             'by_on' => 'by :name on :date',
@@ -154,7 +143,6 @@ return [
         'preview_description' => 'Save your changes to refresh this preview. Application submission is disabled.',
     ],
     'view_tabs' => [
-        'overview' => 'Overview',
         'sourcing' => 'Sourcing',
         'pipeline' => 'Pipeline',
         'analytics' => 'Analytics',
@@ -190,19 +178,6 @@ return [
             'interviewing' => 'With interviews scheduled',
             'stalled' => 'Applications but no progress',
             'no_applications' => 'No applications yet',
-        ],
-    ],
-    'overview' => [
-        'hiring_result' => 'Hiring result',
-        'hired_count' => '{1} 1 person hired|[2,*] :count people hired',
-        'no_hires' => 'No hires yet',
-        'hiring_result_description' => 'Based on applications currently in a stage marked as hired.',
-        'workflow' => 'Hiring workflow',
-        'configure_workflow' => 'Configure',
-        'status_chart' => [
-            'title' => 'Applications by stage',
-            'dataset' => 'Applications',
-            'empty' => 'There are no applications in this pipeline yet.',
         ],
     ],
     'analytics' => [

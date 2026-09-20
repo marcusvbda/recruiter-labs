@@ -41,7 +41,7 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
-            ->favicon(asset('assets/image/favicon.png') . '?v=2')
+            ->favicon(asset('assets/image/favicon.png').'?v=2')
             ->brandLogo(asset('assets/image/logo.png'))
             ->brandLogoHeight('3rem')
             ->darkMode(false)
@@ -72,19 +72,23 @@ class AdminPanelProvider extends PanelProvider
             ->userMenuItems([
                 [
                     Action::make('settings')
-                        ->label(fn(): string => __('settings.account.navigation_label'))
+                        ->label(fn (): string => __('settings.account.navigation_label'))
                         ->icon('heroicon-o-cog-6-tooth')
-                        ->visible(fn(): bool => Filament::getTenant() !== null)
-                        ->url(fn(): string => Filament::getTenant() ? AccountSettings::getUrl() : '#'),
+                        ->visible(fn (): bool => Filament::getTenant() !== null)
+                        ->url(fn (): string => Filament::getTenant() ? AccountSettings::getUrl() : '#'),
                 ],
             ])
             ->renderHook(
                 PanelsRenderHook::USER_MENU_BEFORE,
-                fn(): string => $this->renderCompanyTopbarSummary(),
+                fn (): string => $this->renderAiActivityIndicator(),
             )
             ->renderHook(
                 PanelsRenderHook::USER_MENU_BEFORE,
-                fn(): string => view('filament.language-switcher', [
+                fn (): string => $this->renderCompanyTopbarSummary(),
+            )
+            ->renderHook(
+                PanelsRenderHook::USER_MENU_BEFORE,
+                fn (): string => view('filament.language-switcher', [
                     'locales' => [
                         'en' => ['label' => 'English', 'flag' => '🇺🇸'],
                         'pt_BR' => ['label' => 'Português (Brasil)', 'flag' => '🇧🇷'],
@@ -95,7 +99,7 @@ class AdminPanelProvider extends PanelProvider
             )
             ->renderHook(
                 PanelsRenderHook::BODY_END,
-                fn(): string => $this->renderWorkspaceActivationLauncher(),
+                fn (): string => $this->renderWorkspaceActivationLauncher(),
             )
             ->middleware([
                 EncryptCookies::class,
@@ -143,6 +147,28 @@ class AdminPanelProvider extends PanelProvider
 
         return view('filament.topbar-company-usage', [
             'summary' => $this->topbarViewData($summary),
+        ])->render();
+    }
+
+    /**
+     * The persistent AI indicator. Unlike the usage chip above it, this one
+     * renders in every state, including "Up to date": its whole purpose is to
+     * be a stable place the recruiter can look to see whether the product is
+     * working on their behalf.
+     *
+     * Guards exactly like {@see renderCompanyTopbarSummary()}: no tenant, no
+     * authenticated user, no render.
+     */
+    private function renderAiActivityIndicator(): string
+    {
+        $company = Filament::getTenant();
+
+        if (! $company instanceof Company || ! Filament::auth()->check()) {
+            return '';
+        }
+
+        return view('filament.ai-activity-indicator', [
+            'company' => $company,
         ])->render();
     }
 

@@ -1,9 +1,10 @@
 <?php
 
-use App\Actions\ConfirmJobCriteria;
 use App\Actions\ReplaceApplicationFitAnalysis;
+use App\Actions\ReplaceJobCriteria;
 use App\Actions\RequireJobCriteriaReview;
 use App\Enums\ApplicationAnalysisStatus;
+use App\Enums\JobCriteriaProcessingStatus;
 use App\Filament\Resources\Applications\ApplicationResource;
 use App\Filament\Resources\Jobs\JobResource;
 use App\Filament\Resources\Jobs\Pages\EditJob;
@@ -14,6 +15,7 @@ use App\Models\Plan;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Route;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -53,7 +55,7 @@ function renderFixture(): array
     return [$company, $job, $application];
 }
 
-/** The signed-in workspace member — the human every confirmation needs. */
+/** The signed-in workspace member. */
 function currentRecruiter(): User
 {
     $user = auth()->user();
@@ -63,22 +65,38 @@ function currentRecruiter(): User
     return $user;
 }
 
-test('the criteria tab shows suggested criteria awaiting confirmation', function (): void {
+/**
+ * The stored criteria as a successful extraction leaves them: current, and
+ * governing candidate evaluation. Written directly so the render tests exercise
+ * the surface rather than the activation action.
+ */
+function activateRenderedCriteria(Job $job): void
+{
+    $job->forceFill([
+        'criteria_processing_status' => JobCriteriaProcessingStatus::Completed,
+        'criteria_confirmed_generation' => $job->criteria_generation,
+        'criteria_confirmed_at' => now(),
+        'criteria_confirmed_by_id' => null,
+    ])->saveQuietly();
+}
+
+test('the criteria tab shows the active AI-generated criteria', function (): void {
     [$company, $job] = renderFixture();
+
+    activateRenderedCriteria($job);
 
     // The criteria tab's schema only renders once that tab is the active one.
     Livewire::test(EditJob::class, ['record' => $job->getKey()])
         ->set('activeJobEditTab', 'ai-criteria')
-        ->assertSee(__('jobs.criteria.awaiting_review.title'))
-        ->assertSee(__('jobs.criteria.awaiting_review.badge'))
-        ->assertSee(__('jobs.criteria.confirm_action'))
-        ->assertDontSee(__('jobs.criteria.confirmed.governs'));
+        ->assertSee(__('jobs.criteria.confirmed.governs'))
+        // The criteria themselves stay visible and editable.
+        ->assertSee('Production Laravel experience');
 });
 
 test('the evaluation tab shows fit, coverage, evidence and the identity disclosure', function (): void {
     [$company, $job, $application] = renderFixture();
 
-    app(ConfirmJobCriteria::class)->handle($job, currentRecruiter());
+    activateRenderedCriteria($job);
     $criteria = $job->refresh()->jobCriteria()->get()->keyBy('criterion');
 
     $application->forceFill(['analysis_generation' => 1])->saveQuietly();
@@ -111,7 +129,7 @@ test('the evaluation tab shows fit, coverage, evidence and the identity disclosu
 
     $this->get(ApplicationResource::getUrl('view', [
         'record' => $application,
-        'section' => 'evaluation',
+        'section' => 'review',
     ], tenant: $company))
         ->assertOk()
         // Fit is 90 from the one assessable criterion; coverage is 10/16 weight.
@@ -134,16 +152,18 @@ test('an application waiting for criteria says the criteria need confirming', fu
 
     $this->get(ApplicationResource::getUrl('view', [
         'record' => $application,
-        'section' => 'evaluation',
+        'section' => 'review',
     ], tenant: $company))
         ->assertOk()
         ->assertSee(__('applications.admin.ai.states.awaiting_criteria.title'));
 });
 
 test('an evaluation measured against superseded criteria is not shown as current', function (): void {
+    Queue::fake();
+
     [$company, $job, $application] = renderFixture();
 
-    app(ConfirmJobCriteria::class)->handle($job, currentRecruiter());
+    activateRenderedCriteria($job);
 
     $application->forceFill([
         'analysis_status' => ApplicationAnalysisStatus::Completed,
@@ -154,9 +174,18 @@ test('an evaluation measured against superseded criteria is not shown as current
 
     app(RequireJobCriteriaReview::class)->handle($job);
 
+    // The new revision re-queues this application straight away (the release
+    // action wrote `Pending` through its own, separate model instance). Refresh
+    // before writing it back to `Completed` so this instance's dirty-tracking
+    // sees the change and the update actually lands, isolating what the surface
+    // does with a superseded result from the rescheduling that normally follows.
+    $application->refresh()->forceFill([
+        'analysis_status' => ApplicationAnalysisStatus::Completed,
+    ])->saveQuietly();
+
     $this->get(ApplicationResource::getUrl('view', [
         'record' => $application->fresh(),
-        'section' => 'evaluation',
+        'section' => 'review',
     ], tenant: $company))
         ->assertOk()
         ->assertSee(__('applications.admin.ai.states.outdated.title'))
@@ -164,7 +193,9 @@ test('an evaluation measured against superseded criteria is not shown as current
         ->assertDontSee(__('applications.admin.summary.fit_score', ['score' => 84]));
 });
 
-test('a recruiter can confirm the criteria from the job workspace', function (): void {
+test('criteria becoming current releases the application waiting in the job workspace', function (): void {
+    Queue::fake();
+
     [, $job, $application] = renderFixture();
 
     $application->forceFill([
@@ -172,18 +203,21 @@ test('a recruiter can confirm the criteria from the job workspace', function ():
     ])->saveQuietly();
 
     // Jobs have no policy in this application, so a policy-based gate would deny
-    // every recruiter. The confirm action must use the same resource gate the
-    // rest of the job surfaces use.
+    // every recruiter. The job surfaces use the resource gate instead.
     expect(JobResource::canEdit($job))->toBeTrue();
 
-    app(ConfirmJobCriteria::class)->handle($job, currentRecruiter());
+    // The extraction finishing is what makes the criteria govern evaluation.
+    expect(app(ReplaceJobCriteria::class)->handle($job, [
+        ['criterion' => 'Production Laravel experience', 'weight' => 10, 'reason' => 'Core of the role.'],
+    ], [], (int) $job->criteria_generation))->toBeTrue();
 
     expect($job->refresh()->hasConfirmedCriteria())->toBeTrue()
-        ->and($job->criteria_confirmed_by_id)->toBe((int) auth()->id())
+        // Nobody confirmed it: activation is the system's, not a recruiter's.
+        ->and($job->criteria_confirmed_by_id)->toBeNull()
         ->and($application->refresh()->analysis_status)->toBe(ApplicationAnalysisStatus::Pending);
 });
 
-test('the criteria confirmation next step is offered on a waiting application', function (): void {
+test('the criteria preparation next step is offered on a waiting application', function (): void {
     [$company, , $application] = renderFixture();
 
     $application->forceFill([
@@ -192,13 +226,13 @@ test('the criteria confirmation next step is offered on a waiting application', 
 
     $this->get(ApplicationResource::getUrl('view', [
         'record' => $application->fresh(),
-        'section' => 'summary',
+        'section' => 'review',
     ], tenant: $company))
         ->assertOk()
         ->assertSee(__('applications.admin.summary.next_actions.awaiting_criteria.title'))
         // The link into the job's criteria tab must actually render, not be
         // silently dropped by a gate that can never pass.
-        ->assertSee(__('jobs.criteria.confirm_action'));
+        ->assertSee(__('jobs.criteria.prepare_action'));
 });
 
 test('every navigable admin route has an active sidebar item', function (): void {
@@ -268,7 +302,7 @@ test('the application workspace keeps Jobs selected in the sidebar', function ()
     // item — as active, rather than leaving nothing selected.
     $html = $this->get(ApplicationResource::getUrl('view', [
         'record' => $application,
-        'section' => 'summary',
+        'section' => 'review',
     ], tenant: $company))->assertOk()->getContent();
 
     // Each sidebar entry is an <li> carrying `fi-sidebar-item`, plus `fi-active`

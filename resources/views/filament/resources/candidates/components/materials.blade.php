@@ -209,7 +209,7 @@
 
             <div class="mt-2 flex flex-col gap-1">
                 @foreach ($applications as $application)
-                    <x-filament::link :href="$application['url'] . '?section=documents'" icon="heroicon-m-arrow-right" icon-position="after"
+                    <x-filament::link :href="$application['url'] . '?section=application'" icon="heroicon-m-arrow-right" icon-position="after"
                         size="sm">
                         {{ __('candidates.materials.application_documents_link', ['job' => $application['job']]) }}
                     </x-filament::link>

@@ -95,14 +95,13 @@ class JobResource extends Resource
      */
     public static function getWorkspaceUrl(Job $record): string
     {
-        if ($record->getAttribute('applications_count') === null) {
-            $record->loadCount('applications');
-        }
-
-        return static::getUrl('view', array_filter([
+        // Pipeline is the landing tab either way: with applications it shows the
+        // board, without any it shows Pipeline's own empty state — never the
+        // Sourcing tab (now first in tab order) or a since-removed Overview.
+        return static::getUrl('view', [
             'record' => $record,
-            'section' => (int) $record->getAttribute('applications_count') > 0 ? 'pipeline' : null,
-        ]));
+            'section' => 'pipeline',
+        ]);
     }
 
     public static function getGlobalSearchEloquentQuery(): Builder

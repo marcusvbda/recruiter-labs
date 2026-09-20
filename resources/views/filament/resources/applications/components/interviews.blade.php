@@ -149,6 +149,12 @@
         :description="__('applications.admin.interviews.brief.description')"
         icon="heroicon-o-document-magnifying-glass"
     >
+        {{-- Section-level provenance: the brief is AI-written, the interview
+             evidence below it is not, and the two must not read alike (AC58). --}}
+        <x-slot name="headerEnd">
+            <x-ai-generated-badge />
+        </x-slot>
+
         <div class="space-y-4">
             @forelse ($interviews['brief_items'] as $briefItem)
                 <article class="rounded-xl border border-primary-200 bg-primary-50/60 p-4 dark:border-primary-400/20 dark:bg-primary-500/10">

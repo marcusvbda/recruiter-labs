@@ -17,6 +17,21 @@
             confirmBeforeMove: @js($this->shouldConfirmBeforeMove()),
         })" x-on:kanban-move-accepted.window="handleMoveAccepted($event.detail)"
             x-on:kanban-move-rejected.window="handleMoveRejected()">
+            @if ($this->hasNoApplications())
+                {{-- A genuinely empty pipeline (no applications at all, not a
+                     search/filter mismatch) gets guidance instead of every
+                     column repeating "No matching applications", which reads
+                     like a filter problem rather than a fresh hiring process.
+                     The action lives above the board, on the Pipeline tab's
+                     own "Add candidate" button — reused, not duplicated. --}}
+                <x-filament::empty-state
+                    :contained="false"
+                    :heading="__('applications.pipeline.kanban.no_candidates_yet_heading')"
+                    :description="__('applications.pipeline.kanban.no_candidates_yet_description')"
+                    icon="heroicon-o-user-plus"
+                    icon-color="gray"
+                />
+            @else
             <div class="fi-model-states-kanban__toolbar">
                 <div class="fi-model-states-kanban__search">
                     <x-filament::input.wrapper prefix-icon="heroicon-m-magnifying-glass">
@@ -170,6 +185,7 @@
                     </div>
                 @endforeach
             </div>
+            @endif
 
             <template x-teleport="body">
                 <div x-show="showConfirm" x-cloak x-transition.opacity class="fi-model-states-kanban__confirm-overlay"

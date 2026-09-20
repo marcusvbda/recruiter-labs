@@ -93,7 +93,7 @@ return [
     ],
     'criteria' => [
         'section_title' => 'Criterios de evaluación',
-        'section_description' => 'La IA sugiere estos criterios a partir del empleo; tú decides cuáles gobiernan la evaluación de candidatos. Edita lo que no corresponda a cómo evalúas realmente y confirma. Editarlos después exige una nueva confirmación.',
+        'section_description' => 'La IA prepara estos criterios a partir del empleo y gobiernan la evaluación de candidatos en cuanto están listos. Edita lo que no corresponda a cómo evalúas realmente: tus cambios se aplican al guardar y los candidatos aún en proceso se vuelven a evaluar con ellos.',
         'criterion' => 'Criterio',
         'weight' => 'Peso',
         'reason' => 'Justificación',
@@ -123,19 +123,8 @@ return [
         'start_action' => 'Analizar puesto',
         'retry_action' => 'Intentar de nuevo',
         'rerun_action' => 'Sugerir criterios de nuevo',
-        'overwrite_confirmation' => 'Los criterios actuales y la revisión del puesto se reemplazarán cuando termine el procesamiento, y los nuevos criterios deberán confirmarse antes de evaluar a cualquier candidato con ellos.',
-        'confirm_action' => 'Confirmar criterios de evaluación',
-        'confirm_modal_heading' => 'Confirmar criterios de evaluación',
-        'confirm_modal_description' => 'Estos criterios y pesos se usarán para evaluar a los candidatos de este empleo. Los candidatos que ya estaban esperando se evalúan a continuación.',
-        'confirmed_notification' => 'Criterios de evaluación confirmados.',
-        'awaiting_review' => [
-            'badge' => 'Borrador sugerido por IA',
-            'title' => 'Revisa estos criterios sugeridos',
-            'description' => 'La IA los redactó a partir de este empleo. Ajusta el texto y los pesos hasta que correspondan a cómo evalúas y confírmalos: ningún candidato se evalúa antes de eso.',
-            'changed_title' => 'Estos criterios cambiaron desde que los confirmaste',
-            'changed_description' => 'Confírmalos de nuevo para que gobiernen la evaluación de candidatos. Hasta entonces, las evaluaciones hechas con la versión anterior ya no se muestran como actuales.',
-            'waiting_applications' => '{1} :count candidato está esperando esta confirmación.|[2,*] :count candidatos están esperando esta confirmación.',
-        ],
+        'overwrite_confirmation' => 'Los criterios actuales y la revisión del puesto se reemplazarán cuando termine el procesamiento. Los nuevos criterios entran en vigor automáticamente, y cualquier candidato que siga en proceso será evaluado nuevamente con ellos.',
+        'prepare_action' => 'Preparar criterios de evaluación',
         'confirmed' => [
             'badge' => 'Confirmados',
             'by_on' => 'por :name el :date',
@@ -154,7 +143,6 @@ return [
         'preview_description' => 'Guarda los cambios para actualizar la vista previa. El envío de postulaciones está deshabilitado.',
     ],
     'view_tabs' => [
-        'overview' => 'Resumen',
         'sourcing' => 'Búsqueda de candidatos',
         'pipeline' => 'Pipeline',
         'analytics' => 'Analítica',
@@ -190,19 +178,6 @@ return [
             'interviewing' => 'Con entrevistas agendadas',
             'stalled' => 'Con postulaciones, sin avance',
             'no_applications' => 'Sin postulaciones',
-        ],
-    ],
-    'overview' => [
-        'hiring_result' => 'Resultado de contratación',
-        'hired_count' => '{1} 1 persona contratada|[2,*] :count personas contratadas',
-        'no_hires' => 'Aún no hay contrataciones',
-        'hiring_result_description' => 'Considera postulaciones en una etapa marcada como contratación.',
-        'workflow' => 'Flujo de contratación',
-        'configure_workflow' => 'Configurar',
-        'status_chart' => [
-            'title' => 'Postulaciones por etapa',
-            'dataset' => 'Postulaciones',
-            'empty' => 'Aún no hay postulaciones en este pipeline.',
         ],
     ],
     'analytics' => [

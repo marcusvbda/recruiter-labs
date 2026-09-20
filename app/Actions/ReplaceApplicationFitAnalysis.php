@@ -10,6 +10,7 @@ use App\Models\ApplicationCriterionScore;
 use App\Models\ApplicationInterviewBriefItem;
 use App\Models\Job;
 use App\Models\JobCriterion;
+use App\Services\AiActivityService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
@@ -166,6 +167,10 @@ class ReplaceApplicationFitAnalysis
     private function broadcastAnalysisUpdated(Application $application): void
     {
         RealtimeEvent::dispatch('application_analysis_'.$application->getKey(), 'ApplicationAnalysisUpdated');
+
+        // The same write also changes what the workspace-wide AI Activity
+        // indicator should say.
+        AiActivityService::broadcast($application->company);
     }
 
     /**

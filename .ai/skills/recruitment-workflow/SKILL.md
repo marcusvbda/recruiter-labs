@@ -141,8 +141,10 @@ navigation group: the whole product is recruitment.
   that link to the canonical page are fine; the same block of facts repeated in
   a header, a tab and a card is not. When adding information, first check
   whether it already exists somewhere and link instead.
-- **Application tab order follows recruiter decision-making**: Summary,
-  Evaluation, Interviews, Application, Documents. Tabs use explicit `id()`/
+- **Application tab order follows recruiter decision-making**: Review,
+  Interviews, Application. Review merges what used to be separate Summary and
+  Evaluation tabs (stage/next step plus criterion-level evidence); Application
+  folds in what used to be a separate Documents tab. Tabs use explicit `id()`/
   `key()` values so `?section=` deep links keep working; keep them stable.
 - **Reuse the existing Filament vocabulary.** New surfaces use existing
   resources, widgets, sections and badges. Do not introduce a new design

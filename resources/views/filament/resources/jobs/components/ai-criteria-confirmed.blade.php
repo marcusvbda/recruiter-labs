@@ -4,6 +4,10 @@
         {{ __('jobs.criteria.confirmed.badge') }}
     </x-filament::badge>
 
+    {{-- Section-level provenance: these criteria were produced by AI and the
+         recruiter should be able to see that at a glance (AC58). --}}
+    <x-ai-generated-badge />
+
     <span>
         @if ($confirmedAt && $confirmedBy)
             {{ __('jobs.criteria.confirmed.by_on', ['name' => $confirmedBy, 'date' => $confirmedAt]) }}

@@ -31,8 +31,6 @@
                     {{ $summary['pipeline_name'] }}
                 </a>
             </span>
-
-            <span class="text-xs text-gray-400 dark:text-gray-500">{{ $summary['key'] }}</span>
         </div>
 
         <dl class="rl-job-summary__metrics">

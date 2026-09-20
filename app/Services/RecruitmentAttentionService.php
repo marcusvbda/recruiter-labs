@@ -361,7 +361,7 @@ class RecruitmentAttentionService
             ]),
             explanation: (string) __('attention.items.evaluation_failed.explanation'),
             actionLabel: (string) __('attention.items.evaluation_failed.action'),
-            actionUrl: $this->applicationUrl($application, 'evaluation'),
+            actionUrl: $this->applicationUrl($application, 'review'),
             context: $application->job->name,
             jobId: (int) $application->job_id,
             applicationId: (int) $application->getKey(),
@@ -631,11 +631,14 @@ class RecruitmentAttentionService
         $sourcingResultsReady = [];
 
         foreach ($jobs as $attentionJob) {
+            // Legacy only: a successful extraction activates its own criteria,
+            // so nothing in the product writes this state any more. It is still
+            // reported for revisions stored before that, which would otherwise
+            // sit with no current criteria and no signal — and a sourcing
+            // refresh cannot truthfully be offered while that is the case.
             if ($attentionJob->criteriaAwaitReview()) {
                 $criteriaReady[] = $this->criteriaReadyForReviewItem($attentionJob);
 
-                // A criteria review is the specific gate. A sourcing refresh
-                // cannot truthfully be offered until this revision is confirmed.
                 continue;
             }
 

@@ -10,7 +10,6 @@ use App\Exceptions\RecruitmentWorkflowException;
 use App\Filament\Clusters\Settings\Pages\PlanSettings;
 use App\Filament\Resources\Jobs\Actions\JobStateActions;
 use App\Filament\Resources\Jobs\JobResource;
-use App\Filament\Resources\Jobs\Widgets\JobApplicationStatusChart;
 use App\Filament\Resources\Jobs\Widgets\JobPipelineKanban;
 use App\Filament\Resources\Jobs\Widgets\JobSourcingPanel;
 use App\Filament\Resources\Jobs\Widgets\JobTrafficStats;
@@ -30,7 +29,6 @@ use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Schemas\Components\Actions;
-use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Livewire;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
@@ -150,30 +148,6 @@ class ViewJob extends ViewRecord
                     ->columnSpanFull(),
                 Tabs::make('job-view-tabs')
                     ->tabs([
-                        Tab::make(__('jobs.view_tabs.overview'))
-                            ->id('overview')
-                            ->key('overview')
-                            ->icon(Heroicon::OutlinedPresentationChartBar)
-                            ->schema([
-                                Grid::make([
-                                    'default' => 1,
-                                    'xl' => 2,
-                                ])->schema([
-                                    Livewire::make(JobApplicationStatusChart::class, [
-                                        'record' => $job,
-                                        'statusDistribution' => $dashboard['status_distribution'],
-                                    ])->key("job-status-chart-{$job->getKey()}"),
-                                    View::make('filament.resources.jobs.components.overview-details')
-                                        ->viewData([
-                                            'details' => [
-                                                'hired_count' => $dashboard['hired_count'],
-                                                'pipeline_name' => $job->pipeline->name,
-                                                'pipeline_url' => PipelineResource::getUrl('edit', ['record' => $job->pipeline]),
-                                                'stages' => $dashboard['status_distribution'],
-                                            ],
-                                        ]),
-                                ]),
-                            ]),
                         Tab::make(__('jobs.view_tabs.sourcing'))
                             ->id('sourcing')
                             ->key('sourcing')
@@ -266,7 +240,6 @@ class ViewJob extends ViewRecord
                 $job->applications_paused => 'warning',
                 default => 'success',
             },
-            'key' => $job->key,
             'pipeline_name' => $job->pipeline->name,
             'pipeline_url' => PipelineResource::getUrl('edit', ['record' => $job->pipeline]),
             'pipeline_board_url' => static::getResource()::getUrl('view', ['record' => $job, 'section' => 'pipeline']),

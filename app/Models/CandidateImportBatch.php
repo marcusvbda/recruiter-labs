@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\CandidateImportStatus;
+use App\Services\AiActivityService;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
@@ -72,6 +73,13 @@ class CandidateImportBatch extends Model
         // trigger a spurious refresh of this page.
         static::saved(function (CandidateImportBatch $batch): void {
             RealtimeEvent::dispatch('candidate_import_batch_'.$batch->id, 'CandidateImportBatchUpdated');
+        });
+
+        // Drives the workspace-wide AI Activity indicator: an import moving
+        // between validating/processing/paused/failed/completed is AI work the
+        // recruiter should see from any page.
+        static::saved(function (CandidateImportBatch $batch): void {
+            AiActivityService::broadcast($batch->company);
         });
     }
 

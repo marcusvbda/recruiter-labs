@@ -54,62 +54,37 @@
     </div>
 
     <div class="space-y-6">
+        {{-- Fit and coverage are shown once in this tab, in the evaluation
+             card below this one — not repeated here in a second visual
+             language (AC28). This card instead gives direct access to the
+             candidate's primary submitted document (AC29). --}}
         <x-filament::section
-            :heading="__('applications.admin.summary.fit_heading')"
-            icon="heroicon-o-clipboard-document-check"
+            :heading="__('applications.admin.summary.document_heading')"
+            icon="heroicon-o-document-text"
         >
-            @if ($summary['fit']['score'] !== null || $summary['fit']['coverage'] !== null)
-                {{-- Fit and evidence coverage stand side by side, never combined:
-                     one says how well the assessable criteria were matched, the
-                     other how much could be assessed at all. --}}
-                <div class="flex flex-wrap gap-x-8 gap-y-3">
-                    @if ($summary['fit']['score'] !== null)
-                        <div>
-                            <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                                {{ __('applications.admin.ai.overall_score_label') }}
-                            </p>
-                            <p class="mt-1 text-3xl font-bold tracking-tight text-gray-950 tabular-nums dark:text-white">
-                                {{ $summary['fit']['score'] }}<span class="text-lg font-medium text-gray-400">/100</span>
-                            </p>
-                        </div>
-                    @endif
-
-                    @if ($summary['fit']['coverage'] !== null)
-                        <div>
-                            <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                                {{ __('applications.admin.ai.coverage_label') }}
-                            </p>
-                            <p class="mt-1 text-3xl font-bold tracking-tight text-gray-950 tabular-nums dark:text-white">
-                                {{ $summary['fit']['coverage'] }}<span class="text-lg font-medium text-gray-400">%</span>
-                            </p>
-                        </div>
-                    @endif
-                </div>
-
-                <ul class="mt-4 space-y-2 text-sm">
-                    <li class="flex items-center justify-between gap-3">
-                        <span class="text-gray-500 dark:text-gray-400">{{ __('applications.admin.summary.needs_validation_label') }}</span>
-                        <span class="font-semibold text-gray-950 tabular-nums dark:text-white">{{ $summary['fit']['needs_validation_count'] }}</span>
-                    </li>
-                    <li class="flex items-center justify-between gap-3">
-                        <span class="text-gray-500 dark:text-gray-400">{{ __('applications.admin.summary.supported_label') }}</span>
-                        <span class="font-semibold text-gray-950 tabular-nums dark:text-white">{{ $summary['fit']['supported_count'] }}</span>
-                    </li>
-                </ul>
-                <p class="mt-4 text-xs leading-5 text-gray-500 dark:text-gray-400">
-                    {{ __('applications.admin.summary.fit_disclaimer') }}
+            @if ($summary['document'])
+                <p class="text-sm font-semibold text-gray-950 dark:text-white">
+                    {{ $summary['document']['original_name'] }}
                 </p>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    {{ $summary['document']['type'] }} · {{ $summary['document']['extension'] }}
+                </p>
+
+                <div class="mt-4 flex flex-wrap items-center gap-4">
+                    @if ($summary['document']['can_preview'])
+                        <x-filament::link :href="$summary['document']['view_url']" target="_blank" rel="noopener noreferrer" icon="heroicon-m-eye" size="sm">
+                            {{ __('applications.admin.actions.view_document') }}
+                        </x-filament::link>
+                    @endif
+                    <x-filament::link :href="$summary['document']['download_url']" icon="heroicon-m-arrow-down-tray" icon-position="after" size="sm" color="gray">
+                        {{ __('applications.admin.actions.download_document') }}
+                    </x-filament::link>
+                </div>
             @else
                 <p class="text-sm text-gray-500 dark:text-gray-400">
-                    {{ $summary['fit']['label'] }}
+                    {{ __('applications.admin.empty.documents') }}
                 </p>
             @endif
-
-            <div class="mt-4">
-                <x-filament::link :href="$summary['fit']['url']" icon="heroicon-m-arrow-right" icon-position="after" size="sm">
-                    {{ __('applications.admin.tabs.evaluation') }}
-                </x-filament::link>
-            </div>
         </x-filament::section>
 
         <x-filament::section

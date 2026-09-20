@@ -8,6 +8,7 @@ use App\Enums\ApplicationSource;
 use App\Enums\InterviewCalendarSyncStatus;
 use App\Enums\InterviewRsvpStatus;
 use App\Filament\Resources\Applications\ApplicationResource;
+use App\Filament\Resources\Applications\Pages\ViewApplication;
 use App\Filament\Resources\Jobs\JobResource;
 use App\Models\Application;
 use App\Models\Candidate;
@@ -120,11 +121,31 @@ class JobPipelineKanban extends StateKanbanBoard
         return is_string($email) ? $email : null;
     }
 
+    /**
+     * The `pipelineStage` marker is the sequential-review context: the column
+     * the recruiter was actually looking at when they opened this card. It
+     * follows the same query-string-threading convention as `?section=` and
+     * `?communicationJob=` — no session state — and lets
+     * {@see ViewApplication}
+     * rebuild the exact stage-scoped, longest-waiting-first order this board
+     * itself uses for previous/next navigation, without ever ranking by fit.
+     */
     public function getApplicationUrl(Application $application): string
     {
         return ApplicationResource::getUrl('view', [
             'record' => $application,
+            'pipelineStage' => $application->status_id,
         ], tenant: Filament::getTenant());
+    }
+
+    /**
+     * True only when the job has zero applications at all — independent of the
+     * board's own search/column filter — so a genuinely empty pipeline can be
+     * told apart from a search or filter that simply matched nothing.
+     */
+    public function hasNoApplications(): bool
+    {
+        return $this->getQuery()->count() === 0;
     }
 
     public function isReferralApplication(Application $application): bool

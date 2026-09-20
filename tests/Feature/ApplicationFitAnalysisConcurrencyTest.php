@@ -1,6 +1,5 @@
 <?php
 
-use App\Actions\ConfirmJobCriteria;
 use App\Actions\ReplaceApplicationFitAnalysis;
 use App\Actions\RequireJobCriteriaReview;
 use App\Ai\Agents\ScoreApplicationAgainstCriteria;
@@ -16,7 +15,6 @@ use App\Models\Company;
 use App\Models\Job;
 use App\Models\JobCriterion;
 use App\Models\Plan;
-use App\Models\User;
 use App\Services\CandidateEvaluationContextSanitizer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -89,8 +87,10 @@ test('a response produced for one criteria revision is refused once the criteria
     ])->save();
     app(RequireJobCriteriaReview::class)->handle($job);
 
+    // The edit is authoritative immediately, at the revision that now applies.
     expect($job->refresh()->criteria_generation)->toBe($expectedCriteriaGeneration + 1)
-        ->and($job->criteria_processing_status)->toBe(JobCriteriaProcessingStatus::AwaitingReview);
+        ->and($job->criteria_processing_status)->toBe(JobCriteriaProcessingStatus::Completed)
+        ->and($job->criteria_confirmed_generation)->toBe($expectedCriteriaGeneration + 1);
 
     $persisted = app(ReplaceApplicationFitAnalysis::class)->handle(
         $application,
@@ -121,14 +121,14 @@ test('a response produced for one criteria revision is refused once the criteria
         ->and(ApplicationInterviewBriefItem::query()->count())->toBe(0);
 });
 
-test('a stale response is refused even when the new revision is itself confirmed', function (): void {
+test('a stale response is refused even when the new revision is itself current', function (): void {
     [$application, $criteria] = concurrencyFixture();
     $job = $application->job;
 
-    // The job has been edited and reconfirmed since the request was built, so it
-    // has confirmed criteria — just not the revision this answer measured. The
-    // columns are written directly to isolate the revision check from the
-    // rescheduling ConfirmJobCriteria performs.
+    // The job has been edited since the request was built, so it has current
+    // criteria — just not the revision this answer measured. The columns are
+    // written directly to isolate the revision check from the rescheduling a
+    // new revision performs.
     $job->forceFill([
         'criteria_processing_status' => JobCriteriaProcessingStatus::Completed,
         'criteria_generation' => 2,
@@ -208,18 +208,16 @@ test('a stale response does not overwrite the evaluation already on record', fun
         ->and($application->analysis_status)->toBe(ApplicationAnalysisStatus::AwaitingCriteria);
 });
 
-test('a response made stale after reconfirmation schedules the current revision without persisting stale content', function (): void {
+test('a response made stale by a new revision schedules the current revision without persisting stale content', function (): void {
     Queue::fake();
 
     [$application, $criteria] = concurrencyFixture();
     $job = $application->job;
-    $recruiter = User::factory()->create();
-    $recruiter->companies()->attach($application->company_id);
 
     ScoreApplicationAgainstCriteria::fake([
-        function () use ($job, $recruiter, $criteria): array {
+        function () use ($job, $criteria): array {
             app(RequireJobCriteriaReview::class)->handle($job);
-            app(ConfirmJobCriteria::class)->handle($job->refresh(), $recruiter);
+            $job->refresh();
 
             return ['scores' => concurrencyScores($criteria), 'interview_brief_items' => []];
         },
@@ -281,7 +279,9 @@ test('a cached response is bound to its criteria revision exactly like a fresh o
 
     $application->refresh();
 
-    expect($application->analysis_status)->toBe(ApplicationAnalysisStatus::AwaitingCriteria)
+    // The new revision is authoritative straight away, so the application is
+    // re-queued against it rather than parked waiting for a confirmation.
+    expect($application->analysis_status)->toBe(ApplicationAnalysisStatus::Pending)
         ->and($application->analysis_criteria_generation)->toBeNull()
         ->and($application->analysis_score)->toBeNull()
         ->and(ApplicationCriterionScore::query()->count())->toBe(0)
@@ -311,10 +311,9 @@ test('a cache entry for a prior confirmed revision is not reused by an identical
         ['scores' => $cachedScores, 'interview_brief_items' => []],
     );
 
+    // The edit produces a new revision that governs evaluation immediately.
     app(RequireJobCriteriaReview::class)->handle($job);
-    $recruiter = User::factory()->create();
-    $recruiter->companies()->attach($application->company_id);
-    app(ConfirmJobCriteria::class)->handle($job->refresh(), $recruiter);
+    $job->refresh();
 
     $application->forceFill([
         'analysis_generation' => 2,

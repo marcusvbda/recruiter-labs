@@ -98,7 +98,12 @@ class RecordCompanyMilestone
     {
         $reached = $this->reachedAt($companyId);
 
-        $setupCompletedAt = $this->latestOf($reached, CompanyMilestone::FirstJobCreated, CompanyMilestone::FirstCriteriaConfirmed);
+        // Setup completes with the first job. Criteria activation used to be a
+        // second, human step here; it is now an automatic consequence of
+        // creating a job with real role context, so requiring it would leave a
+        // workspace that is already evaluating candidates permanently "setting
+        // up".
+        $setupCompletedAt = $this->latestOf($reached, CompanyMilestone::FirstJobCreated);
 
         if ($setupCompletedAt !== null) {
             $this->record($companyId, CompanyMilestone::WorkspaceSetupCompleted, $setupCompletedAt);

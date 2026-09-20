@@ -12,6 +12,7 @@ use App\Models\AiAgentResponseCache;
 use App\Models\AiUsageRecord;
 use App\Models\Job;
 use App\Models\SourcingSearch;
+use App\Services\AiActivityService;
 use App\Services\AiCredentialsResolver;
 use App\Services\AiUsageTracker;
 use App\Services\CandidateSourcingContextSanitizer;
@@ -387,6 +388,10 @@ class SourceCandidatesForJob implements ShouldBeUnique, ShouldQueue
             // update on purpose (see class docblock), so it bypasses model events
             // and must broadcast explicitly.
             RealtimeEvent::dispatch('job_sourcing_'.$this->jobId, 'SourcingSearchUpdated');
+
+            // The same write also changes what the workspace-wide AI Activity
+            // indicator should say.
+            AiActivityService::broadcastForJob($this->jobId);
         }
 
         return $updated;
