@@ -33,8 +33,7 @@ class StatusFactory extends Factory
             'is_terminal' => false,
             'attention_after_days' => null,
             'sends_email' => false,
-            'email_subject' => null,
-            'email_body' => null,
+            'email_template_id' => null,
         ];
     }
 }

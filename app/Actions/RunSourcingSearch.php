@@ -8,6 +8,7 @@ use App\Jobs\SourceCandidatesForJob;
 use App\Models\Company;
 use App\Models\Job;
 use App\Models\SourcingSearch;
+use App\Services\AiActivityService;
 use Closure;
 use Illuminate\Support\Facades\DB;
 
@@ -43,7 +44,12 @@ class RunSourcingSearch
         ?string $trigger = 'sourcing_requested',
         ?Closure $accepts = null,
     ): bool {
-        $generation = DB::transaction(function () use ($job, $userId, $accepts): ?int {
+        // Whether the search row was created or moved by this call. The
+        // `NotStarted` row a first request creates is state the workspace can
+        // already read, so it counts as a change too.
+        $searchTouched = false;
+
+        $generation = DB::transaction(function () use ($job, $userId, $accepts, &$searchTouched): ?int {
             $lockedJob = Job::query()
                 ->whereKey($job->getKey())
                 ->lockForUpdate()
@@ -59,6 +65,7 @@ class RunSourcingSearch
             }
 
             $search = $this->lockedSearchFor($lockedJob);
+            $searchTouched = true;
 
             // Attention-derived requests carry an additional human gate. It
             // must be evaluated while this exact search row is locked, rather
@@ -98,6 +105,14 @@ class RunSourcingSearch
 
             return $search->generation;
         });
+
+        // A sweep that is queued but not yet running is work the workspace is
+        // owed, so the indicator has to hear about it. The `SourcingSearch`
+        // model event only reaches the job's own sourcing panel channel, never
+        // the workspace-wide AI Activity one.
+        if ($searchTouched) {
+            DB::afterCommit(fn () => AiActivityService::broadcastForJob($job->getKey()));
+        }
 
         if ($generation === null) {
             return false;

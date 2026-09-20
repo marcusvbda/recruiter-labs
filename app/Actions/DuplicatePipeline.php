@@ -33,8 +33,9 @@ class DuplicatePipeline
                     'is_hired' => $status->is_hired,
                     'is_terminal' => $status->is_terminal,
                     'sends_email' => $status->sends_email,
-                    'email_subject' => $status->email_subject,
-                    'email_body' => $status->email_body,
+                    // The copy points at the same reusable template: the content
+                    // lives in the workspace, not in the stage.
+                    'email_template_id' => $status->email_template_id,
                 ]);
             });
 

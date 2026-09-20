@@ -327,6 +327,45 @@
         @apply text-gray-300;
     }
 
+    /* The same quiet line of figures, used inside a panel body. */
+    .rl-overview-summary--inset {
+        @apply px-4 py-3;
+    }
+
+    /*
+     * "RecruiterLabs AI now": a state and at most a few named operations. The
+     * full list lives in the AI Activity panel this region opens, so nothing
+     * here grows into a second execution log.
+     */
+    .rl-overview-ai-state {
+        @apply px-4 pt-3;
+    }
+
+    .rl-ai-activity-list {
+        @apply divide-y divide-gray-100;
+    }
+
+    .rl-ai-activity-item {
+        @apply focus-visible:ring-primary-500 block px-4 py-2.5 text-sm outline-none transition hover:bg-gray-50 focus-visible:ring-2;
+    }
+
+    .rl-ai-activity-item__role {
+        @apply mr-1 text-xs font-semibold tracking-wide text-gray-400 uppercase;
+    }
+
+    .rl-ai-activity-item__text {
+        @apply text-gray-950;
+    }
+
+    .rl-ai-activity-item__reason {
+        @apply mt-0.5 block text-xs text-gray-500;
+    }
+
+    /* Allowance is normally context; close to blocking, it is a warning. */
+    .rl-overview-allowance--warning {
+        @apply text-danger-700 font-medium;
+    }
+
     .rl-overview-panel {
         @apply overflow-hidden rounded-xl border border-gray-200 bg-white;
     }

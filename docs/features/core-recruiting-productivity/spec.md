@@ -1562,8 +1562,8 @@ reconcile conflicting observable behaviour in, at least:
 - `../first-workspace-activation/spec.md`
 - `../ai-usage-and-limits/spec.md`
 
-The integrity rules in `.ai/skills/evaluation-integrity/SKILL.md` and
-`.ai/skills/recruitment-workflow/SKILL.md` remain binding except where an
+The integrity rules in `.claude/skills/evaluation-integrity/SKILL.md` and
+`.claude/skills/recruitment-workflow/SKILL.md` remain binding except where an
 existing rule is specifically the obsolete routine criteria-confirmation product
 behaviour replaced by this approved specification. Any such contradiction must be
 surfaced and reconciled explicitly rather than silently ignored.

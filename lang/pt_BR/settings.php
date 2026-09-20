@@ -17,6 +17,13 @@ return [
         'subtitle' => 'Dados da empresa e os fluxos de contratação reutilizados pelas vagas.',
         'identity_heading' => 'Empresa',
         'identity_description' => 'O nome e a URL deste workspace.',
+        'productivity' => [
+            'heading' => 'Referência de tempo de análise',
+            'description' => 'Opcional. Usada apenas para estimar, na Visão geral, o tempo de análise que a RecruiterLabs AI economizou.',
+            'manual_review_minutes_label' => 'Tempo de análise manual por candidatura',
+            'manual_review_minutes_helper' => 'Aproximadamente quanto tempo um recrutador gastava analisando uma candidatura manualmente. Deixe em branco e a Visão geral mostra apenas os números medidos, sem estimativa de tempo.',
+            'minutes_suffix' => 'minutos',
+        ],
         'careers' => [
             'heading' => 'Página de carreiras',
             'description' => 'Publique uma página personalizada da empresa para vagas que estão aceitando candidaturas.',

@@ -31,6 +31,10 @@ return [
         'body' => 'Message',
         'empty' => 'Nothing yet',
     ],
+    'notifications' => [
+        'in_use_title' => "This template can't be deleted",
+        'in_use_body' => 'It is the email sent when a candidate enters: :stages. Select another template on those stages first, or turn their stage email off.',
+    ],
     'empty_state' => [
         'heading' => 'No email templates yet',
         'description' => 'Create one to reuse the same message across candidates instead of rewriting it each time.',

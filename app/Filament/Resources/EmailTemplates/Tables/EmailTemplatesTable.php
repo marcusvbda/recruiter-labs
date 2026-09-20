@@ -2,7 +2,9 @@
 
 namespace App\Filament\Resources\EmailTemplates\Tables;
 
+use App\Filament\Resources\EmailTemplates\EmailTemplateDeletionGuard;
 use App\Models\Company;
+use App\Models\EmailTemplate;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -35,7 +37,8 @@ class EmailTemplatesTable
             ->recordActions([
                 ActionGroup::make([
                     EditAction::make(),
-                    DeleteAction::make(),
+                    DeleteAction::make()
+                        ->before(fn (DeleteAction $action, EmailTemplate $record) => EmailTemplateDeletionGuard::halt($action, $record)),
                 ]),
             ])
             ->emptyStateHeading(__('email_templates.empty_state.heading'))

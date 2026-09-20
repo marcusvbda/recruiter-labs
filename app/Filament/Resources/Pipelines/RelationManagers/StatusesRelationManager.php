@@ -57,7 +57,7 @@ class StatusesRelationManager extends RelationManager
                         : __('statuses.badges.email_off'))
                     ->color(fn (Status $record): string => $record->sendsOnEnterEmail() ? 'success' : 'gray')
                     ->description(fn (Status $record): ?string => $record->sendsOnEnterEmail()
-                        ? $record->email_subject
+                        ? $record->emailTemplate?->name
                         : null),
                 TextColumn::make('stage_role')
                     ->label(__('statuses.fields.stage_role'))

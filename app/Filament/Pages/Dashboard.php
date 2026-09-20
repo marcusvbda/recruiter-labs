@@ -3,12 +3,18 @@
 namespace App\Filament\Pages;
 
 use App\Actions\RunAttentionSourcingSearch;
+use App\Data\AiActivitySnapshot;
 use App\Data\RecruiterAgendaPreview;
+use App\Data\RecruiterProductivitySnapshot;
 use App\Data\WorkspaceActivationProgress;
+use App\Filament\Clusters\Settings\Pages\AiSettings;
+use App\Filament\Clusters\Settings\Pages\WorkspaceSettings;
 use App\Filament\Resources\Jobs\JobResource;
 use App\Models\Company;
 use App\Models\Job;
 use App\Models\User;
+use App\Services\AiActivityService;
+use App\Services\RecruiterProductivityService;
 use App\Services\RecruitmentAttentionService;
 use App\Services\RecruitmentProgressService;
 use App\Services\WorkspaceActivationJourney;
@@ -19,21 +25,24 @@ use Filament\Notifications\Notification;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Support\Facades\Gate;
 
 /**
  * The operational answer to "what needs my attention?". It is deliberately not
  * a welcome page: no greeting, no workspace identity, no decorative hero.
  *
- * It is also not a stack of widgets. The page composes three regions itself, in
- * the order the product promises: what needs attention, the commitments the
- * recruiter has to keep today, and how the live hiring processes are moving.
- * Attention leads the layout, the agenda sits beside it as personal context,
- * and the totals are one quiet line — a number describes the workspace, the
- * queue tells the recruiter what to do about it.
+ * It is also not a stack of widgets. The page composes the regions itself, in
+ * the order of the questions the product promises to answer: what needs my
+ * attention, what is Recruiter Labs doing for me right now, what did it
+ * actually finish for me, and how are my commitments and live hiring processes
+ * moving. Attention leads the layout, and the totals stay one quiet line — a
+ * number describes the workspace, the queue tells the recruiter what to do
+ * about it.
  *
  * Every figure on this page is read from the services that own its meaning
- * ({@see RecruitmentAttentionService}, {@see RecruitmentProgressService}); the
- * page only decides what is worth showing and in what order.
+ * ({@see RecruitmentAttentionService}, {@see RecruitmentProgressService},
+ * {@see AiActivityService}, {@see RecruiterProductivityService}); the page only
+ * decides what is worth showing and in what order.
  */
 class Dashboard extends BaseDashboard
 {
@@ -47,6 +56,13 @@ class Dashboard extends BaseDashboard
     private const int AgendaLimit = 6;
 
     private const int ProcessLimit = 6;
+
+    /**
+     * How many live AI operations the Dashboard lists before it stops naming
+     * them. This region is a summary of {@see AiActivityService}, not a second
+     * copy of the AI Activity panel: past this, the recruiter opens the panel.
+     */
+    private const int AiActivityLimit = 3;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedSquares2x2;
 
@@ -113,6 +129,15 @@ class Dashboard extends BaseDashboard
      *     calendar_url: string,
      *     activation: WorkspaceActivationProgress|null,
      *     show_welcome: bool,
+     *     ai_activity: array<string, mixed>|null,
+     *     ai_activity_items: list<array<string, mixed>>,
+     *     ai_activity_hidden: int,
+     *     ai_activity_channel: string|null,
+     *     ai_activity_event: string,
+     *     productivity: RecruiterProductivitySnapshot|null,
+     *     time_saved: string|null,
+     *     ai_settings_url: string,
+     *     baseline_url: string|null,
      * }
      */
     protected function getViewData(): array
@@ -132,6 +157,15 @@ class Dashboard extends BaseDashboard
             'calendar_url' => Calendar::getUrl(),
             'activation' => null,
             'show_welcome' => false,
+            'ai_activity' => null,
+            'ai_activity_items' => [],
+            'ai_activity_hidden' => 0,
+            'ai_activity_channel' => null,
+            'ai_activity_event' => AiActivityService::Event,
+            'productivity' => null,
+            'time_saved' => null,
+            'ai_settings_url' => AiSettings::getUrl(),
+            'baseline_url' => null,
         ];
 
         if (! $company instanceof Company || ! $recruiter instanceof User) {
@@ -146,6 +180,9 @@ class Dashboard extends BaseDashboard
         // workspace is activated this stays unused and the Overview
         // renders exactly as it did before the journey existed (AC27).
         $activation = app(WorkspaceActivationJourney::class)->for($company, $recruiter);
+        $activity = app(AiActivityService::class)->for($company);
+        $productivity = app(RecruiterProductivityService::class)->for($company);
+        $activityItems = $this->aiActivityItems($activity);
 
         return [
             ...$data,
@@ -161,7 +198,70 @@ class Dashboard extends BaseDashboard
             // this member has not already said "later" for this workspace
             // (T04's per-user pivot timestamp) — never a milestone check.
             'show_welcome' => ! $activation->isActivated() && ! $company->hasDismissedOnboardingWelcome($recruiter),
+            'ai_activity' => $activity->toArray(),
+            'ai_activity_items' => array_slice($activityItems, 0, self::AiActivityLimit),
+            'ai_activity_hidden' => max(0, $activity->workingCount + $activity->waitingCount + $activity->blockedCount - self::AiActivityLimit),
+            'ai_activity_channel' => AiActivityService::ChannelPrefix.$company->slug,
+            'productivity' => $productivity,
+            'time_saved' => $this->timeSaved($productivity->estimatedMinutesSaved()),
+            // Offered only to someone who may actually change the workspace,
+            // and only while there is no baseline to change: a recruiter who
+            // cannot save it is never shown a control that will refuse them.
+            'baseline_url' => $company->manual_review_minutes_per_application === null
+                && Gate::forUser($recruiter)->allows('update', $company)
+                    ? WorkspaceSettings::getUrl()
+                    : null,
         ];
+    }
+
+    /**
+     * The estimate as a duration a person reads, or null when the workspace
+     * set no baseline — in which case nothing about time is rendered at all,
+     * rather than a zero or a guessed default.
+     */
+    private function timeSaved(?int $minutes): ?string
+    {
+        if ($minutes === null || $minutes < 1) {
+            return null;
+        }
+
+        $hours = intdiv($minutes, 60);
+        $remainder = $minutes % 60;
+
+        if ($hours === 0) {
+            return trans_choice('dashboard.productivity.minutes', $remainder, ['count' => $remainder]);
+        }
+
+        if ($remainder === 0) {
+            return trans_choice('dashboard.productivity.hours', $hours, ['count' => $hours]);
+        }
+
+        return __('dashboard.productivity.hours_and_minutes', [
+            'hours' => trans_choice('dashboard.productivity.hours', $hours, ['count' => $hours]),
+            'minutes' => trans_choice('dashboard.productivity.minutes', $remainder, ['count' => $remainder]),
+        ]);
+    }
+
+    /**
+     * The live AI work worth naming on the Dashboard, most consequential
+     * first. It is the same data the AI Activity panel shows, cut to a glance:
+     * a blocked operation needs a person, running work is reassurance, waiting
+     * work explains a silence.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function aiActivityItems(AiActivitySnapshot $activity): array
+    {
+        $snapshot = $activity->toArray();
+
+        /** @var list<array<string, mixed>> $items */
+        $items = [
+            ...$snapshot['blocked'],
+            ...$snapshot['working'],
+            ...$snapshot['waiting'],
+        ];
+
+        return $items;
     }
 
     /**

@@ -18,7 +18,7 @@ than the application proves.
 ## Objective
 
 Provide an AI-assisted, evidence-backed evaluation of a candidate against the
-job's human-confirmed criteria while keeping fit, uncertainty, evidence coverage,
+job's current evaluation criteria while keeping fit, uncertainty, evidence coverage,
 and the eventual hiring decision separate.
 
 The evaluation should answer:
@@ -36,7 +36,7 @@ When a current evaluation is available, the recruiter can see:
 
 - overall application fit;
 - evidence coverage;
-- one result per confirmed job criterion;
+- one result per current job criterion;
 - the criterion's fit when it can be assessed;
 - confidence in the submitted support;
 - concise supporting evidence and its application source;
@@ -54,11 +54,12 @@ not to the recruiter-facing record.
 ## Business rules
 
 This feature is governed by
-`.ai/skills/evaluation-integrity/SKILL.md` and the recruitment rules in
-`.ai/skills/recruitment-workflow/SKILL.md`.
+`.claude/skills/evaluation-integrity/SKILL.md` and the recruitment rules in
+`.claude/skills/recruitment-workflow/SKILL.md`.
 
-- Candidate evaluation runs only against the job's currently confirmed
-  evaluation criteria.
+- Candidate evaluation runs only against the job's current
+  evaluation criteria, and starts automatically when the application is eligible
+  (no manual "evaluate" step in the normal flow).
 - Direct candidate identifiers are excluded from the AI evaluation context where
   the product can deterministically identify them. This is identity reduction,
   not a claim of full anonymity or bias elimination.
@@ -71,7 +72,7 @@ This feature is governed by
 - Missing information is represented as unknown. It does not become a zero,
   midpoint, failure, or other invented fit signal.
 - Overall fit is based only on criteria that could be assessed and respects the
-  confirmed criterion weights.
+  current criterion weights.
 - Evidence coverage separately communicates how much of the weighted criteria
   could actually be assessed.
 - Confidence describes the strength and specificity of support in the submitted
@@ -79,7 +80,7 @@ This feature is governed by
   statistical confidence value.
 - Supporting evidence identifies the submitted source that supports a criterion
   result. Candidate claims are not represented as independently verified facts.
-- Each evaluation result maps to the exact confirmed criterion set. Criterion
+- Each evaluation result maps to the exact current criterion set. Criterion
   identity and criteria revision both have to match.
 - An evaluation produced for an older criteria revision is historical and cannot
   be presented as the current evaluation.
@@ -95,23 +96,24 @@ This feature is governed by
 
 ## User flow
 
-1. A job has a human-confirmed set of evaluation criteria.
+1. A job has a current set of evaluation criteria (AI-generated and editable by
+   the recruiter; there is no separate confirmation step).
 2. A candidate submits an application, or an existing candidate enters the job's
    active recruitment process.
-3. If current criteria are confirmed, the application is queued for evaluation.
-   Otherwise it waits for criteria confirmation.
+3. If the job has current criteria, the application is queued for evaluation
+   automatically. Otherwise it waits until criteria are prepared.
 4. Direct identifiers are reduced from the candidate material before the AI
    evaluation context is built.
 5. The submitted CV, cover letter, and application answers are assessed against
-   the confirmed criteria.
+   the current criteria.
 6. The product persists one strict result per criterion, supporting evidence, and
    an Interview Brief.
 7. Laravel derives overall fit and evidence coverage from the validated criterion
    results.
 8. The recruiter reviews the evaluation as decision support.
 9. If job criteria change, the prior evaluation stops presenting itself as
-   current until a new evaluation is completed against the newly confirmed
-   revision.
+   current until a new evaluation is completed against the new revision, which
+   eligible active applications receive automatically.
 10. Human workflow actions remain independent from the AI result.
 
 For eligible public applications, this queueing is the normal automatic path:
@@ -123,7 +125,7 @@ evaluation or reuse sourcing analysis as application fit.
 ## Acceptance criteria
 
 - **AC01** — An application cannot receive a current candidate evaluation while
-  the job's evaluation criteria are unconfirmed.
+  the job has no current evaluation criteria.
 - **AC02** — The AI evaluation context does not intentionally include the
   candidate's stored name, email address, phone number, or stored social profile
   identifiers.
@@ -137,7 +139,7 @@ evaluation or reuse sourcing analysis as application fit.
 - **AC07** — Confidence remains separate from both fit and evidence coverage.
 - **AC08** — An assessed criterion can expose concise supporting evidence with a
   source from the submitted application.
-- **AC09** — Candidate evaluation results must match the complete confirmed
+- **AC09** — Candidate evaluation results must match the complete current
   criterion set; missing, duplicate, or foreign criterion identities are not
   silently accepted.
 - **AC10** — A result created for criteria revision X cannot become a current

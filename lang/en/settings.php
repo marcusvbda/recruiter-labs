@@ -17,6 +17,13 @@ return [
         'subtitle' => 'Company information and the hiring workflows your jobs reuse.',
         'identity_heading' => 'Company',
         'identity_description' => 'The name and URL of this workspace.',
+        'productivity' => [
+            'heading' => 'Review time baseline',
+            'description' => 'Optional. Used only to estimate the review time RecruiterLabs AI saved on the Overview.',
+            'manual_review_minutes_label' => 'Manual review time per application',
+            'manual_review_minutes_helper' => 'Roughly how long one of your recruiters used to spend reviewing a single application by hand. Leave empty and the Overview shows measured counts only, with no time estimate.',
+            'minutes_suffix' => 'minutes',
+        ],
         'careers' => [
             'heading' => 'Careers page',
             'description' => 'Publish a company-branded page for roles that are accepting applications.',

@@ -100,6 +100,28 @@ class EmailTemplateRenderer
     }
 
     /**
+     * Resolve a template into editable composer content.
+     *
+     * Unlike {@see render()}, a token the context cannot fill keeps its literal
+     * placeholder instead of collapsing to an empty string: the recruiter has to
+     * see the hole before it becomes an outgoing message, and can then either
+     * supply the missing context or delete the dependency. The composer refuses
+     * to send while such a placeholder survives.
+     */
+    public function renderForComposer(?string $template, EmailTemplateContext $context, bool $escape = false): string
+    {
+        $values = $this->values($context);
+
+        foreach ($values as $token => $value) {
+            if (blank($value)) {
+                $values[$token] = self::placeholder($token);
+            }
+        }
+
+        return $this->substitute($template, $values, $escape);
+    }
+
+    /**
      * Renders a template against sample values, for previewing a template that
      * has no real recipient yet.
      */

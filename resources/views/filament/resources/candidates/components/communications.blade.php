@@ -71,11 +71,9 @@
         </div>
     @endif
 
-    @if ($context_job)
-        <div class="mt-4">
-            <x-filament::button wire:click="mountAction('composeCommunication')" icon="heroicon-m-envelope" size="sm" :disabled="$is_do_not_contact">
-                {{ __('communications.actions.contact_candidate') }}
-            </x-filament::button>
-        </div>
-    @endif
+    <div class="mt-4">
+        <x-filament::button wire:click="mountAction('sendMessage')" icon="heroicon-m-envelope" size="sm" :disabled="$is_do_not_contact">
+            {{ __('communications.actions.send_message') }}
+        </x-filament::button>
+    </div>
 </x-filament::section>

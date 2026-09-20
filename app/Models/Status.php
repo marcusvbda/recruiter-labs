@@ -22,10 +22,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property bool $is_terminal
  * @property int|null $attention_after_days
  * @property bool $sends_email
- * @property string|null $email_subject
- * @property string|null $email_body
+ * @property int|null $email_template_id
  */
-#[Fillable(['company_id', 'pipeline_id', 'name', 'color', 'order', 'is_hired', 'is_final_stage', 'is_terminal', 'attention_after_days', 'sends_email', 'email_subject', 'email_body'])]
+#[Fillable(['company_id', 'pipeline_id', 'name', 'color', 'order', 'is_hired', 'is_final_stage', 'is_terminal', 'attention_after_days', 'sends_email', 'email_template_id'])]
 class Status extends Model
 {
     /** @use HasFactory<StatusFactory> */
@@ -77,6 +76,7 @@ class Status extends Model
             'is_terminal' => 'boolean',
             'attention_after_days' => 'integer',
             'sends_email' => 'boolean',
+            'email_template_id' => 'integer',
         ];
     }
 
@@ -90,6 +90,17 @@ class Status extends Model
     public function pipeline(): BelongsTo
     {
         return $this->belongsTo(Pipeline::class);
+    }
+
+    /**
+     * The reusable template sent when a candidate enters this stage. The stage
+     * owns the decision to send; the workspace owns the content.
+     *
+     * @return BelongsTo<EmailTemplate, $this>
+     */
+    public function emailTemplate(): BelongsTo
+    {
+        return $this->belongsTo(EmailTemplate::class);
     }
 
     /** @return HasMany<Application, $this> */
@@ -127,12 +138,10 @@ class Status extends Model
 
     /**
      * Whether entering this status should email the candidate. A status with the
-     * toggle on but no subject or body has nothing to send.
+     * toggle on but no template selected has nothing to send.
      */
     public function sendsOnEnterEmail(): bool
     {
-        return $this->sends_email
-            && filled($this->email_subject)
-            && filled($this->email_body);
+        return $this->sends_email && $this->email_template_id !== null;
     }
 }

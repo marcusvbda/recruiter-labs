@@ -10,6 +10,7 @@ use App\Enums\Limit;
 use App\Enums\SourcingSearchStatus;
 use App\Models\AiAgentResponseCache;
 use App\Models\AiUsageRecord;
+use App\Models\Company;
 use App\Models\Job;
 use App\Models\SourcingSearch;
 use App\Services\AiActivityService;
@@ -18,9 +19,11 @@ use App\Services\AiUsageTracker;
 use App\Services\CandidateSourcingContextSanitizer;
 use App\Services\CandidateSourcingEligibilityService;
 use App\Services\LimitManager;
+use App\Services\RecruiterNotifier;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Laravel\Ai\Responses\StructuredAgentResponse;
 use Marcusvbda\FilamentRealtimeDriver\RealtimeEvent;
@@ -377,12 +380,19 @@ class SourceCandidatesForJob implements ShouldBeUnique, ShouldQueue
      */
     private function updateCurrentGeneration(array $attributes): int
     {
+        $previousStatus = SourcingSearch::query()
+            ->where('job_id', $this->jobId)
+            ->where('generation', $this->generation)
+            ->value('status');
+
         $updated = SourcingSearch::query()
             ->where('job_id', $this->jobId)
             ->where('generation', $this->generation)
             ->update($attributes);
 
         if ($updated > 0) {
+            $this->announceEnding($attributes['status'] ?? null, is_string($previousStatus) ? $previousStatus : null);
+
             // Drives the job sourcing panel's realtime refresh
             // (job-sourcing-panel.blade.php) instead of polling. A query-builder
             // update on purpose (see class docblock), so it bypasses model events
@@ -395,6 +405,54 @@ class SourceCandidatesForJob implements ShouldBeUnique, ShouldQueue
         }
 
         return $updated;
+    }
+
+    /**
+     * Tell the recruiter a sweep they asked for has ended.
+     *
+     * Two things make this quiet enough to be useful: only a real transition
+     * into an ending counts (the `failed()` callback re-writes `Failed` after
+     * the catch block already did, and that second write says nothing new),
+     * and only a sweep a person started is announced — an automatic refresh
+     * finishing is not news anyone was waiting for.
+     */
+    private function announceEnding(mixed $status, ?string $previousStatus): void
+    {
+        if ($this->origin !== AiExecutionOrigin::UserRequested
+            || ! $status instanceof SourcingSearchStatus
+            || $previousStatus === $status->value) {
+            return;
+        }
+
+        if (! in_array($status, [
+            SourcingSearchStatus::Completed,
+            SourcingSearchStatus::Failed,
+            SourcingSearchStatus::PendingQuota,
+        ], true)) {
+            return;
+        }
+
+        $search = SourcingSearch::query()
+            ->with(['job', 'company'])
+            ->where('job_id', $this->jobId)
+            ->where('generation', $this->generation)
+            ->first();
+
+        if (! $search instanceof SourcingSearch) {
+            return;
+        }
+
+        DB::afterCommit(function () use ($search, $status): void {
+            app(RecruiterNotifier::class)->sourcingFinished($search, $status);
+        });
+
+        if ($status === SourcingSearchStatus::PendingQuota && $search->company instanceof Company) {
+            $company = $search->company;
+
+            DB::afterCommit(function () use ($company): void {
+                app(RecruiterNotifier::class)->aiAllowanceBlocked($company);
+            });
+        }
     }
 
     private function elapsedMilliseconds(int $startedAt): int

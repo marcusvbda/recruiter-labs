@@ -26,10 +26,10 @@ return [
         'stage_role' => 'Role in the process',
         'sends_email' => 'Send an email when a candidate enters this stage',
         'sends_email_helper' => 'Sent automatically through your configured email provider.',
-        'email_subject' => 'Subject',
-        'email_subject_placeholder' => 'Application received - {{ job.title }}',
-        'email_body' => 'Message',
-        'email_body_helper' => 'Use the variables below to personalise the message.',
+        'email_template' => 'Email template',
+        'email_template_helper' => 'The candidate receives this template, with its variables resolved for them.',
+        'email_template_hint' => 'Managed in Settings → Email templates',
+        'email_template_retired' => 'no longer available',
         'applications_count' => 'Candidates',
     ],
     'badges' => [
@@ -40,9 +40,14 @@ return [
         'email_on' => 'Email on',
         'email_off' => 'No email',
     ],
+    'stage_email_blocked' => [
+        'subject' => 'Stage email for ":status" was not sent',
+        'unresolved_variables' => '<p>This stage email was not sent because its template uses variables that could not be resolved for this candidate: :variables.</p><p>The candidate stayed in the stage. Fix the template or the missing information, then send the message manually.</p>',
+        'template_unavailable' => '<p>This stage email was not sent because its template is no longer available.</p><p>The candidate stayed in the stage. Select a valid template for this stage, then send the message manually if it is still needed.</p>',
+    ],
     'variables' => [
         'title' => 'Available variables',
-        'description' => 'Click a variable to copy it, then paste it into the subject or message.',
+        'description' => 'These variables are resolved for each candidate when the template is sent. Click one to copy it, then use it in the template.',
         'copied' => 'Copied',
         'groups' => [
             'candidate' => 'Candidate',
@@ -53,6 +58,7 @@ return [
     ],
     'actions' => [
         'create' => 'Add stage',
+        'manage_email_templates' => 'Manage templates',
     ],
     'notifications' => [
         'has_applications_title' => "This stage can't be deleted",

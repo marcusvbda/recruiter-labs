@@ -4,6 +4,8 @@
     never appears without Evidence Coverage and Confidence beside it — that is
     a hard product rule, not a layout choice.
 --}}
+{{-- Livewire allows exactly one root element per component: the realtime listener renders its own <div>, so it must live inside a single wrapper. --}}
+<div>
 <x-filament-realtime-driver::listener
     :channel="'job_sourcing_'.$jobId"
     event="SourcingSearchUpdated"
@@ -85,4 +87,5 @@
             </div>
         @endif
     @endif
+</div>
 </div>

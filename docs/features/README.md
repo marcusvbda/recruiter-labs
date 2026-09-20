@@ -1,7 +1,7 @@
 # Feature documentation
 
 Persistent, versioned source of truth for each feature, shared by humans and by
-every AI tool (Claude Code, Codex). One directory per feature.
+Claude Code. One directory per feature.
 
 For an existing / as-built feature:
 
@@ -25,14 +25,14 @@ These documents are **not** temporary agent plans. They are never deleted
 automatically or as part of "finishing" a feature. An as-built feature is valid
 with only `spec.md`; do not create a retrospective technical design merely to
 satisfy the planned-feature convention. Temporary session plans live outside
-`docs/features/**` and are deleted after execution (`AGENTS.md` →
+`docs/features/**` and are deleted after execution (`CLAUDE.md` →
 Documentation).
 
 Execution of a documented feature follows
-`.ai/skills/execute-feature/SKILL.md`. A planned feature is executable with a
+`.claude/skills/execute-feature/SKILL.md`. A planned feature is executable with a
 complete `spec.md`; `tech-design.md` is optional. The orchestrator inspects the
 current repository and its history, then derives an AI-appropriate task graph
-in `.ai/state/<feature>.md`, which is local and git-ignored. It never creates a
+in `.claude/state/<feature>.md`, which is local and git-ignored. It never creates a
 persistent `tasks.md`.
 
 ## `spec.md` — product source of truth
@@ -47,7 +47,7 @@ observable behaviour or a product invariant. Typical sections:
 - **User behaviour** — what the recruiter (or candidate) sees and does.
 - **Business rules** — the rules the product must enforce, including the
   existing invariants the feature must respect (link the relevant
-  `.ai/skills/*/SKILL.md` rules instead of restating them).
+  `.claude/skills/*/SKILL.md` rules instead of restating them).
 - **User flow** — the sequence through the product, including alternate and
   terminal branches.
 - **Acceptance criteria** — numbered `AC01`, `AC02`, … Each one observable and
@@ -81,7 +81,7 @@ hypothetical architecture. It may cover:
 - **Technical constraints** — authentication, authorization, tenant isolation,
   security, performance, idempotency, concurrency and technical invariants.
 - **Verification strategy** — the deterministic checks that prove each part
-  works, using the real commands in `.ai/guidelines/project-core.md`.
+  works, using the real commands in `.claude/skills/project-core/SKILL.md`.
 - **Compatibility** — relevant as-built feature specs and domain-skill
   invariants that the implementation must preserve.
 
@@ -126,7 +126,7 @@ and coverage is checked before implementation begins.
 
 The graph, progress, correction counters, `spec.md` fingerprint and either the
 `tech-design.md` fingerprint or an explicit `ABSENT` marker live only in
-`.ai/state/<feature>.md`. When no design exists, state also records the derived
+`.claude/state/<feature>.md`. When no design exists, state also records the derived
 technical approach. Pending tasks may be split, merged, reordered or refined
 after repository discovery as long as product scope does not change and any
 binding technical design is followed exactly.

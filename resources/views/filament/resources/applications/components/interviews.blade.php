@@ -150,10 +150,12 @@
         icon="heroicon-o-document-magnifying-glass"
     >
         {{-- Section-level provenance: the brief is AI-written, the interview
-             evidence below it is not, and the two must not read alike (AC58). --}}
-        <x-slot name="headerEnd">
+             evidence above it is not, and the two must not read alike (AC58).
+             `afterHeader` is the slot the installed Filament section component
+             actually renders (vendor/filament/support/.../section/index.blade.php). --}}
+        <x-slot:afterHeader>
             <x-ai-generated-badge />
-        </x-slot>
+        </x-slot:afterHeader>
 
         <div class="space-y-4">
             @forelse ($interviews['brief_items'] as $briefItem)

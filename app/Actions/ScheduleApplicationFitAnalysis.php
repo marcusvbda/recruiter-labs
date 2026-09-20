@@ -7,6 +7,7 @@ use App\Enums\ApplicationAnalysisStatus;
 use App\Jobs\AnalyzeApplicationFit;
 use App\Models\Application;
 use App\Models\Job;
+use App\Services\AiActivityService;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -33,7 +34,11 @@ class ScheduleApplicationFitAnalysis
         AiExecutionOrigin $origin = AiExecutionOrigin::UserRequested,
         ?string $trigger = 'application_analysis_requested',
     ): void {
-        $generation = DB::transaction(function () use ($application, $expectedGeneration): ?int {
+        // Whether this call actually moved the persisted analysis status. Only
+        // then does the workspace indicator have something new to say.
+        $statusChanged = false;
+
+        $generation = DB::transaction(function () use ($application, $expectedGeneration, &$statusChanged): ?int {
             $lockedApplication = Application::query()
                 ->whereKey($application->getKey())
                 ->lockForUpdate()
@@ -58,6 +63,8 @@ class ScheduleApplicationFitAnalysis
                     'analysis_status' => ApplicationAnalysisStatus::AwaitingCriteria,
                 ])->saveQuietly();
 
+                $statusChanged = true;
+
                 return null;
             }
 
@@ -66,8 +73,18 @@ class ScheduleApplicationFitAnalysis
                 'analysis_generation' => $lockedApplication->analysis_generation + 1,
             ])->saveQuietly();
 
+            $statusChanged = true;
+
             return $lockedApplication->analysis_generation;
         });
+
+        // Queued and waiting work has to be as visible as running work, and
+        // `saveQuietly()` above bypasses the model events that would broadcast
+        // it. Deferred to after commit so the indicator never reads a status
+        // that a rollback would undo.
+        if ($statusChanged) {
+            DB::afterCommit(fn () => AiActivityService::broadcastForApplication($application->getKey()));
+        }
 
         if ($generation === null) {
             return;

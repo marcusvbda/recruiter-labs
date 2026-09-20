@@ -36,29 +36,4 @@ class CandidateCommunicationException extends RuntimeException implements Should
     {
         return new self('Only an unauthorised draft can be edited.');
     }
-
-    public static function unsupportedDraftLanguage(): self
-    {
-        return new self('The selected draft language is not supported.');
-    }
-
-    public static function aiUnavailable(): self
-    {
-        return new self('This workspace does not have a usable AI configuration.');
-    }
-
-    public static function aiAllowanceReached(): self
-    {
-        return new self('This workspace has reached its AI allowance.');
-    }
-
-    public static function jobRequiredForAiDrafting(): self
-    {
-        return new self('AI communication drafting requires a job context.');
-    }
-
-    public static function followUpRequiresPriorOutboundMessage(): self
-    {
-        return new self('A follow-up draft requires a prior authorized outbound message in this thread.');
-    }
 }

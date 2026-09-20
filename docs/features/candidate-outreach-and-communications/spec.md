@@ -5,6 +5,23 @@ type: as-built
 
 # Candidate outreach and communications
 
+> **Superseded in part by `../core-recruiting-productivity/spec.md`.**
+> The recruiter-message workflow described here is replaced by a simple
+> **Send message** flow: optionally pick a reusable workspace email template
+> (Settings), edit the resolved Subject and Message, then Send; or write from
+> scratch. AI-prepared outreach and follow-up drafting ("Prepare outreach",
+> "Initial outreach", "Prepare follow-up", draft purposes, AI-assisted drafts)
+> no longer exists in the product, and nothing creates a follow-up draft after a
+> send. Send is available from an Application (Job context fixed) and from the
+> Candidate profile (Job optional; a generic message needs no Job and creates no
+> Application). Pipeline status emails now use one reusable template per status
+> instead of a private subject/body. Unchanged and still binding: sending
+> through the workspace's configured provider, do-not-contact / recipient /
+> tenant / provider-readiness safety, immutable sent content, delivery state
+> separate from recruitment state, no inferred replies, threads keyed by
+> candidate and optional Job, and preserved history; existing unsent drafts are
+> recoverable in the composer rather than deleted.
+
 ## Problem
 
 Recruiter Labs already performs a substantial part of the recruitment workflow.

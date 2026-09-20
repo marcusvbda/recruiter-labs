@@ -18,11 +18,6 @@ return [
                 'hint' => 'Uma vaga diz ao RecruiterLabs o que você está contratando, para que ele possa começar a comparar candidatos com ela.',
                 'action' => 'Criar vaga',
             ],
-            'confirm_hiring_criteria' => [
-                'title' => 'Confirme os critérios de contratação',
-                'hint' => 'Com os critérios confirmados, o RecruiterLabs avalia cada candidato de forma consistente com o que você realmente procura.',
-                'action' => 'Confirmar critérios',
-            ],
             'add_first_application' => [
                 'title' => 'Adicione sua primeira candidatura',
                 'hint' => 'O RecruiterLabs precisa de uma candidatura real antes de poder mostrar como é uma avaliação.',

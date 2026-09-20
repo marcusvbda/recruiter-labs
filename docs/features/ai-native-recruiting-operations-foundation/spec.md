@@ -5,6 +5,23 @@ type: as-built
 
 # AI-native recruiting operations foundation
 
+> **Superseded in part by `../core-recruiting-productivity/spec.md`.**
+> That spec removes routine criteria confirmation. Wherever this document says
+> criteria must be "confirmed" by a human, are "awaiting review/confirmation",
+> raise a "Criteria ready for review" attention item, or that automatic
+> preparation "does not confirm" them, the delivered behaviour is instead:
+> successful automatic preparation makes the criteria the job's **current**
+> criteria immediately (AI-generated, editable; a saved edit is authoritative
+> at once; explicit Rebuild remains). There is no confirmation step and no
+> confirmation-based attention item; only failed / blocked / missing-context
+> preparation asks for human action. Read "confirmed criteria" below as
+> "current criteria". Revision integrity, terminal-application protection,
+> sourcing readiness, allowance and idempotency rules still apply, and the
+> human-only decisions (rejecting, hiring, moving candidates, contacting,
+> billing, permissions) are unchanged. The standalone Job Review advisory card
+> is no longer part of the recruiter experience. See
+> `../job-evaluation-criteria/spec.md` for the current criteria lifecycle.
+
 ## Problem
 
 Recruiter Labs already uses AI in meaningful parts of the recruitment process.
@@ -131,8 +148,8 @@ The existing contracts that remain authoritative include:
 | Structured interview feedback | Human interview evidence remains human evidence and is not rewritten into an AI hiring decision. |
 
 This feature must not weaken the guarantees in
-`.ai/skills/evaluation-integrity/SKILL.md` or
-`.ai/skills/recruitment-workflow/SKILL.md`.
+`.claude/skills/evaluation-integrity/SKILL.md` or
+`.claude/skills/recruitment-workflow/SKILL.md`.
 
 Where this feature changes observable behaviour described by an existing
 as-built specification, that specification must be reconciled when

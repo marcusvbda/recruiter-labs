@@ -26,10 +26,10 @@ return [
         'stage_role' => 'Rol en el proceso',
         'sends_email' => 'Enviar un correo cuando el candidato entre en esta etapa',
         'sends_email_helper' => 'Se envía automáticamente por el proveedor de correo configurado.',
-        'email_subject' => 'Asunto',
-        'email_subject_placeholder' => 'Postulación recibida - {{ job.title }}',
-        'email_body' => 'Mensaje',
-        'email_body_helper' => 'Usa las variables de abajo para personalizar el mensaje.',
+        'email_template' => 'Plantilla de correo',
+        'email_template_helper' => 'El candidato recibe esta plantilla, con sus variables resueltas para él.',
+        'email_template_hint' => 'Se gestiona en Ajustes → Plantillas de correo',
+        'email_template_retired' => 'ya no está disponible',
         'applications_count' => 'Candidatos',
     ],
     'badges' => [
@@ -40,9 +40,14 @@ return [
         'email_on' => 'Con correo',
         'email_off' => 'Sin correo',
     ],
+    'stage_email_blocked' => [
+        'subject' => 'El correo de la etapa ":status" no se envió',
+        'unresolved_variables' => '<p>Este correo de etapa no se envió porque su plantilla usa variables que no se pudieron resolver para este candidato: :variables.</p><p>El candidato permaneció en la etapa. Corrige la plantilla o la información que falta y luego envía el mensaje manualmente.</p>',
+        'template_unavailable' => '<p>Este correo de etapa no se envió porque su plantilla ya no está disponible.</p><p>El candidato permaneció en la etapa. Selecciona una plantilla válida para esta etapa y envía el mensaje manualmente si sigue siendo necesario.</p>',
+    ],
     'variables' => [
         'title' => 'Variables disponibles',
-        'description' => 'Haz clic en una variable para copiarla y pégala en el asunto o el mensaje.',
+        'description' => 'Estas variables se resuelven para cada candidato cuando se envía la plantilla. Haz clic en una para copiarla y úsala en la plantilla.',
         'copied' => 'Copiado',
         'groups' => [
             'candidate' => 'Candidato',
@@ -53,6 +58,7 @@ return [
     ],
     'actions' => [
         'create' => 'Añadir etapa',
+        'manage_email_templates' => 'Gestionar plantillas',
     ],
     'notifications' => [
         'has_applications_title' => 'Esta etapa no se puede eliminar',

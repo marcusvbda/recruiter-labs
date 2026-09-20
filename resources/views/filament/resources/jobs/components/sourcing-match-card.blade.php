@@ -78,7 +78,7 @@
 
                 @if ($match['communication_url'])
                     <x-filament::button tag="a" :href="$match['communication_url']" color="gray" icon="heroicon-m-envelope" size="sm">
-                        {{ __('communications.actions.contact_candidate') }}
+                        {{ __('communications.actions.send_message') }}
                     </x-filament::button>
                 @endif
 

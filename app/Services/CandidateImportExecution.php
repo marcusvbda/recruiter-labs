@@ -496,6 +496,7 @@ class CandidateImportExecution
     private function finish(CandidateImportBatch $batch): void
     {
         $progress = CandidateImportProgress::measure((int) $batch->company_id, (int) $batch->getKey());
+        $wasTerminal = $this->isTerminal($batch);
 
         $this->persist($batch, [
             // Rows still needing a human are not a failed import: the
@@ -509,6 +510,19 @@ class CandidateImportExecution
             'last_progress_at' => now(),
             'executing_company_id' => null,
         ], $progress);
+
+        // Only the transition into an ending is news. A batch that was already
+        // finished and is written again says nothing new, so it says nothing.
+        if ($wasTerminal) {
+            return;
+        }
+
+        $imported = $progress->created + $progress->reused;
+        $unresolved = $progress->unresolved();
+
+        DB::afterCommit(function () use ($batch, $imported, $unresolved): void {
+            app(RecruiterNotifier::class)->candidateImportCompleted($batch, $imported, $unresolved);
+        });
     }
 
     /** Stop, keep everything committed, and wait for someone who may continue. */
@@ -531,6 +545,8 @@ class CandidateImportExecution
      */
     public function fail(CandidateImportBatch $batch, FailureCode $code = FailureCode::ExecutionFailed): void
     {
+        $wasTerminal = $this->isTerminal($batch);
+
         $this->persist($batch, [
             'status' => CandidateImportStatus::Failed,
             'failure_code' => $code->value,
@@ -538,6 +554,24 @@ class CandidateImportExecution
             'last_progress_at' => now(),
             'executing_company_id' => null,
         ]);
+
+        if ($wasTerminal) {
+            return;
+        }
+
+        DB::afterCommit(function () use ($batch): void {
+            app(RecruiterNotifier::class)->candidateImportFailed($batch);
+        });
+    }
+
+    /** An ending already reached: writing it again is not a new ending. */
+    private function isTerminal(CandidateImportBatch $batch): bool
+    {
+        return in_array($batch->status, [
+            CandidateImportStatus::Completed,
+            CandidateImportStatus::CompletedWithIssues,
+            CandidateImportStatus::Failed,
+        ], true);
     }
 
     /** A worker that died without answering, seen from the queue's side. */

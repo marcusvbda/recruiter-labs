@@ -21,11 +21,6 @@ return [
                 'hint' => 'A job tells RecruiterLabs what you are hiring for, so it can start matching candidates against it.',
                 'action' => 'Create job',
             ],
-            'confirm_hiring_criteria' => [
-                'title' => 'Confirm hiring criteria',
-                'hint' => 'Confirmed criteria let RecruiterLabs evaluate every candidate consistently against what you are actually looking for.',
-                'action' => 'Confirm criteria',
-            ],
             'add_first_application' => [
                 'title' => 'Add your first application',
                 'hint' => 'RecruiterLabs needs a real candidate application before it can show you what an evaluation looks like.',

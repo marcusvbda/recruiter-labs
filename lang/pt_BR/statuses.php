@@ -26,10 +26,10 @@ return [
         'stage_role' => 'Papel no processo',
         'sends_email' => 'Enviar um e-mail quando o candidato entrar nesta etapa',
         'sends_email_helper' => 'Enviado automaticamente pelo provedor de e-mail configurado.',
-        'email_subject' => 'Assunto',
-        'email_subject_placeholder' => 'Candidatura recebida - {{ job.title }}',
-        'email_body' => 'Mensagem',
-        'email_body_helper' => 'Use as variáveis abaixo para personalizar a mensagem.',
+        'email_template' => 'Modelo de e-mail',
+        'email_template_helper' => 'O candidato recebe este modelo, com as variáveis resolvidas para ele.',
+        'email_template_hint' => 'Gerenciado em Configurações → Modelos de e-mail',
+        'email_template_retired' => 'não está mais disponível',
         'applications_count' => 'Candidatos',
     ],
     'badges' => [
@@ -40,9 +40,14 @@ return [
         'email_on' => 'Com e-mail',
         'email_off' => 'Sem e-mail',
     ],
+    'stage_email_blocked' => [
+        'subject' => 'O e-mail da etapa ":status" não foi enviado',
+        'unresolved_variables' => '<p>Este e-mail de etapa não foi enviado porque o modelo usa variáveis que não puderam ser resolvidas para este candidato: :variables.</p><p>O candidato permaneceu na etapa. Corrija o modelo ou a informação ausente e depois envie a mensagem manualmente.</p>',
+        'template_unavailable' => '<p>Este e-mail de etapa não foi enviado porque o modelo não está mais disponível.</p><p>O candidato permaneceu na etapa. Selecione um modelo válido para esta etapa e envie a mensagem manualmente, se ainda for necessário.</p>',
+    ],
     'variables' => [
         'title' => 'Variáveis disponíveis',
-        'description' => 'Clique em uma variável para copiá-la e cole no assunto ou na mensagem.',
+        'description' => 'Estas variáveis são resolvidas para cada candidato quando o modelo é enviado. Clique em uma para copiá-la e use-a no modelo.',
         'copied' => 'Copiado',
         'groups' => [
             'candidate' => 'Candidato',
@@ -53,6 +58,7 @@ return [
     ],
     'actions' => [
         'create' => 'Adicionar etapa',
+        'manage_email_templates' => 'Gerenciar modelos',
     ],
     'notifications' => [
         'has_applications_title' => 'Esta etapa não pode ser excluída',

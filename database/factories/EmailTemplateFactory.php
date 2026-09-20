@@ -20,7 +20,7 @@ class EmailTemplateFactory extends Factory
     {
         return [
             'company_id' => Company::factory(),
-            'name' => ucwords(implode(' ', $this->faker->unique()->words(2))).' Template',
+            'name' => ucfirst($this->faker->unique()->word()).' '.ucfirst($this->faker->unique()->word()).' Template',
             'subject' => 'About your application',
             'body' => '<p>Hi {{ candidate.name }}, thanks for applying.</p>',
             'is_available' => true,

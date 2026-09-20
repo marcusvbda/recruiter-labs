@@ -50,7 +50,7 @@ evaluation.
 
 ## Business rules
 
-The evaluation rules in `.ai/skills/evaluation-integrity/SKILL.md` apply to every
+The evaluation rules in `.claude/skills/evaluation-integrity/SKILL.md` apply to every
 AI execution that produces candidate-evaluation data.
 
 - Platform AI analysis is subject to the workspace's configured plan allowance.

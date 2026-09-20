@@ -82,7 +82,7 @@ Onboarding must direct users toward existing RecruiterLabs actions.
 It must not introduce onboarding-specific versions of:
 
 - job creation;
-- criteria confirmation;
+- criteria editing;
 - candidate creation;
 - applications;
 - evaluations;
@@ -138,8 +138,11 @@ It is not a live operational-readiness checklist.
 
 A workspace reaches **Setup complete** after:
 
-1. at least one job has been created; and
-2. hiring criteria have been confirmed for at least one workspace job.
+1. at least one job has been created.
+
+Hiring criteria are no longer a setup prerequisite: RecruiterLabs prepares them
+automatically from the job, so the workspace never waits on a criteria-confirmation
+step (see "Step 3 — retired").
 
 This means RecruiterLabs has received structured hiring intent from the team.
 
@@ -213,29 +216,26 @@ The step should communicate that a job establishes what the team is hiring for.
 
 ---
 
-## Step 3 — Confirm hiring criteria
+## Step 3 — retired
 
-### Completion condition
+The former "Confirm hiring criteria" step no longer exists. Criteria are prepared
+automatically from a job's role context and become the job's current criteria
+without a human confirmation (see `../job-evaluation-criteria/spec.md`), so there
+is nothing for onboarding to ask the user to do. The step number is kept only so
+the numbering of the remaining steps stays stable.
 
-Hiring criteria have been confirmed for at least one workspace job.
-
-Completion must use the existing criteria-confirmation semantics.
-
-### Call to action
-
-The onboarding experience should direct the user toward the existing criteria
-confirmation flow for an appropriate job.
+The primary checklist therefore has four steps: workspace created, first job
+created, first application added, first application evaluated.
 
 ### Product milestone
 
-Completing this step after the first-job milestone marks the workspace as:
+Creating the first job marks the workspace as:
 
 **Setup complete**
 
-### User-facing intent
-
-The step should communicate that confirmed criteria allow RecruiterLabs to
-evaluate candidates consistently against hiring intent.
+The `first_criteria_confirmed` milestone is still recorded, at the moment a job's
+criteria first become current automatically, but it is informational: it no longer
+gates Setup complete or Activated.
 
 ---
 
@@ -471,7 +471,6 @@ Completed:
 Remaining:
 
 - Create your first job
-- Confirm hiring criteria
 - Add your first application
 - Evaluate your first application
 
@@ -484,7 +483,7 @@ Completed:
 
 Remaining steps depend on existing criteria, applications and evaluations.
 
-## Workspace with confirmed job criteria
+## Workspace whose job criteria are already current
 
 The relevant job and criteria milestones should already be completed.
 
@@ -512,7 +511,7 @@ Core activation progress is shared by the workspace.
 For example:
 
 1. the Owner creates the first job;
-2. another authorized Member confirms the criteria;
+2. RecruiterLabs prepares the criteria automatically;
 3. another Member adds or receives the first application;
 4. another authorized Member triggers or reaches the first successful
    evaluation.
@@ -597,7 +596,8 @@ workspace milestones:
 
 - `workspace_created`
 - `first_job_created`
-- `first_criteria_confirmed`
+- `first_criteria_confirmed` (recorded when a job's criteria first become current
+  automatically; informational, it no longer gates Setup complete or Activated)
 - `first_application_created`
 - `first_application_evaluated`
 - `workspace_setup_completed`
@@ -686,7 +686,7 @@ It should avoid:
 The experience should explain the value of the next action, not merely tell the
 user which button to press.
 
-For example, criteria confirmation should be framed around consistent candidate
+For example, the first evaluation should be framed around consistent candidate
 evaluation rather than around completing a setup task.
 
 ---
@@ -759,7 +759,7 @@ If an action fails, the corresponding milestone must not be completed.
 Examples include:
 
 - job creation fails;
-- criteria confirmation fails;
+- automatic criteria preparation fails;
 - application creation fails;
 - evaluation fails;
 - evaluation is cancelled or discarded before successful completion.
@@ -886,7 +886,7 @@ This feature does not introduce:
 - job templates;
 - sample recruitment data;
 - automatic job creation;
-- automatic criteria confirmation;
+- onboarding-specific criteria actions;
 - automatic candidate creation;
 - automatic application creation;
 - automatic evaluation;
@@ -923,13 +923,13 @@ milestone.
 
 ## AC04
 
-Confirming hiring criteria for a workspace job automatically completes the
-criteria milestone.
+A workspace job's criteria becoming current automatically records the
+informational criteria milestone, with no user action.
 
 ## AC05
 
-A workspace reaches Setup complete after the first-job and criteria-confirmation
-milestones have been completed.
+A workspace reaches Setup complete once the first job has been created; it does
+not wait on any criteria milestone.
 
 ## AC06
 
@@ -1055,7 +1055,7 @@ selection without creating separate progress per language.
 ## AC31
 
 The feature exposes or persists idempotent first-time milestones for workspace
-creation, first job, first criteria confirmation, first application, first
+creation, first job, first criteria becoming current, first application, first
 evaluation, setup completion and activation.
 
 ## AC32

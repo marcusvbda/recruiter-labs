@@ -22,6 +22,9 @@ return [
         'recent_heading' => 'Recently completed',
         'empty' => 'Nothing is running. Everything the AI could do is up to date.',
         'recent_empty' => 'No AI work has been completed yet.',
+        'allowance' => 'AI allowance: :used of :limit used this month, :remaining left.',
+        'allowance_unlimited' => 'AI allowance: unlimited on this plan.',
+        'allowance_details' => 'Details',
     ],
 
     'role' => [

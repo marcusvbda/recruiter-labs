@@ -67,6 +67,7 @@ class WorkspaceSettings extends Page
             'careers_enabled',
             'careers_description',
             'careers_logo_path',
+            'manual_review_minutes_per_application',
         ]));
     }
 
@@ -127,6 +128,23 @@ class WorkspaceSettings extends Page
                             ->regex('/^[a-z0-9]+(-[a-z0-9]+)*$/')
                             ->helperText(__('company.fields.slug_helper'))
                             ->unique(Company::class, 'slug', ignoreRecord: true),
+                    ]),
+                // The one number behind the Overview's "Estimated review time
+                // saved". It is optional on purpose: with no number from this
+                // workspace, the product shows measured counts and says
+                // nothing about time rather than inventing an industry average.
+                Section::make(__('settings.workspace.productivity.heading'))
+                    ->description(__('settings.workspace.productivity.description'))
+                    ->columnSpanFull()
+                    ->columns(1)
+                    ->schema([
+                        TextInput::make('manual_review_minutes_per_application')
+                            ->label(__('settings.workspace.productivity.manual_review_minutes_label'))
+                            ->helperText(__('settings.workspace.productivity.manual_review_minutes_helper'))
+                            ->numeric()
+                            ->minValue(1)
+                            ->maxValue(600)
+                            ->suffix(__('settings.workspace.productivity.minutes_suffix')),
                     ]),
                 Section::make(__('settings.workspace.careers.heading'))
                     ->description(__('settings.workspace.careers.description'))
@@ -189,6 +207,10 @@ class WorkspaceSettings extends Page
             'careers_enabled' => $data['careers_enabled'],
             'careers_description' => $data['careers_description'],
             'careers_logo_path' => $data['careers_logo_path'],
+            'manual_review_minutes_per_application' => $data['manual_review_minutes_per_application'] === null
+                || $data['manual_review_minutes_per_application'] === ''
+                    ? null
+                    : (int) $data['manual_review_minutes_per_application'],
         ])->save();
 
         if (is_string($previousLogoPath) && $previousLogoPath !== '' && $previousLogoPath !== $company->careers_logo_path) {

@@ -43,7 +43,7 @@ preparation context.
 ## Business rules
 
 This feature is governed by
-`.ai/skills/recruitment-workflow/SKILL.md`.
+`.claude/skills/recruitment-workflow/SKILL.md`.
 
 - Scheduling is a human action on an active application.
 - Terminal applications cannot schedule a new interview until a human reopens the

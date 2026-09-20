@@ -30,8 +30,9 @@ use Illuminate\Support\Facades\DB;
  * @property bool $careers_enabled
  * @property string|null $careers_description
  * @property string|null $careers_logo_path
+ * @property int|null $manual_review_minutes_per_application
  */
-#[Fillable(['name', 'slug', 'plan_id', 'careers_enabled', 'careers_description', 'careers_logo_path'])]
+#[Fillable(['name', 'slug', 'plan_id', 'careers_enabled', 'careers_description', 'careers_logo_path', 'manual_review_minutes_per_application'])]
 class Company extends Model
 {
     protected $attributes = [
@@ -44,6 +45,7 @@ class Company extends Model
         return [
             'candidate_pool_revision' => 'integer',
             'careers_enabled' => 'boolean',
+            'manual_review_minutes_per_application' => 'integer',
         ];
     }
 

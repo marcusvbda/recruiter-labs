@@ -22,6 +22,9 @@ return [
         'recent_heading' => 'Concluído recentemente',
         'empty' => 'Nada em execução. Tudo o que a IA podia fazer está em dia.',
         'recent_empty' => 'Nenhum trabalho da IA foi concluído ainda.',
+        'allowance' => 'Cota de IA: :used de :limit usados neste mês, :remaining restantes.',
+        'allowance_unlimited' => 'Cota de IA: ilimitada neste plano.',
+        'allowance_details' => 'Detalhes',
     ],
 
     'role' => [

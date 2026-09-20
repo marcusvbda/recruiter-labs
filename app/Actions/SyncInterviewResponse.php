@@ -14,6 +14,7 @@ use App\Models\Company;
 use App\Models\Interview;
 use App\Models\User;
 use App\Services\GoogleCalendarInterviewEventClient;
+use App\Services\RecruiterNotifier;
 use App\Services\RecruitmentEmailDispatcher;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\Cache\LockTimeoutException;
@@ -164,6 +165,15 @@ class SyncInterviewResponse
             }
 
             $lockedInterview->forceFill($attributes)->save();
+
+            // Only the moment the candidate's answer becomes "declined" is
+            // news; every later sync repeats the same answer and stays quiet.
+            if ($lockedInterview->rsvp_status === InterviewRsvpStatus::Declined
+                && $lockedInterview->wasChanged('rsvp_status')) {
+                DB::afterCommit(function () use ($lockedInterview): void {
+                    app(RecruiterNotifier::class)->interviewDeclined($lockedInterview);
+                });
+            }
 
             return $lockedInterview;
         });

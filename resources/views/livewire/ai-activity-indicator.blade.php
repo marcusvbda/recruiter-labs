@@ -46,6 +46,37 @@
         @endphp
 
         <div class="flex flex-col gap-6">
+            {{-- Capacity first: it decides whether anything below can keep
+                 running. Critical and exhausted stay an operational warning. --}}
+            <div @class([
+                'flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm',
+                'bg-gray-50 text-gray-600 dark:bg-white/5 dark:text-gray-300' => !in_array(
+                    $allowance->warningState->value,
+                    ['critical', 'reached'],
+                    true),
+                'bg-danger-50 text-danger-700 dark:bg-danger-400/10 dark:text-danger-400' => in_array(
+                    $allowance->warningState->value,
+                    ['critical', 'reached'],
+                    true),
+            ])>
+                <span>
+                    @if ($allowance->isUnlimited)
+                        {{ __('ai_activity.panel.allowance_unlimited') }}
+                    @else
+                        {{ __('ai_activity.panel.allowance', [
+                            'used' => $allowance->used,
+                            'limit' => $allowance->limitValue,
+                            'remaining' => $allowance->remaining,
+                        ]) }}
+                    @endif
+                </span>
+
+                <a href="{{ $aiSettingsUrl }}" wire:navigate
+                    class="shrink-0 text-xs font-medium underline underline-offset-2">
+                    {{ __('ai_activity.panel.allowance_details') }}
+                </a>
+            </div>
+
             @if ($activity['working'] === [] && $activity['waiting'] === [] && $activity['blocked'] === [])
                 <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('ai_activity.panel.empty') }}</p>
             @endif

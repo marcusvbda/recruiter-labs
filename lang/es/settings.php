@@ -17,6 +17,13 @@ return [
         'subtitle' => 'Datos de la empresa y los flujos de contratación que reutilizan las vacantes.',
         'identity_heading' => 'Empresa',
         'identity_description' => 'El nombre y la URL de este espacio de trabajo.',
+        'productivity' => [
+            'heading' => 'Referencia de tiempo de revisión',
+            'description' => 'Opcional. Se usa solo para estimar en el Resumen el tiempo de revisión que ahorró RecruiterLabs AI.',
+            'manual_review_minutes_label' => 'Tiempo de revisión manual por candidatura',
+            'manual_review_minutes_helper' => 'Aproximadamente cuánto tardaba un reclutador en revisar una candidatura a mano. Déjalo vacío y el Resumen muestra solo los números medidos, sin estimación de tiempo.',
+            'minutes_suffix' => 'minutos',
+        ],
         'careers' => [
             'heading' => 'Página de carreras',
             'description' => 'Publica una página personalizada de la empresa para los puestos que aceptan postulaciones.',

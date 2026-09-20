@@ -49,8 +49,8 @@ The queue may include signals for:
 - job ending without finalists;
 - hiring target reached;
 - hiring target nearly reached.
-- criteria prepared and awaiting human review;
-- failed criteria preparation;
+- failed criteria preparation (routine successful preparation is not a human
+  gate: prepared criteria become current automatically, so it raises no item);
 - internal sourcing ready or ready to refresh;
 - sourcing blocked or failed; and
 - aggregated sourcing results awaiting human review.
@@ -58,7 +58,7 @@ The queue may include signals for:
 ## Business rules
 
 This feature is governed by
-`.ai/skills/recruitment-workflow/SKILL.md`.
+`.claude/skills/recruitment-workflow/SKILL.md`.
 
 - Attention is derived from persisted recruitment state. It is not a separate
   user-created task entity.
@@ -82,8 +82,9 @@ This feature is governed by
 - Criteria and internal-sourcing human gates may apply to unpublished jobs:
   internal sourcing does not depend on public intake. Legacy operational job
   signals remain limited to active hiring processes.
-- Criteria awaiting human confirmation suppresses a sourcing refresh signal;
-  an in-progress, failed, or quota-blocked sourcing search suppresses a
+- A job whose criteria are not current (preparation failed, is blocked by AI
+  allowance, or lacks context) suppresses a sourcing refresh signal, because
+  that recovery is the more specific human gate; an in-progress, failed, or quota-blocked sourcing search suppresses a
   competing start/refresh signal.
 - Sourcing-ready actions explicitly authorize the existing sourcing operation
   after the server rechecks tenant ownership, permission, current criteria,

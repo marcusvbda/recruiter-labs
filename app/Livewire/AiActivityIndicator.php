@@ -2,8 +2,11 @@
 
 namespace App\Livewire;
 
+use App\Enums\Limit;
+use App\Filament\Clusters\Settings\Pages\AiSettings;
 use App\Models\Company;
 use App\Services\AiActivityService;
+use App\Services\CompanyUsageService;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 
@@ -37,6 +40,11 @@ class AiActivityIndicator extends Component
             'activity' => app(AiActivityService::class)->for($this->company)->toArray(),
             'channel' => AiActivityService::ChannelPrefix.$this->company->slug,
             'event' => AiActivityService::Event,
+            // Whether automatic work can continue is part of "what is the AI
+            // doing?", so the panel answers it here. Provider, model and token
+            // accounting stays in AI Settings, one link away.
+            'allowance' => app(CompanyUsageService::class)->usageFor($this->company, Limit::AiAnalyses),
+            'aiSettingsUrl' => AiSettings::getUrl(tenant: $this->company),
         ]);
     }
 }

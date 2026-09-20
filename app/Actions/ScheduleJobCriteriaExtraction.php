@@ -6,6 +6,7 @@ use App\Enums\AiExecutionOrigin;
 use App\Enums\JobCriteriaProcessingStatus;
 use App\Jobs\AnalyzeJobCriteria;
 use App\Models\Job;
+use App\Services\AiActivityService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -27,6 +28,8 @@ class ScheduleJobCriteriaExtraction
 
             return $lockedJob->criteria_generation;
         });
+
+        $this->broadcastActivity($job);
 
         $this->dispatch($job, $userId, $generation, $origin, $trigger);
     }
@@ -65,9 +68,23 @@ class ScheduleJobCriteriaExtraction
             return false;
         }
 
+        $this->broadcastActivity($job);
+
         $this->dispatch($job, null, $generation, AiExecutionOrigin::Automatic, $trigger);
 
         return true;
+    }
+
+    /**
+     * Queued criteria work must be as visible as running criteria work. The
+     * transitions above use `saveQuietly()`, which bypasses the model events
+     * that would otherwise broadcast, so the AI Activity channel is notified
+     * explicitly — after the surrounding transaction commits, so the indicator
+     * never reads a status a rollback would undo.
+     */
+    private function broadcastActivity(Job $job): void
+    {
+        DB::afterCommit(fn () => AiActivityService::broadcastForJob($job->getKey()));
     }
 
     private function hasSubstantiveRoleDescription(Job $job): bool

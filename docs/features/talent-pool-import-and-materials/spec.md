@@ -56,9 +56,9 @@ already implemented. It defines observable behaviour and acceptance criteria.
 
 The document contract is defined in
 [Feature documentation](../README.md). Project-wide rules remain in
-[AGENTS.md](../../../AGENTS.md). The relevant product invariants remain in
-[Recruitment workflow](../../../.ai/skills/recruitment-workflow/SKILL.md) and
-[Evaluation integrity](../../../.ai/skills/evaluation-integrity/SKILL.md).
+[CLAUDE.md](../../../CLAUDE.md). The relevant product invariants remain in
+[Recruitment workflow](../../../.claude/skills/recruitment-workflow/SKILL.md) and
+[Evaluation integrity](../../../.claude/skills/evaluation-integrity/SKILL.md).
 
 The existing feature contracts that matter are:
 
@@ -1041,7 +1041,7 @@ Templates and reports must round-trip Unicode names without corrupting accents.
 Each criterion describes observable behaviour. Verification should cover the
 relevant normal, direct-request, concurrent, and failure paths rather than only
 the appearance of a UI control. Project testing and execution rules remain in
-AGENTS.md and the existing execution workflow.
+CLAUDE.md and the existing execution workflow.
 
 ### Entry, authorization, and scope
 

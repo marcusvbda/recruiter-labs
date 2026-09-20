@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Company;
+use App\Models\EmailTemplate;
 use App\Models\Pipeline;
 use Illuminate\Database\Seeder;
 
@@ -127,11 +128,35 @@ class PipelineSeeder extends Seeder
                         'is_terminal' => $status['is_terminal'] ?? false,
                         'attention_after_days' => $status['attention_after_days'] ?? null,
                         'sends_email' => $status['sends_email'],
-                        'email_subject' => $status['email_subject'] ?? null,
-                        'email_body' => $status['email_body'] ?? null,
+                        'email_template_id' => $this->templateId($company, $status),
                     ],
                 );
             }
         }
+    }
+
+    /**
+     * The stage's message is a workspace-level reusable template, so the demo
+     * content is seeded there and the stage only points at it.
+     *
+     * @param  array<string, mixed>  $status
+     */
+    private function templateId(Company $company, array $status): ?int
+    {
+        if (($status['sends_email'] ?? false) !== true || ! isset($status['email_subject'], $status['email_body'])) {
+            return null;
+        }
+
+        return (int) EmailTemplate::query()->updateOrCreate(
+            [
+                'company_id' => $company->getKey(),
+                'name' => $status['name'].' stage email',
+            ],
+            [
+                'subject' => $status['email_subject'],
+                'body' => $status['email_body'],
+                'is_available' => true,
+            ],
+        )->getKey();
     }
 }

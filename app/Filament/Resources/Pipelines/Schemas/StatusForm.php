@@ -2,15 +2,21 @@
 
 namespace App\Filament\Resources\Pipelines\Schemas;
 
+use App\Filament\Resources\EmailTemplates\EmailTemplateResource;
+use App\Models\Company;
+use App\Models\EmailTemplate;
 use App\Services\EmailTemplateRenderer;
+use Filament\Actions\Action;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\ColorPicker;
-use Filament\Forms\Components\RichEditor;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
 
 class StatusForm
 {
@@ -69,17 +75,24 @@ class StatusForm
                             ->helperText(__('statuses.fields.sends_email_helper'))
                             ->inline(false)
                             ->live(),
-                        TextInput::make('email_subject')
-                            ->label(__('statuses.fields.email_subject'))
-                            ->placeholder(__('statuses.fields.email_subject_placeholder'))
-                            ->maxLength(255)
-                            ->required(fn (Get $get): bool => (bool) $get('sends_email'))
-                            ->visible(fn (Get $get): bool => (bool) $get('sends_email')),
-                        RichEditor::make('email_body')
-                            ->label(__('statuses.fields.email_body'))
-                            ->helperText(__('statuses.fields.email_body_helper'))
-                            ->fileAttachments(false)
-                            ->toolbarButtons(['bold', 'italic', 'link', 'bulletList', 'orderedList', 'undo', 'redo'])
+                        // One reusable template, not a second copy of the content:
+                        // the message itself is written and maintained in
+                        // Settings → Email templates.
+                        Select::make('email_template_id')
+                            ->label(__('statuses.fields.email_template'))
+                            ->helperText(__('statuses.fields.email_template_helper'))
+                            ->hintIcon(Heroicon::OutlinedEnvelope)
+                            ->hint(__('statuses.fields.email_template_hint'))
+                            ->hintAction(
+                                Action::make('manageEmailTemplates')
+                                    ->label(__('statuses.actions.manage_email_templates'))
+                                    ->icon(Heroicon::OutlinedArrowTopRightOnSquare)
+                                    ->url(fn (): ?string => self::emailTemplatesUrl(), shouldOpenInNewTab: true)
+                                    ->visible(fn (): bool => self::emailTemplatesUrl() !== null),
+                            )
+                            ->options(self::templateOptions(...))
+                            ->searchable()
+                            ->native(false)
                             ->required(fn (Get $get): bool => (bool) $get('sends_email'))
                             ->visible(fn (Get $get): bool => (bool) $get('sends_email')),
                         View::make('filament.resources.pipelines.components.template-variables')
@@ -87,5 +100,48 @@ class StatusForm
                             ->visible(fn (Get $get): bool => (bool) $get('sends_email')),
                     ]),
             ]);
+    }
+
+    /**
+     * The templates this workspace may attach to a stage. Scoped to the current
+     * tenant explicitly — nothing scopes EmailTemplate globally — and limited to
+     * available ones, except for a template already attached here: a retired
+     * template must stay visible (and labelled) rather than silently vanish from
+     * a stage that is still configured to send it.
+     *
+     * @return array<int, string>
+     */
+    private static function templateOptions(Get $get): array
+    {
+        $company = Filament::getTenant();
+
+        if (! $company instanceof Company) {
+            return [];
+        }
+
+        $selected = $get('email_template_id');
+
+        return EmailTemplate::query()
+            ->whereBelongsTo($company)
+            ->where(fn ($query) => $query
+                ->where('is_available', true)
+                ->when($selected !== null, fn ($available) => $available->orWhere('id', $selected)))
+            ->orderBy('name')
+            ->get()
+            ->mapWithKeys(fn (EmailTemplate $template): array => [
+                (int) $template->getKey() => $template->is_available
+                    ? $template->name
+                    : $template->name.' — '.__('statuses.fields.email_template_retired'),
+            ])
+            ->all();
+    }
+
+    private static function emailTemplatesUrl(): ?string
+    {
+        $company = Filament::getTenant();
+
+        return $company instanceof Company
+            ? EmailTemplateResource::getUrl('index', tenant: $company)
+            : null;
     }
 }

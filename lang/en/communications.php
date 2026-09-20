@@ -2,12 +2,8 @@
 
 return [
     'actions' => [
-        'contact_candidate' => 'Contact candidate',
-        'prepare_outreach' => 'Prepare outreach',
-        'prepare_follow_up' => 'Prepare follow-up',
-        'prepare_with_ai' => 'Prepare with AI',
+        'send_message' => 'Send message',
         'send' => 'Send',
-        'save_draft' => 'Save draft',
         'discard_draft' => 'Discard draft',
         'do_not_contact' => 'Do not contact',
         'allow_contact' => 'Allow contact',
@@ -19,12 +15,19 @@ return [
         'sender' => 'From',
         'subject' => 'Subject',
         'body' => 'Message',
-        'language' => 'Draft language',
+        'template' => 'Email template',
+        'job_context' => 'Job',
     ],
     'composer' => [
-        'heading' => 'Contact :candidate',
+        'heading' => 'Send a message to :candidate',
+        'description' => 'Optionally start from a template, edit the message, then send it.',
         'job_context' => 'This message is about :job.',
-        'provider_unavailable' => 'Sending is unavailable until a workspace sending identity is available. You can still review and edit this draft.',
+        'job_helper' => 'Only needed when the message refers to a specific hiring process.',
+        'no_job_context' => 'No specific job',
+        'no_template' => 'Start from a blank message',
+        'template_helper' => 'Choosing a template fills the subject and message below. You can edit them freely before sending.',
+        'unresolved_context' => 'This message still needs context that is not available yet: :variables. Select the missing context or remove it from the text before sending.',
+        'provider_unavailable' => 'Sending is unavailable until a workspace sending identity is available. You can still review and edit this message.',
         'sender_unavailable' => 'Sending identity unavailable',
     ],
     'history' => [
@@ -54,9 +57,9 @@ return [
         'ambiguous' => 'Delivery needs review',
     ],
     'dnc' => [
-        'block_description' => 'New discretionary outreach and AI drafting will be blocked. Existing communication stays visible.',
+        'block_description' => 'New discretionary outreach will be blocked. Existing communication stays visible.',
         'allow_description' => 'This candidate can receive discretionary outreach again.',
-        'active_description' => 'This candidate is marked do not contact. Existing communication remains visible, but new discretionary outreach and AI drafting are unavailable.',
+        'active_description' => 'This candidate is marked do not contact. Existing communication remains visible, but new discretionary outreach is unavailable.',
     ],
     'recipient' => [
         'invalid_email' => 'This candidate does not have a valid email address. Sending is unavailable until their contact details are corrected.',
@@ -65,9 +68,7 @@ return [
         'invalid_email' => 'This candidate does not have a valid email address.',
         'do_not_contact' => 'This candidate is marked do not contact.',
         'provider_unavailable' => 'This workspace does not have a usable default email provider.',
-        'ai_unavailable' => 'AI drafting is not available for this workspace. You can continue with a manual message.',
-        'ai_allowance_reached' => 'The workspace AI allowance has been reached. You can continue with a manual message.',
-        'follow_up_requires_history' => 'Prepare a follow-up after at least one authorized outbound message exists in this communication.',
+        'unresolved_context' => 'This message still depends on context that is not available: :variables.',
         'already_authorized' => 'This message has already been authorized and cannot be changed.',
         'draft_cannot_be_edited' => 'Only an unauthorised draft can be edited.',
         'unavailable' => 'This communication is no longer available. Refresh the page and try again.',
@@ -75,8 +76,6 @@ return [
     ],
     'notifications' => [
         'send_requested' => 'Email send requested.',
-        'draft_prepared' => 'AI draft prepared. Review and send it explicitly when ready.',
-        'draft_saved' => 'Draft saved.',
         'draft_discarded' => 'Draft discarded.',
         'do_not_contact_set' => 'Candidate marked do not contact.',
         'contact_allowed' => 'Candidate can be contacted again.',

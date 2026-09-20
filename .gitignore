@@ -38,4 +38,4 @@ docs/*
 !docs/features/
 
 # Local AI execution state (never versioned)
-/.ai/state/
+/.claude/state/

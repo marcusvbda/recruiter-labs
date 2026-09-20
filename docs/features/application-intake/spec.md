@@ -41,8 +41,8 @@ human-confirmed criteria; otherwise the application waits for that confirmation.
 ## Business rules
 
 The recruitment workflow rules in
-`.ai/skills/recruitment-workflow/SKILL.md` and evaluation rules in
-`.ai/skills/evaluation-integrity/SKILL.md` apply after intake.
+`.claude/skills/recruitment-workflow/SKILL.md` and evaluation rules in
+`.claude/skills/evaluation-integrity/SKILL.md` apply after intake.
 
 - A job can receive a public application only while it is published, not paused,
   and inside its configured application window.

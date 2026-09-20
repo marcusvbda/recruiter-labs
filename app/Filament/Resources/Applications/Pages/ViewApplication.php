@@ -12,6 +12,7 @@ use App\Enums\InterviewStatus;
 use App\Enums\PhoneCountry;
 use App\Enums\SocialNetwork;
 use App\Filament\Clusters\Settings\Pages\AiSettings;
+use App\Filament\Concerns\ComposesCandidateMessages;
 use App\Filament\Resources\Applications\ApplicationResource;
 use App\Filament\Resources\Applications\Pages\Concerns\ManagesApplicationInterviews;
 use App\Filament\Resources\Applications\Pages\Concerns\ManagesInterviewFeedback;
@@ -27,8 +28,11 @@ use App\Models\ApplicationUtmParameter;
 use App\Models\Candidate;
 use App\Models\CandidateCommunicationMessage;
 use App\Models\CandidateCommunicationThread;
+use App\Models\Company;
 use App\Models\Interview;
+use App\Models\Job;
 use App\Models\Status;
+use App\Models\User;
 use BackedEnum;
 use Closure;
 use Filament\Actions\Action;
@@ -55,6 +59,7 @@ use LogicException;
 
 class ViewApplication extends ViewRecord
 {
+    use ComposesCandidateMessages;
     use ManagesApplicationInterviews;
     use ManagesInterviewFeedback;
     use PresentsInterviewEvidence;
@@ -158,6 +163,11 @@ class ViewApplication extends ViewRecord
                 $secondary[] = $this->reprocessApplicationAnalysisAction($application);
             }
         }
+
+        // Messaging this candidate is a normal recruiter action, not a
+        // decision step: it stays secondary, and the composer already knows
+        // this Application's candidate and Job.
+        $secondary[] = $this->sendMessageAction()->color('gray');
 
         // A deliberate fast path (AC33): the same stage-move action, continuing
         // straight to the next Application in the recruiter's review context
@@ -564,6 +574,48 @@ class ViewApplication extends ViewRecord
         ]);
     }
 
+    protected function messageCandidate(): Candidate
+    {
+        return $this->getApplication()->candidate;
+    }
+
+    protected function messageCompany(): Company
+    {
+        $company = $this->getApplication()->company;
+
+        abort_unless($company instanceof Company, 404);
+
+        return $company;
+    }
+
+    protected function messageActor(): User
+    {
+        $user = Filament::auth()->user();
+
+        abort_unless($user instanceof User, 403);
+
+        return $user;
+    }
+
+    /**
+     * This Application's Job, and only this one: a message started here belongs
+     * to this hiring process and never attaches itself to another.
+     */
+    protected function messageFixedJob(): ?Job
+    {
+        return $this->getApplication()->job;
+    }
+
+    protected function afterCandidateMessageSent(): void
+    {
+        $this->record = ApplicationResource::getEloquentQuery()
+            ->findOrFail($this->getApplication()->getKey());
+
+        // The content schema is cached per request before the action runs, so
+        // the communication block would otherwise keep rendering stale history.
+        $this->cacheSchema('content', null);
+    }
+
     /** @return array<string, mixed> */
     private function communicationsData(Application $application): array
     {
@@ -698,7 +750,6 @@ class ViewApplication extends ViewRecord
         return match ($key) {
             'review_candidate' => [
                 $this->moveStatusAction($application, 'nextActionMoveStatus')->color('primary'),
-                $this->openTabAction('nextActionOpenReview', 'review', Heroicon::OutlinedClipboardDocumentCheck),
                 $this->scheduleInterviewAction($application, 'nextActionScheduleInterview')->color('gray'),
             ],
             // The Interview Brief itself lives exclusively on Interviews
@@ -724,11 +775,10 @@ class ViewApplication extends ViewRecord
                     ->icon(Heroicon::OutlinedBolt)
                     ->color('primary')
                     ->url(AiSettings::getUrl(tenant: $application->company)),
-                $this->openTabAction('nextActionOpenReview', 'review', Heroicon::OutlinedClipboardDocumentCheck),
             ],
-            'await_evaluation' => [
-                $this->openTabAction('nextActionOpenReview', 'review', Heroicon::OutlinedClipboardDocumentCheck),
-            ],
+            // This card already lives on the Review tab, so a "Review" link
+            // would only reload the page the recruiter is looking at.
+            'await_evaluation' => [],
             // The job has no criteria governing it yet, which only happens when
             // preparing them has not run or could not finish. The criteria tab
             // is where it is started again or recovered.

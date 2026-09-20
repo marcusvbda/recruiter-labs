@@ -18,11 +18,6 @@ return [
                 'hint' => 'Una vacante le indica a RecruiterLabs qué estás buscando, para que pueda empezar a comparar candidatos con ella.',
                 'action' => 'Crear vacante',
             ],
-            'confirm_hiring_criteria' => [
-                'title' => 'Confirma los criterios de contratación',
-                'hint' => 'Con los criterios confirmados, RecruiterLabs evalúa a cada candidato de forma consistente con lo que realmente buscas.',
-                'action' => 'Confirmar criterios',
-            ],
             'add_first_application' => [
                 'title' => 'Añade tu primera candidatura',
                 'hint' => 'RecruiterLabs necesita una candidatura real antes de poder mostrarte cómo es una evaluación.',

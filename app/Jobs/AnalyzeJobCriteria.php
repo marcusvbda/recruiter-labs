@@ -10,14 +10,17 @@ use App\Enums\JobCriteriaProcessingStatus;
 use App\Enums\Limit;
 use App\Models\AiAgentResponseCache;
 use App\Models\AiUsageRecord;
+use App\Models\Company;
 use App\Models\Job;
 use App\Services\AiActivityService;
 use App\Services\AiCredentialsResolver;
 use App\Services\AiUsageTracker;
 use App\Services\LimitManager;
+use App\Services\RecruiterNotifier;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Laravel\Ai\Responses\StructuredAgentResponse;
 use Throwable;
@@ -199,22 +202,56 @@ class AnalyzeJobCriteria implements ShouldBeUnique, ShouldQueue
      */
     private function markCurrentGenerationAsFailed(): void
     {
-        Job::query()
+        $updated = Job::query()
             ->whereKey($this->jobId)
             ->where('criteria_generation', $this->generation)
+            ->where('criteria_processing_status', '!=', JobCriteriaProcessingStatus::Failed)
             ->update(['criteria_processing_status' => JobCriteriaProcessingStatus::Failed]);
 
         AiActivityService::broadcastForJob($this->jobId);
+
+        // Criteria that cannot be prepared stop every evaluation for this job,
+        // so this is one of the few AI failures worth interrupting for. The
+        // status guard above keeps it to one notification per failed
+        // generation, however many times this run is told it failed.
+        if ($updated > 0) {
+            $this->announce(fn (Job $job, RecruiterNotifier $notifier) => $notifier->criteriaPreparationFailed($job));
+        }
     }
 
     private function markCurrentGenerationAsPendingQuota(): void
     {
-        Job::query()
+        $updated = Job::query()
             ->whereKey($this->jobId)
             ->where('criteria_generation', $this->generation)
+            ->where('criteria_processing_status', '!=', JobCriteriaProcessingStatus::PendingQuota)
             ->update(['criteria_processing_status' => JobCriteriaProcessingStatus::PendingQuota]);
 
         AiActivityService::broadcastForJob($this->jobId);
+
+        if ($updated > 0) {
+            $this->announce(function (Job $job, RecruiterNotifier $notifier): void {
+                if ($job->company instanceof Company) {
+                    $notifier->aiAllowanceBlocked($job->company);
+                }
+            });
+        }
+    }
+
+    /**
+     * @param  callable(Job, RecruiterNotifier): void  $announcement
+     */
+    private function announce(callable $announcement): void
+    {
+        $job = Job::query()->with('company')->find($this->jobId);
+
+        if (! $job instanceof Job) {
+            return;
+        }
+
+        DB::afterCommit(function () use ($job, $announcement): void {
+            $announcement($job, app(RecruiterNotifier::class));
+        });
     }
 
     private function elapsedMilliseconds(int $startedAt): int

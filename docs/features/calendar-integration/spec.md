@@ -38,7 +38,7 @@ it, the product can surface that as recruitment attention.
 ## Business rules
 
 The recruitment workflow rules in
-`.ai/skills/recruitment-workflow/SKILL.md` apply to calendar-backed recruitment
+`.claude/skills/recruitment-workflow/SKILL.md` apply to calendar-backed recruitment
 actions.
 
 - Calendar authorization is scoped to both a user and a company workspace.

@@ -29,11 +29,15 @@ candidate movement and hiring decisions human-controlled.
 
 Opening a job presents a persistent summary of the hiring process and tabs for:
 
-- **Overview** — distribution of applications across the job workflow and core
-  job/process context;
 - **Pipeline** — the operational Kanban where recruiters review and move
-  applications;
+  applications; it is where every job opens, and a job with no applications shows
+  a useful empty state whose next action is adding a candidate;
+- **Sourcing** — optional, explicitly started talent-pool sourcing for the job;
 - **Analytics** — lightweight traffic/acquisition context for the job.
+
+There is no permanent Overview tab: the Pipeline already shows the distribution
+of applications, so a separate Overview visualization would only duplicate it.
+The summary shows no internal technical identifiers (such as the job's raw UUID).
 
 The persistent workspace summary includes:
 
@@ -54,7 +58,7 @@ From the workspace, recruiters can also:
 ## Business rules
 
 This feature is governed by
-`.ai/skills/recruitment-workflow/SKILL.md`.
+`.claude/skills/recruitment-workflow/SKILL.md`.
 
 - The job workspace is the primary operating surface for one hiring process; it
   should not duplicate the global overview as a second card dashboard.
@@ -86,10 +90,12 @@ This feature is governed by
 1. A recruiter opens a job from the global recruiting overview or jobs list.
 2. The workspace summary immediately shows job state, hiring progress, and
    current job-specific attention.
-3. The recruiter uses **Overview** to understand stage distribution and process
-   context.
-4. The recruiter uses **Pipeline** for day-to-day candidate work, opening
-   applications and explicitly moving candidates when appropriate.
+3. The workspace opens on **Pipeline**, which shows stage distribution and is
+   used for day-to-day candidate work: opening applications (with previous/next
+   review that keeps the originating stage), and explicitly moving candidates
+   when appropriate.
+4. The recruiter may use **Sourcing** when they want to look for additional
+   candidates in the talent pool.
 5. The recruiter uses **Analytics** to understand job traffic and acquisition
    context such as campaign/UTM performance.
 6. The recruiter may edit publication/configuration, open the public page, or add
@@ -101,7 +107,8 @@ This feature is governed by
 ## Acceptance criteria
 
 - **AC01** — A job has one primary workspace that exposes summary context plus
-  Overview, Pipeline, and Analytics sections.
+  Pipeline, Sourcing, and Analytics sections, with no permanent Overview tab; a
+  job without applications opens on a useful Pipeline empty state.
 - **AC02** — The persistent job summary distinguishes metrics from actionable
   attention.
 - **AC03** — The summary exposes application, interviewing, finalist, and hired

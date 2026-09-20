@@ -56,6 +56,13 @@ class AiActivityService
     /** How many recently completed items the panel keeps, per workspace. */
     public const RecentLimit = 15;
 
+    /**
+     * "Recent" has to mean recent: work finished more than a week ago is
+     * workspace history, reachable from the records themselves, and keeping it
+     * in this panel would make an idle workspace look busy forever.
+     */
+    private const RecentWindowDays = 7;
+
     /** How many individual (non-aggregated) lines a section may show. */
     private const MaxItemsPerSection = 12;
 
@@ -328,32 +335,43 @@ class AiActivityService
         /** @var list<AiActivityItem> $items */
         $items = [];
 
+        $since = $this->recentSince();
+
         $evaluated = Application::query()
             ->withoutGlobalScopes()
             ->where('company_id', $company->getKey())
             ->where('analysis_status', ApplicationAnalysisStatus::Completed)
             ->whereNotNull('analyzed_at')
+            ->where('analyzed_at', '>=', $since)
             ->with(['job', 'candidate'])
             ->orderByDesc('analyzed_at')
             ->limit(self::RecentLimit)
             ->get();
 
-        foreach ($evaluated->groupBy('job_id') as $group) {
+        // The list above is deliberately bounded, so counting its rows would
+        // understate a job that had fifty candidates evaluated. The number the
+        // recruiter reads is a real count over the same window, taken with one
+        // grouped COUNT instead of loading those rows.
+        $evaluatedPerJob = $this->evaluatedCountsPerJob($company, $since, $evaluated->pluck('job_id')->all());
+
+        foreach ($evaluated->groupBy('job_id') as $jobId => $group) {
             $job = $group->first()?->job;
 
             if ($job === null) {
                 continue;
             }
 
-            if ($group->count() > self::AggregationThreshold) {
+            $evaluatedCount = $evaluatedPerJob[(int) $jobId] ?? $group->count();
+
+            if ($evaluatedCount > self::AggregationThreshold) {
                 $items[] = new AiActivityItem(
                     role: (string) __('ai_activity.role.candidate_reviewer'),
-                    description: (string) trans_choice('ai_activity.done.evaluated_many', $group->count(), [
-                        'count' => $group->count(),
+                    description: (string) trans_choice('ai_activity.done.evaluated_many', $evaluatedCount, [
+                        'count' => $evaluatedCount,
                         'job' => $job->name,
                     ]),
                     url: $this->jobUrl($job),
-                    count: $group->count(),
+                    count: $evaluatedCount,
                     occurredAt: $group->max('analyzed_at'),
                 );
 
@@ -377,6 +395,7 @@ class AiActivityService
             ->where('company_id', $company->getKey())
             ->where('criteria_processing_status', JobCriteriaProcessingStatus::Completed)
             ->whereNotNull('criteria_confirmed_at')
+            ->where('criteria_confirmed_at', '>=', $since)
             ->orderByDesc('criteria_confirmed_at')
             ->limit(self::RecentLimit)
             ->get();
@@ -394,6 +413,7 @@ class AiActivityService
             ->where('company_id', $company->getKey())
             ->where('status', SourcingSearchStatus::Completed)
             ->whereNotNull('completed_at')
+            ->where('completed_at', '>=', $since)
             ->with('job')
             ->orderByDesc('completed_at')
             ->limit(self::RecentLimit)
@@ -407,6 +427,7 @@ class AiActivityService
             ->where('company_id', $company->getKey())
             ->whereIn('status', [CandidateImportStatus::Completed, CandidateImportStatus::CompletedWithIssues])
             ->whereNotNull('completed_at')
+            ->where('completed_at', '>=', $since)
             ->orderByDesc('completed_at')
             ->limit(self::RecentLimit)
             ->get();
@@ -544,5 +565,42 @@ class AiActivityService
     private function blockedSince(): CarbonImmutable
     {
         return CarbonImmutable::now()->subDays(self::BlockedWindowDays);
+    }
+
+    private function recentSince(): CarbonImmutable
+    {
+        return CarbonImmutable::now()->subDays(self::RecentWindowDays);
+    }
+
+    /**
+     * How many candidates were really evaluated per job inside the recency
+     * window, for the jobs that show up in the bounded recent list.
+     *
+     * @param  array<array-key, mixed>  $jobIds
+     * @return array<int, int>
+     */
+    private function evaluatedCountsPerJob(Company $company, CarbonImmutable $since, array $jobIds): array
+    {
+        $jobIds = array_values(array_unique(array_map('intval', array_filter($jobIds, fn ($id): bool => $id !== null))));
+
+        if ($jobIds === []) {
+            return [];
+        }
+
+        /** @var array<int, int> $counts */
+        $counts = Application::query()
+            ->withoutGlobalScopes()
+            ->where('company_id', $company->getKey())
+            ->where('analysis_status', ApplicationAnalysisStatus::Completed)
+            ->whereNotNull('analyzed_at')
+            ->where('analyzed_at', '>=', $since)
+            ->whereIn('job_id', $jobIds)
+            ->groupBy('job_id')
+            ->selectRaw('job_id, count(*) as evaluated_count')
+            ->pluck('evaluated_count', 'job_id')
+            ->map(fn ($count): int => (int) $count)
+            ->all();
+
+        return $counts;
     }
 }

@@ -2,18 +2,13 @@
 
 namespace App\Filament\Resources\Candidates\Pages;
 
-use App\Actions\GenerateCandidateCommunicationDraft;
 use App\Actions\SetCandidateDoNotContact;
-use App\Enums\ApplicationLocale;
-use App\Enums\CandidateCommunicationDraftPurpose;
 use App\Enums\CandidateCommunicationMessageKind;
-use App\Enums\CandidateCommunicationMessageStatus;
 use App\Enums\CandidateMaterialPreparationStatus;
 use App\Enums\InterviewStatus;
 use App\Enums\PhoneCountry;
 use App\Enums\SocialNetwork;
-use App\Exceptions\CandidateCommunicationException;
-use App\Filament\Clusters\Settings\Pages\EmailProviderSettings;
+use App\Filament\Concerns\ComposesCandidateMessages;
 use App\Filament\Resources\Applications\ApplicationResource;
 use App\Filament\Resources\Candidates\CandidateResource;
 use App\Filament\Resources\Jobs\JobResource;
@@ -26,7 +21,6 @@ use App\Models\Company;
 use App\Models\Interview;
 use App\Models\Job;
 use App\Models\User;
-use App\Services\CandidateCommunicationService;
 use App\Services\CandidateMaterialLifecycle;
 use App\Services\CandidateMaterialPreparation;
 use App\Services\CandidateMaterialStorage;
@@ -37,15 +31,11 @@ use Filament\Facades\Filament;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\Hidden;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
-use Filament\Support\Exceptions\Halt;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Http\UploadedFile;
@@ -61,6 +51,8 @@ use LogicException;
  */
 class ViewCandidate extends ViewRecord
 {
+    use ComposesCandidateMessages;
+
     protected static string $resource = CandidateResource::class;
 
     public ?int $communicationJobId = null;
@@ -82,17 +74,10 @@ class ViewCandidate extends ViewRecord
     protected function getHeaderActions(): array
     {
         $groupedActions = [];
-        $actions = [];
 
-        if ($this->communicationJob() instanceof Job) {
-            $actions[] = $this->composeCommunicationAction();
-
-            $groupedActions[] = $this->prepareCommunicationDraftAction();
-
-            if ($this->hasEligibleFollowUpContext()) {
-                $groupedActions[] = $this->prepareCommunicationDraftAction(CandidateCommunicationDraftPurpose::FollowUp);
-            }
-        }
+        // Messaging a person is a single entry point on this page, with or
+        // without a Job in play: no purpose to choose, no AI step to run.
+        $actions = [$this->sendMessageAction()];
 
         $groupedActions[] = $this->doNotContactAction();
         $groupedActions[] = $this->addCvAction();
@@ -135,233 +120,51 @@ class ViewCandidate extends ViewRecord
             });
     }
 
-    private function composeCommunicationAction(): Action
+    protected function messageCandidate(): Candidate
     {
-        return Action::make('composeCommunication')
-            ->label(__('communications.actions.contact_candidate'))
-            ->icon(Heroicon::OutlinedEnvelope)
-            ->modalHeading(fn (): string => __('communications.composer.heading', ['candidate' => $this->getCandidate()->name]))
-            ->modalDescription(fn (): string => $this->composerDescription())
-            ->modalSubmitActionLabel(__('communications.actions.send'))
-            ->modalSubmitAction(fn (Action $action): Action => $action->disabled(
-                fn (): bool => $this->getCandidate()->isDoNotContact()
-                    || ! $this->candidateHasValidEmail()
-                    || ! $this->hasUsableEmailProvider(),
-            ))
-            ->extraModalFooterActions(function (Action $action): array {
-                $actions = [
-                    $action->makeModalSubmitAction('prepareCommunicationOutreachFromComposer', arguments: [
-                        'draftPurpose' => CandidateCommunicationDraftPurpose::InitialOutreach->value,
-                    ])
-                        ->label(__('communications.actions.prepare_outreach'))
-                        ->icon(Heroicon::OutlinedSparkles)
-                        ->color('gray')
-                        ->disabled(fn (): bool => $this->getCandidate()->isDoNotContact()),
-                    $action->makeModalSubmitAction('saveCommunicationDraft', arguments: ['saveDraft' => true])
-                        ->label(__('communications.actions.save_draft'))
-                        ->color('gray'),
-                    $action->makeModalSubmitAction('discardCommunicationDraft', arguments: ['discardDraft' => true])
-                        ->label(__('communications.actions.discard_draft'))
-                        ->icon(Heroicon::OutlinedTrash)
-                        ->color('danger')
-                        ->requiresConfirmation()
-                        ->visible(fn (): bool => $this->communicationDraft() instanceof CandidateCommunicationMessage),
-                ];
-
-                if ($this->hasEligibleFollowUpContext()) {
-                    $actions[] = $action->makeModalSubmitAction('prepareCommunicationFollowUpFromComposer', arguments: [
-                        'draftPurpose' => CandidateCommunicationDraftPurpose::FollowUp->value,
-                    ])
-                        ->label(__('communications.actions.prepare_follow_up'))
-                        ->icon(Heroicon::OutlinedSparkles)
-                        ->color('gray')
-                        ->disabled(fn (): bool => $this->getCandidate()->isDoNotContact());
-                }
-
-                if (! $this->hasUsableEmailProvider()) {
-                    $actions[] = Action::make('configureEmailProvider')
-                        ->label(__('communications.actions.open_email_provider_settings'))
-                        ->url(EmailProviderSettings::getUrl(tenant: $this->getCompany()))
-                        ->color('gray');
-                }
-
-                return $actions;
-            })
-            ->fillForm(fn (): array => $this->composerFormState())
-            ->schema([
-                Hidden::make('draft_id'),
-                TextInput::make('recipient')
-                    ->label(__('communications.fields.recipient'))
-                    ->disabled()
-                    ->dehydrated(false),
-                TextInput::make('sender')
-                    ->label(__('communications.fields.sender'))
-                    ->placeholder(__('communications.composer.sender_unavailable'))
-                    ->disabled()
-                    ->dehydrated(false),
-                TextInput::make('subject')
-                    ->label(__('communications.fields.subject'))
-                    ->maxLength(160),
-                Textarea::make('body')
-                    ->label(__('communications.fields.body'))
-                    ->rows(12)
-                    ->maxLength(1800),
-            ])
-            ->action(function (array $data, array $arguments, Schema $schema, CandidateCommunicationService $communications, GenerateCandidateCommunicationDraft $drafts): void {
-                $candidate = $this->getCandidate();
-                $thread = $communications->resolveThread(
-                    $this->getCurrentUser(),
-                    $this->getCompany(),
-                    $candidate,
-                    $this->communicationJobOrFail(),
-                );
-
-                // Every branch below that keeps the composer open must throw
-                // Halt: Filament unmounts the action and resets its data once
-                // the closure returns normally, which would discard whatever
-                // the recruiter is still reviewing.
-                $purpose = CandidateCommunicationDraftPurpose::tryFrom((string) ($arguments['draftPurpose'] ?? ''));
-
-                if ($purpose instanceof CandidateCommunicationDraftPurpose) {
-
-                    try {
-                        $drafts->handle(
-                            $this->getCurrentUser(),
-                            $thread,
-                            $this->defaultCommunicationLocale(),
-                            $purpose,
-                        );
-                    } catch (CandidateCommunicationException $exception) {
-                        $this->notifyCommunicationException($exception);
-
-                        throw new Halt;
-                    }
-
-                    $schema->fill($this->composerFormState());
-
-                    $this->refreshCandidateRecord();
-
-                    Notification::make()->title(__('communications.notifications.draft_prepared'))->success()->send();
-
-                    throw new Halt;
-                }
-
-                $draftId = $data['draft_id'] ?? null;
-                $draft = is_numeric($draftId)
-                    ? $thread->messages()->whereKey((int) $draftId)->first()
-                    : null;
-
-                if ($arguments['discardDraft'] ?? false) {
-                    if (! $draft instanceof CandidateCommunicationMessage) {
-                        Notification::make()->title(__('communications.errors.unavailable'))->danger()->send();
-
-                        return;
-                    }
-
-                    try {
-                        $communications->discardDraft($this->getCurrentUser(), $draft);
-                    } catch (CandidateCommunicationException $exception) {
-                        $this->notifyCommunicationException($exception);
-
-                        return;
-                    }
-
-                    $this->refreshCandidateRecord();
-
-                    Notification::make()->title(__('communications.notifications.draft_discarded'))->success()->send();
-
-                    return;
-                }
-
-                if (! ($arguments['saveDraft'] ?? false)
-                    && (blank($data['subject'] ?? null) || blank($data['body'] ?? null))) {
-                    Notification::make()->title(__('communications.errors.subject_and_body_required'))->danger()->send();
-
-                    throw new Halt;
-                }
-
-                try {
-                    if ($draft instanceof CandidateCommunicationMessage) {
-                        $draft = $communications->updateDraft(
-                            $this->getCurrentUser(),
-                            $draft,
-                            (string) $data['subject'],
-                            (string) $data['body'],
-                        );
-                    } else {
-                        $draft = $communications->createDraft(
-                            $this->getCurrentUser(),
-                            $thread,
-                            (string) $data['subject'],
-                            (string) $data['body'],
-                        );
-                    }
-
-                    if ($arguments['saveDraft'] ?? false) {
-                        $this->refreshCandidateRecord();
-
-                        Notification::make()->title(__('communications.notifications.draft_saved'))->success()->send();
-
-                        return;
-                    }
-
-                    $communications->authorizeDraft($this->getCurrentUser(), $draft);
-                } catch (CandidateCommunicationException $exception) {
-                    $this->notifyCommunicationException($exception);
-
-                    return;
-                }
-
-                $this->refreshCandidateRecord();
-
-                Notification::make()->title(__('communications.notifications.send_requested'))->success()->send();
-            });
+        return $this->getCandidate();
     }
 
-    public function prepareCommunicationDraftAction(
-        CandidateCommunicationDraftPurpose $purpose = CandidateCommunicationDraftPurpose::InitialOutreach,
-    ): Action {
-        $isFollowUp = $purpose === CandidateCommunicationDraftPurpose::FollowUp;
+    protected function messageCompany(): Company
+    {
+        return $this->getCompany();
+    }
 
-        return Action::make($isFollowUp ? 'prepareCommunicationFollowUp' : 'prepareCommunicationDraft')
-            ->label($isFollowUp
-                ? __('communications.actions.prepare_follow_up')
-                : __('communications.actions.prepare_outreach'))
-            ->icon(Heroicon::OutlinedSparkles)
-            ->color('gray')
-            ->schema([
-                Select::make('language')
-                    ->label(__('communications.fields.language'))
-                    ->options(ApplicationLocale::options())
-                    ->default(fn (): string => $this->defaultCommunicationLocale())
-                    ->required()
-                    ->native(false),
-            ])
-            ->disabled(fn (): bool => $this->getCandidate()->isDoNotContact())
-            ->action(function (array $data, CandidateCommunicationService $communications, GenerateCandidateCommunicationDraft $drafts) use ($purpose): void {
-                try {
-                    $thread = $communications->resolveThread(
-                        $this->getCurrentUser(),
-                        $this->getCompany(),
-                        $this->getCandidate(),
-                        $this->communicationJobOrFail(),
-                    );
-                    $drafts->handle(
-                        $this->getCurrentUser(),
-                        $thread,
-                        ApplicationLocale::from((string) $data['language']),
-                        $purpose,
-                    );
-                } catch (CandidateCommunicationException $exception) {
-                    $this->notifyCommunicationException($exception);
+    protected function messageActor(): User
+    {
+        return $this->getCurrentUser();
+    }
 
-                    return;
-                }
+    /**
+     * A Job opened from a Job-specific context is pre-selected, but the
+     * selector stays available: this page is person-centric, and a generic
+     * message needs no hiring process at all.
+     */
+    protected function messageDefaultJobId(): ?int
+    {
+        return $this->communicationJob()?->getKey();
+    }
 
-                $this->refreshCandidateRecord();
+    /** @return array<int, string> */
+    protected function messageJobOptions(): array
+    {
+        $candidate = $this->getCandidate();
+        $candidate->loadMissing('applications.job');
 
-                Notification::make()->title(__('communications.notifications.draft_prepared'))->success()->send();
-            });
+        /** @var array<int, string> $options */
+        $options = $candidate->applications
+            ->map(fn (Application $application): Job => $application->job)
+            ->unique('id')
+            ->sortBy('name')
+            ->pluck('name', 'id')
+            ->all();
+
+        return $options;
+    }
+
+    protected function afterCandidateMessageSent(): void
+    {
+        $this->refreshCandidateRecord();
     }
 
     /**
@@ -668,7 +471,10 @@ class ViewCandidate extends ViewRecord
                         ->sortByDesc('id')
                         ->map(fn (CandidateCommunicationMessage $message): array => [
                             'subject' => $message->authorized_subject ?? $message->draft_subject,
-                            'body' => $message->authorized_body ?? $message->draft_body,
+                            // Message bodies are rich text; the history is a
+                            // scannable record, so it shows their words rather
+                            // than their markup.
+                            'body' => $this->readableMessageBody($message->authorized_body ?? $message->draft_body),
                             'status' => $message->status->value,
                             'status_label' => __('communications.statuses.'.$message->status->value),
                             'kind_label' => $this->communicationKindLabel($message),
@@ -930,121 +736,15 @@ class ViewCandidate extends ViewRecord
             ->find($jobId);
     }
 
-    private function communicationJobOrFail(): Job
+    private function readableMessageBody(?string $body): string
     {
-        $job = $this->communicationJob();
-
-        abort_unless($job instanceof Job, 404);
-
-        return $job;
-    }
-
-    private function communicationThread(): ?CandidateCommunicationThread
-    {
-        $job = $this->communicationJob();
-
-        if (! $job instanceof Job) {
-            return null;
+        if (! is_string($body) || $body === '') {
+            return '';
         }
 
-        return CandidateCommunicationThread::query()
-            ->where('company_id', $this->getCandidate()->company_id)
-            ->where('candidate_id', $this->getCandidate()->getKey())
-            ->where('job_id', $job->getKey())
-            ->with('messages')
-            ->first();
-    }
-
-    private function candidateHasValidEmail(): bool
-    {
-        return is_string($this->getCandidate()->email)
-            && filter_var($this->getCandidate()->email, FILTER_VALIDATE_EMAIL) !== false;
-    }
-
-    private function defaultCommunicationLocale(): string
-    {
-        $locale = $this->getCurrentUser()->locale ?? app()->getLocale();
-
-        return ApplicationLocale::tryFrom($locale)?->value ?? ApplicationLocale::English->value;
-    }
-
-    private function notifyCommunicationException(CandidateCommunicationException $exception): void
-    {
-        $settingsUrl = EmailProviderSettings::getUrl(tenant: $this->getCompany());
-        $notification = Notification::make()
-            ->title(__($this->communicationErrorKey($exception)))
-            ->danger();
-
-        if ($exception->getMessage() === CandidateCommunicationException::providerUnavailable()->getMessage()) {
-            $notification->actions([
-                Action::make('emailProviderSettings')
-                    ->label(__('communications.actions.open_email_provider_settings'))
-                    ->url($settingsUrl)
-                    ->button(),
-            ]);
-        }
-
-        $notification->send();
-    }
-
-    private function hasUsableEmailProvider(): bool
-    {
-        return $this->defaultCommunicationSender() !== null;
-    }
-
-    /** @return array<string, mixed> */
-    private function composerFormState(): array
-    {
-        $draft = $this->communicationDraft();
-
-        return [
-            'draft_id' => $draft?->getKey(),
-            'recipient' => $this->getCandidate()->email,
-            'sender' => $this->defaultCommunicationSender(),
-            'subject' => $draft?->draft_subject,
-            'body' => $draft?->draft_body,
-        ];
-    }
-
-    private function communicationDraft(): ?CandidateCommunicationMessage
-    {
-        return $this->communicationThread()?->messages()
-            ->where('status', CandidateCommunicationMessageStatus::Draft)
-            ->latest('id')
-            ->first();
-    }
-
-    private function composerDescription(): string
-    {
-        $description = __('communications.composer.job_context', ['job' => $this->communicationJobOrFail()->name]);
-
-        if (! $this->hasUsableEmailProvider()) {
-            $description .= ' '.__('communications.composer.provider_unavailable');
-        }
-
-        return $description;
-    }
-
-    private function defaultCommunicationSender(): ?string
-    {
-        try {
-            return app(CandidateCommunicationService::class)
-                ->usableDefaultProvider($this->getCompany())
-                ->validSenderAddress();
-        } catch (CandidateCommunicationException) {
-            return null;
-        }
-    }
-
-    private function hasEligibleFollowUpContext(): bool
-    {
-        $thread = $this->communicationThread();
-
-        return $thread?->messages()
-            ->where('kind', CandidateCommunicationMessageKind::RecruiterAuthored)
-            ->whereNotNull('authorized_at')
-            ->whereNotNull('authorized_body')
-            ->exists() ?? false;
+        return trim(html_entity_decode(strip_tags(
+            preg_replace('/<\/p>|<br\s*\/?>/i', "\n", $body) ?? $body,
+        )));
     }
 
     private function communicationKindLabel(CandidateCommunicationMessage $message): string
@@ -1056,21 +756,6 @@ class ViewCandidate extends ViewRecord
             CandidateCommunicationMessageKind::InterviewRescheduled => __('communications.history.interview_rescheduled_notification'),
             CandidateCommunicationMessageKind::InterviewCancelled => __('communications.history.interview_cancelled_notification'),
             null => __('communications.history.recorded_message'),
-        };
-    }
-
-    private function communicationErrorKey(CandidateCommunicationException $exception): string
-    {
-        return match ($exception->getMessage()) {
-            CandidateCommunicationException::candidateHasNoValidEmail()->getMessage() => 'communications.errors.invalid_email',
-            CandidateCommunicationException::candidateIsDoNotContact()->getMessage() => 'communications.errors.do_not_contact',
-            CandidateCommunicationException::providerUnavailable()->getMessage() => 'communications.errors.provider_unavailable',
-            CandidateCommunicationException::aiUnavailable()->getMessage() => 'communications.errors.ai_unavailable',
-            CandidateCommunicationException::aiAllowanceReached()->getMessage() => 'communications.errors.ai_allowance_reached',
-            CandidateCommunicationException::followUpRequiresPriorOutboundMessage()->getMessage() => 'communications.errors.follow_up_requires_history',
-            CandidateCommunicationException::alreadyAuthorized()->getMessage() => 'communications.errors.already_authorized',
-            CandidateCommunicationException::draftCannotBeEdited()->getMessage() => 'communications.errors.draft_cannot_be_edited',
-            default => 'communications.errors.unavailable',
         };
     }
 }

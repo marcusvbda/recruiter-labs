@@ -13,12 +13,14 @@ use App\Enums\Limit;
 use App\Models\AiAgentResponseCache;
 use App\Models\AiUsageRecord;
 use App\Models\Application;
+use App\Models\Company;
 use App\Models\Job;
 use App\Services\AiActivityService;
 use App\Services\AiCredentialsResolver;
 use App\Services\AiUsageTracker;
 use App\Services\CandidateEvaluationContextSanitizer;
 use App\Services\LimitManager;
+use App\Services\RecruiterNotifier;
 use App\Services\ResumeTextExtractor;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -263,10 +265,30 @@ class AnalyzeApplicationFit implements ShouldBeUnique, ShouldQueue
         $updated = Application::query()
             ->whereKey($this->applicationId)
             ->where('analysis_generation', $this->generation)
+            ->where('analysis_status', '!=', $status)
             ->update(['analysis_status' => $status]);
 
         if ($updated > 0) {
             $this->broadcastAnalysisUpdated();
+        }
+
+        // A single candidate's evaluation ending — successfully or not — is
+        // never a notification: at pool scale that is noise, and Attention
+        // already holds the failures. The one thing worth interrupting for is
+        // the workspace running out of allowance, because that stops the
+        // automatic work itself rather than one candidate's turn in it.
+        if ($updated > 0 && $status === ApplicationAnalysisStatus::PendingQuota) {
+            $company = Application::query()
+                ->withoutGlobalScopes()
+                ->whereKey($this->applicationId)
+                ->with('company')
+                ->first()?->company;
+
+            if ($company instanceof Company) {
+                DB::afterCommit(function () use ($company): void {
+                    app(RecruiterNotifier::class)->aiAllowanceBlocked($company);
+                });
+            }
         }
     }
 

@@ -38,8 +38,8 @@ referral rather than being treated as direct sourcing.
 
 ## Business rules
 
-The evaluation rules in `.ai/skills/evaluation-integrity/SKILL.md` and
-recruitment workflow rules in `.ai/skills/recruitment-workflow/SKILL.md` apply.
+The evaluation rules in `.claude/skills/evaluation-integrity/SKILL.md` and
+recruitment workflow rules in `.claude/skills/recruitment-workflow/SKILL.md` apply.
 
 - A referral belongs to one company, one job, and one workspace user.
 - A public referral is usable only while it is published, not expired, associated

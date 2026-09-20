@@ -40,7 +40,7 @@ recruitment actions until the recruiter deliberately reopens the application.
 ## Business rules
 
 This feature is governed by
-`.ai/skills/recruitment-workflow/SKILL.md`.
+`.claude/skills/recruitment-workflow/SKILL.md`.
 
 - A job's pipeline is fixed once applications exist. Changing it after candidate
   entry would make existing status assignments ambiguous.
@@ -55,7 +55,12 @@ This feature is governed by
 - A non-terminal status can define how long an application may remain there
   before it is considered overdue.
 - Configured communication associated with entering a status follows the same
-  human-controlled stage transition.
+  human-controlled stage transition. A status is configured with "send email
+  when a candidate enters this status" plus one reusable workspace email template
+  (the same templates used by the Send message composer); the status holds no
+  private subject/body of its own. Configuring it is the recruiter's durable
+  authorization, so the send needs no further confirmation, and a failed or
+  unresolvable send never rolls the stage move back.
 - The default pipeline board order is operational: candidates waiting longer in
   the stage appear before newer arrivals. AI fit is not a default priority key.
 - A current fit may be shown on a card as context, but an outdated fit must not
@@ -105,8 +110,10 @@ This feature is governed by
 - **AC10** — A terminal application does not offer normal active recruiting
   actions until a human reopens it.
 - **AC11** — Hired and rejected/closed outcomes remain distinguishable.
-- **AC12** — A configured status-entry communication is coupled to the same
-  validated stage transition rather than a separate unverified status write.
+- **AC12** — A configured status-entry communication (a status pointing at one
+  reusable email template) is coupled to the same validated stage transition
+  rather than a separate unverified status write, and its failure does not undo
+  the transition.
 
 ## Out of scope
 

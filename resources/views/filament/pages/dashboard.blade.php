@@ -100,6 +100,149 @@
                 @endif
             </section>
 
+            {{-- What is Recruiter Labs doing for me right now? A compact,
+                 truthful summary of the same state the AI Activity panel
+                 shows — never a second implementation of it, and never a
+                 technical execution log. It refreshes when the workspace's AI
+                 channel pushes, never on a timer. --}}
+            @if ($ai_activity !== null)
+                <section class="rl-overview-panel" aria-labelledby="rl-overview-ai-heading">
+                    @if ($ai_activity_channel !== null)
+                        <x-filament-realtime-driver::listener :channel="$ai_activity_channel" :event="$ai_activity_event"
+                            callback="$wire.$refresh()" />
+                    @endif
+
+                    <div class="rl-overview-panel__head">
+                        <h2 id="rl-overview-ai-heading" class="rl-overview-panel__title">
+                            {{ __('dashboard.ai_activity.heading') }}
+                        </h2>
+
+                        <button type="button" class="rl-overview-action"
+                            x-on:click="$dispatch('open-modal', { id: 'ai-activity-panel' })">
+                            {{ __('dashboard.ai_activity.open_panel') }}
+                            <x-filament::icon icon="heroicon-m-arrow-right" class="size-3.5 shrink-0"
+                                aria-hidden="true" />
+                        </button>
+                    </div>
+
+                    <p class="rl-overview-ai-state">
+                        <x-filament::badge :color="$ai_activity['state_color']" :icon="$ai_activity['state_icon']" size="sm">
+                            {{ $ai_activity['state_label'] }}
+                        </x-filament::badge>
+                    </p>
+
+                    @if ($ai_activity_items === [])
+                        <p class="rl-overview-empty">
+                            <x-filament::icon icon="heroicon-m-check-circle" class="rl-overview-empty__icon"
+                                data-tone="success" aria-hidden="true" />
+                            <span>
+                                <span class="rl-overview-empty__title">{{ __('dashboard.ai_activity.idle_heading') }}</span>
+                                <span
+                                    class="rl-overview-empty__text">{{ __('dashboard.ai_activity.idle_description') }}</span>
+                            </span>
+                        </p>
+                    @else
+                        <ul class="rl-ai-activity-list">
+                            @foreach ($ai_activity_items as $item)
+                                <li>
+                                    <a href="{{ $item['url'] }}" wire:navigate class="rl-ai-activity-item">
+                                        <span class="rl-ai-activity-item__role">{{ $item['role'] }}</span>
+                                        <span class="rl-ai-activity-item__text">{{ $item['description'] }}</span>
+
+                                        @if ($item['reason'])
+                                            <span class="rl-ai-activity-item__reason">{{ $item['reason'] }}</span>
+                                        @endif
+                                    </a>
+                                </li>
+                            @endforeach
+                        </ul>
+
+                        @if ($ai_activity_hidden > 0)
+                            <p class="rl-overview-panel__note">
+                                {{ trans_choice('dashboard.ai_activity.hidden', $ai_activity_hidden, ['count' => $ai_activity_hidden]) }}
+                            </p>
+                        @endif
+                    @endif
+                </section>
+            @endif
+        </div>
+
+        <div class="grid items-start gap-5 lg:grid-cols-3">
+            {{-- What did Recruiter Labs actually finish for me? Completed work for
+                 one stated period, as a quiet line of figures — no cards, no token
+                 counts, and no time estimate unless this workspace supplied the
+                 baseline it would be computed from. --}}
+            @if ($productivity !== null)
+            <section class="rl-overview-panel lg:col-span-2" aria-labelledby="rl-overview-productivity-heading">
+                <div class="rl-overview-panel__head">
+                    <h2 id="rl-overview-productivity-heading" class="rl-overview-panel__title">
+                        {{ __('dashboard.productivity.heading') }}
+                    </h2>
+
+                    <a href="{{ $ai_settings_url }}" wire:navigate class="rl-overview-action">
+                        {{ __('dashboard.productivity.view_usage') }}
+                        <x-filament::icon icon="heroicon-m-arrow-right" class="size-3.5 shrink-0" aria-hidden="true" />
+                    </a>
+                </div>
+
+                <p class="rl-overview-summary rl-overview-summary--inset">
+                    <span class="rl-overview-summary__figure">
+                        <span class="rl-overview-summary__value">{{ $productivity->applicationsEvaluated }}</span>
+                        {{ trans_choice('dashboard.productivity.applications_evaluated', $productivity->applicationsEvaluated) }}
+                    </span>
+
+                    <span class="rl-overview-summary__separator" aria-hidden="true">&middot;</span>
+
+                    <span class="rl-overview-summary__figure">
+                        <span class="rl-overview-summary__value">{{ $productivity->aiWorkCompleted() }}</span>
+                        {{ trans_choice('dashboard.productivity.ai_work_completed', $productivity->aiWorkCompleted()) }}
+                    </span>
+
+                    {{-- Sourcing only appears when a recruiter actually asked for
+                         it and it read something: completed work, never a ranking. --}}
+                    @if ($productivity->hasSourcing())
+                        <span class="rl-overview-summary__separator" aria-hidden="true">&middot;</span>
+
+                        <span class="rl-overview-summary__figure">
+                            <span
+                                class="rl-overview-summary__value">{{ $productivity->sourcingProfilesAnalyzed }}</span>
+                            {{ trans_choice('dashboard.productivity.profiles_analyzed', $productivity->sourcingProfilesAnalyzed) }}
+                        </span>
+                    @endif
+                </p>
+
+                @if ($time_saved !== null)
+                    <p class="rl-overview-panel__note"
+                        title="{{ __('dashboard.productivity.time_saved_formula', ['minutes' => $productivity->manualReviewMinutes]) }}">
+                        {{ __('dashboard.productivity.time_saved', ['duration' => $time_saved]) }}
+                    </p>
+                @elseif ($baseline_url !== null)
+                    <p class="rl-overview-panel__note">
+                        <a href="{{ $baseline_url }}" wire:navigate class="rl-overview-action">
+                            {{ __('dashboard.productivity.set_baseline') }}
+                            <x-filament::icon icon="heroicon-m-arrow-right" class="size-3.5 shrink-0"
+                                aria-hidden="true" />
+                        </a>
+                    </p>
+                @endif
+
+                {{-- Capacity is operational: a recruiter should not have to open
+                     Settings to learn whether automatic work can continue. Token
+                     and provider detail stays there. --}}
+                <p class="rl-overview-panel__note" @class(['rl-overview-allowance--warning' => in_array($productivity->aiAllowance->warningState->value, ['critical', 'reached'], true)])>
+                    @if ($productivity->aiAllowance->isUnlimited)
+                        {{ __('dashboard.productivity.allowance_unlimited') }}
+                    @else
+                        {{ __('dashboard.productivity.allowance', [
+                            'used' => $productivity->aiAllowance->used,
+                            'limit' => $productivity->aiAllowance->limitValue,
+                            'remaining' => $productivity->aiAllowance->remaining,
+                        ]) }}
+                    @endif
+                </p>
+            </section>
+            @endif
+
             {{-- What do I have next? A compact preview of the recruiter's own
                  commitments; the calendar page stays the operational view. --}}
             <section class="rl-overview-panel" aria-labelledby="rl-overview-agenda-heading">

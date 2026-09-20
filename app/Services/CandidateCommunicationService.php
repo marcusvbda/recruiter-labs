@@ -31,11 +31,18 @@ class CandidateCommunicationService
         private readonly RecruitmentEmailDispatcher $emails,
     ) {}
 
+    /**
+     * The conversation with a candidate, optionally about one Job.
+     *
+     * The Job is optional because a talent-pool candidate with no Application
+     * can still be messaged; that conversation is person-scoped and must not
+     * fabricate an Application to exist. Every tenancy check is unchanged.
+     */
     public function resolveThread(
         User $actor,
         Company $company,
         Candidate $candidate,
-        Job $job,
+        ?Job $job = null,
         ?Application $application = null,
     ): CandidateCommunicationThread {
         Gate::forUser($actor)->authorize('update', $company);
@@ -46,19 +53,25 @@ class CandidateCommunicationService
                 ->whereBelongsTo($company)
                 ->lockForUpdate()
                 ->findOrFail($candidate->getKey());
-            $job = Job::query()->whereBelongsTo($company)->lockForUpdate()->findOrFail($job->getKey());
+            $job = $job === null
+                ? null
+                : Job::query()->whereBelongsTo($company)->lockForUpdate()->findOrFail($job->getKey());
 
-            $application ??= Application::query()
-                ->whereBelongsTo($company)
-                ->whereBelongsTo($candidate)
-                ->whereBelongsTo($job)
-                ->lockForUpdate()
-                ->first();
+            if ($job === null) {
+                $application = null;
+            } else {
+                $application ??= Application::query()
+                    ->whereBelongsTo($company)
+                    ->whereBelongsTo($candidate)
+                    ->whereBelongsTo($job)
+                    ->lockForUpdate()
+                    ->first();
+            }
 
             if ($application !== null && (
                 $application->company_id !== $company->getKey()
                 || $application->candidate_id !== $candidate->getKey()
-                || $application->job_id !== $job->getKey()
+                || $application->job_id !== $job?->getKey()
             )) {
                 throw CandidateCommunicationException::crossTenantContext();
             }
@@ -67,7 +80,7 @@ class CandidateCommunicationService
             $thread = CandidateCommunicationThread::query()->firstOrCreate([
                 'company_id' => $company->getKey(),
                 'candidate_id' => $candidate->getKey(),
-                'job_id' => $job->getKey(),
+                'job_id' => $job?->getKey(),
             ]);
 
             // A sourced candidate can be contacted before applying. Once a
@@ -111,85 +124,6 @@ class CandidateCommunicationService
                 'draft_subject' => $subject,
                 'draft_body' => $body,
                 'ai_assisted' => $aiAssisted,
-            ]);
-        });
-    }
-
-    /**
-     * Return freshly scoped records for an AI drafting request. This is separate
-     * from sending: it does not inspect a recipient or provider and makes no
-     * communication state change.
-     *
-     * @return array{CandidateCommunicationThread, Candidate, Job}
-     */
-    public function draftingContext(User $actor, CandidateCommunicationThread $thread): array
-    {
-        return DB::transaction(function () use ($actor, $thread): array {
-            $thread = $this->lockedThreadForActor($actor, $thread);
-
-            if ($thread->job_id === null) {
-                throw CandidateCommunicationException::jobRequiredForAiDrafting();
-            }
-
-            $candidate = Candidate::query()
-                ->whereBelongsTo($thread->company)
-                ->lockForUpdate()
-                ->findOrFail($thread->candidate_id);
-            $job = Job::query()
-                ->whereBelongsTo($thread->company)
-                ->with('company')
-                ->lockForUpdate()
-                ->findOrFail($thread->job_id);
-
-            return [$thread, $candidate, $job];
-        });
-    }
-
-    /**
-     * Save only a generated draft. A manual draft is never selected or
-     * overwritten, and this method cannot authorize, queue, or send anything.
-     */
-    public function saveAiDraft(
-        User $actor,
-        CandidateCommunicationThread $thread,
-        string $subject,
-        string $body,
-    ): CandidateCommunicationMessage {
-        return DB::transaction(function () use ($actor, $thread, $subject, $body): CandidateCommunicationMessage {
-            $thread = $this->lockedThreadForActor($actor, $thread);
-            $candidate = Candidate::query()
-                ->whereBelongsTo($thread->company)
-                ->lockForUpdate()
-                ->findOrFail($thread->candidate_id);
-
-            if ($candidate->isDoNotContact()) {
-                throw CandidateCommunicationException::candidateIsDoNotContact();
-            }
-
-            /** @var CandidateCommunicationMessage|null $draft */
-            $draft = $thread->messages()
-                ->where('status', CandidateCommunicationMessageStatus::Draft)
-                ->where('ai_assisted', true)
-                ->whereNull('authorized_at')
-                ->latest('id')
-                ->lockForUpdate()
-                ->first();
-
-            if ($draft instanceof CandidateCommunicationMessage) {
-                $draft->update([
-                    'draft_subject' => $subject,
-                    'draft_body' => $body,
-                ]);
-
-                return $draft;
-            }
-
-            return $thread->messages()->create([
-                'company_id' => $thread->company_id,
-                'kind' => CandidateCommunicationMessageKind::RecruiterAuthored,
-                'draft_subject' => $subject,
-                'draft_body' => $body,
-                'ai_assisted' => true,
             ]);
         });
     }

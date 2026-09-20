@@ -5,6 +5,7 @@ namespace App\Actions;
 use App\Enums\JobCriteriaProcessingStatus;
 use App\Models\Application;
 use App\Models\Job;
+use App\Services\AiActivityService;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -31,7 +32,12 @@ class RequireJobCriteriaReview
 
     public function handle(Job $job): void
     {
-        $revised = DB::transaction(function () use ($job): bool {
+        // Whether the criteria processing status itself moved — an interrupted
+        // extraction becoming `Failed` is exactly the kind of block the
+        // workspace indicator must not learn about only on the next page load.
+        $statusChanged = false;
+
+        $revised = DB::transaction(function () use ($job, &$statusChanged): bool {
             $lockedJob = Job::query()->whereKey($job->getKey())->lockForUpdate()->firstOrFail();
 
             // A blank job has no criteria revision to invalidate. In particular,
@@ -73,10 +79,18 @@ class RequireJobCriteriaReview
                 ] : [],
             ])->saveQuietly();
 
+            $statusChanged = $interrupted || $carriesCriteria;
+
             $job->setRawAttributes($lockedJob->getAttributes(), true);
 
             return $carriesCriteria;
         });
+
+        // `saveQuietly()` above bypasses the model events, so the AI Activity
+        // channel is notified explicitly, after the transaction commits.
+        if ($statusChanged) {
+            DB::afterCommit(fn () => AiActivityService::broadcastForJob($job->getKey()));
+        }
 
         if ($revised) {
             $this->releaseApplicationsForCurrentCriteria->handle($job, trigger: 'criteria_revised');

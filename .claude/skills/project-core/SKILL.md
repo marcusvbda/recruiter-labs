@@ -1,0 +1,138 @@
+---
+name: project-core
+description: Stack detail (dependency versioning, React Compiler, realtime), the exact lint/static-analysis/type/test/format commands for PHP and frontend, token discipline, and Filament plugin discovery. Load before running verification or when choosing how to verify a change.
+---
+
+# Project core guidelines
+
+Shared engineering guidance for this repository. It supports
+`CLAUDE.md` and never replaces it: global rules (language, Git, testing,
+documentation, orchestration) stay in `CLAUDE.md`; this file holds the detail
+that would otherwise bloat it.
+
+## Stack detail
+
+The stack list itself is in `CLAUDE.md`. Two expansions:
+
+- **Dependency versioning.** Always install/use the latest stable version of
+  each dependency at setup time (`composer require`/`npm install` without
+  pinning old versions). When running `composer create-project`/`npm create`,
+  confirm the resolved version before proceeding, since newer releases may exist
+  beyond this assistant's knowledge. Do not change the application's
+  dependencies without approval.
+- **React Compiler.** It is enabled via `babel-plugin-react-compiler` (or the
+  equivalent Vite config). Do not write manual `useMemo`/`useCallback`/
+  `React.memo` speculatively — the compiler already handles that optimization;
+  use them only for a real, identified performance issue.
+- **Realtime updates, not polling.** `marcusvbda/filament-realtime-driver` is
+  installed and active on the admin panel specifically to replace
+  `wire:poll`/`->poll()` with WebSocket pushes. The rule and the concrete
+  patterns (Table/Widget/Blade) live in `.claude/agents/filament-admin.md` —
+  follow that when a Filament surface needs to react to a backend change.
+
+## Deterministic verification commands
+
+These are the commands that actually exist in this repository
+(`composer.json` scripts, `package.json` scripts). Do not invent others. Prefer
+the narrowest command that covers what changed, and run these **before** asking
+an AI reviewer to look at anything.
+
+### PHP changed
+
+| Purpose              | Command                                                         |
+| -------------------- | --------------------------------------------------------------- |
+| Format changed files | `vendor/bin/pint --dirty --format agent`                        |
+| Format whole project | `composer lint` (`pint --parallel`)                             |
+| Format check only    | `composer lint:check`                                           |
+| Static analysis      | `composer types:check` (`phpstan analyse`)                      |
+| Focused tests        | `php artisan test --compact --filter=<name>` or with a path     |
+| Full PHP gate        | `composer test` (clears config, lint:check, types:check, tests) |
+
+### Frontend changed (`resources/js/**`, styles, Vite config)
+
+| Purpose                                           | Command                                   |
+| ------------------------------------------------- | ----------------------------------------- |
+| Types                                             | `npm run types:check` (`tsc --noEmit`)    |
+| Lint (check)                                      | `npm run lint:check`                      |
+| Lint (fix)                                        | `npm run lint`                            |
+| Formatting                                        | `npm run format:check` / `npm run format` |
+| Build (only when the bundle is genuinely at risk) | `npm run build`                           |
+
+### Everything changed / final gate
+
+`composer ci:check` runs the frontend checks plus the PHP gate. It is the
+heaviest option — use it for a final feature review, not per task.
+
+Notes:
+
+- Running existing tests is always allowed. Creating or modifying tests is not,
+  unless the user explicitly asked in that message (see `CLAUDE.md` → Testing).
+- Do not use an LLM to do what a shell command verifies. If a deterministic
+  check fails, fix the implementation before invoking a reviewer — unless the
+  failure itself is what needs diagnosis.
+- If a frontend change does not show up in the UI, the user may need to run
+  `npm run build`, `npm run dev` or `composer run dev` — ask them.
+
+## Tooling
+
+Prefer the Laravel Boost MCP tools (`database-schema`, `database-query`, `search-docs`,
+`browser-logs`, `get-absolute-url`) over shell equivalents, and `search-docs` over
+guessing framework APIs.
+
+## Token discipline
+
+- Load a skill only when its domain is relevant; never preload all project skills.
+- After the initial full read, revisit only the sections of `spec.md` and
+  any present `tech-design.md` that a task needs rather than re-reading source
+  documents on every task.
+- Review the task diff, not the repository.
+- Run deterministic checks first; use AI review for judgement, not for running
+  commands.
+- Do not invoke `qa-tester` for trivial tasks; run the relevant tests directly.
+- One comprehensive review at the end of a feature, not a full-repository review
+  per task.
+- **Cap subagent resume loops.** A background review/implementation delegation
+  gets at most one resume after it fails to produce a usable result (runs out
+  of turns, returns nothing, or spends its budget only reading reference
+  material). If it still hasn't produced one after that resume, stop delegating
+  it and verify the specific concern directly instead — a targeted `Read`/`Grep`
+  against one file or one invariant is faster and cheaper than a third round
+  trip, and is usually all a narrow, well-defined check needs anyway.
+- **Don't preemptively split a review.** Try a review as one pass first. Split
+  it into scoped sub-passes only after that single pass has demonstrably run
+  out of budget mid-file — splitting before that is guessing at a problem that
+  may not exist and doubles the token cost for no reason.
+- **A prompt that requires reading `docs/features/**` or `.claude/skills/**` before
+  writing anything is usually the wrong prompt.** Embed the specific contract
+  (method signatures, constants, acceptance-criteria text, product rules) the
+  delegation actually needs directly in its instructions instead of pointing it
+  at source documents to rediscover — this is what actually prevents an agent
+  from burning its whole turn budget on background reading before writing a
+  line of code or filing a finding.
+
+## Filament plugin discovery
+
+Before designing or implementing a feature that touches the Filament
+application, search https://filamentphp.com/plugins for existing plugins that
+may fully or partially solve the problem.
+
+For each relevant plugin:
+
+- inspect its current documentation;
+- inspect its source code when integration details matter;
+- verify compatibility with the repository's current Laravel and Filament
+  versions;
+- evaluate compatibility with the existing domain, tenancy model and product
+  requirements;
+- identify useful capabilities and unwanted behavior;
+- decide whether to use it directly, adapt it, use it only as a reference, or
+  reject it.
+
+A plugin is an implementation candidate, not a product requirement.
+
+Do not change approved product behavior or distort the existing architecture
+merely to fit a plugin.
+
+When a relevant plugin materially changes implementation cost, complexity or
+technical direction, record that finding before choosing the implementation
+approach.
