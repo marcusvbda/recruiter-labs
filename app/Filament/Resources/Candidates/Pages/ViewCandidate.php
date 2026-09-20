@@ -93,19 +93,22 @@ class ViewCandidate extends ViewRecord
 
     private function doNotContactAction(): Action
     {
-        $candidate = $this->getCandidate();
-
+        // Header actions are cached when the page loads, so everything that
+        // depends on the current do-not-contact state is a closure read at
+        // render/click time. Building these from a captured model would keep
+        // the label stale (and toggle the wrong way twice) until a reload.
         return Action::make('toggleDoNotContact')
-            ->label($candidate->isDoNotContact()
+            ->label(fn (): string => $this->getCandidate()->isDoNotContact()
                 ? __('communications.actions.allow_contact')
                 : __('communications.actions.do_not_contact'))
             ->icon(Heroicon::OutlinedNoSymbol)
-            ->color($candidate->isDoNotContact() ? 'gray' : 'danger')
+            ->color(fn (): string => $this->getCandidate()->isDoNotContact() ? 'gray' : 'danger')
             ->requiresConfirmation()
-            ->modalDescription($candidate->isDoNotContact()
+            ->modalDescription(fn (): string => $this->getCandidate()->isDoNotContact()
                 ? __('communications.dnc.allow_description')
                 : __('communications.dnc.block_description'))
-            ->action(function (SetCandidateDoNotContact $doNotContact) use ($candidate): void {
+            ->action(function (SetCandidateDoNotContact $doNotContact): void {
+                $candidate = $this->getCandidate();
                 $isDoNotContact = ! $candidate->isDoNotContact();
 
                 $doNotContact->run($this->getCurrentUser(), $candidate, $isDoNotContact);
