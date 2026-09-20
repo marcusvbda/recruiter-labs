@@ -1,6 +1,6 @@
 ---
-status: planned
-type: product
+status: implemented
+type: as-built
 ---
 
 # Core recruiting productivity
