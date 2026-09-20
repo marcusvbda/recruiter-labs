@@ -6,27 +6,13 @@
     isn't backed by a row: "Up to date" is a valid and useful answer.
 --}}
 <div class="flex items-center">
-    {{-- Realtime refresh instead of wire:poll: any write that moves an AI
-         operation status broadcasts on this workspace's channel. --}}
-    <x-filament-realtime-driver::listener
-        :channel="$channel"
-        :event="$event"
-        callback="$wire.$refresh()"
-    />
+    <x-filament-realtime-driver::listener :channel="$channel" :event="$event" callback="$wire.$refresh()" />
 
-    <x-filament::modal
-        id="ai-activity-panel"
-        slide-over
-        width="lg"
-        :heading="__('ai_activity.panel.heading')"
-        :description="__('ai_activity.panel.description')"
-    >
+    <x-filament::modal id="ai-activity-panel" slide-over width="lg" :heading="__('ai_activity.panel.heading')" :description="__('ai_activity.panel.description')">
         <x-slot name="trigger">
-            <button
-                type="button"
+            <button type="button"
                 class="flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-gray-600 transition hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
-                :title="__('ai_activity.indicator.open')"
-            >
+                :title="__('ai_activity.indicator.open')">
                 <span class="sr-only">{{ __('ai_activity.indicator.label') }}</span>
 
                 <x-filament::badge :color="$activity['state_color']" :icon="$activity['state_icon']">

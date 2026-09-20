@@ -28,7 +28,7 @@ return [
         'sends_email_helper' => 'Se envía automáticamente por el proveedor de correo configurado.',
         'email_template' => 'Plantilla de correo',
         'email_template_helper' => 'El candidato recibe esta plantilla, con sus variables resueltas para él.',
-        'email_template_hint' => 'Se gestiona en Ajustes → Plantillas de correo',
+        'email_template_hint' => 'Se gestiona en Plantillas de correo',
         'email_template_retired' => 'ya no está disponible',
         'applications_count' => 'Candidatos',
     ],

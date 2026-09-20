@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\Pipelines;
 
-use App\Filament\Clusters\Settings\SettingsCluster;
 use App\Filament\Resources\Pipelines\Pages\CreatePipeline;
 use App\Filament\Resources\Pipelines\Pages\EditPipeline;
 use App\Filament\Resources\Pipelines\Pages\ListPipelines;
@@ -20,11 +19,9 @@ class PipelineResource extends Resource
 {
     protected static ?string $model = Pipeline::class;
 
-    protected static ?string $cluster = SettingsCluster::class;
-
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowsRightLeft;
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 6;
 
     protected static ?string $recordTitleAttribute = 'name';
 

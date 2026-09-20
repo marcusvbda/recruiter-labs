@@ -28,7 +28,7 @@ return [
         'sends_email_helper' => 'Sent automatically through your configured email provider.',
         'email_template' => 'Email template',
         'email_template_helper' => 'The candidate receives this template, with its variables resolved for them.',
-        'email_template_hint' => 'Managed in Settings → Email templates',
+        'email_template_hint' => 'Managed in Email templates',
         'email_template_retired' => 'no longer available',
         'applications_count' => 'Candidates',
     ],

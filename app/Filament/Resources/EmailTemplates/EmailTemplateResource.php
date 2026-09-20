@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\EmailTemplates;
 
-use App\Filament\Clusters\Settings\SettingsCluster;
 use App\Filament\Resources\EmailTemplates\Pages\CreateEmailTemplate;
 use App\Filament\Resources\EmailTemplates\Pages\EditEmailTemplate;
 use App\Filament\Resources\EmailTemplates\Pages\ListEmailTemplates;
@@ -19,11 +18,9 @@ class EmailTemplateResource extends Resource
 {
     protected static ?string $model = EmailTemplate::class;
 
-    protected static ?string $cluster = SettingsCluster::class;
-
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedEnvelope;
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 7;
 
     protected static ?string $recordTitleAttribute = 'name';
 

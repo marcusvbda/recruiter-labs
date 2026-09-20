@@ -76,8 +76,8 @@ class StatusForm
                             ->inline(false)
                             ->live(),
                         // One reusable template, not a second copy of the content:
-                        // the message itself is written and maintained in
-                        // Settings → Email templates.
+                        // the message itself is written and maintained in the
+                        // Email templates resource.
                         Select::make('email_template_id')
                             ->label(__('statuses.fields.email_template'))
                             ->helperText(__('statuses.fields.email_template_helper'))

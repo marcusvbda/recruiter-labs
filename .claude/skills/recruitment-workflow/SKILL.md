@@ -50,13 +50,15 @@ navigation group: the whole product is recruitment.
 
 - **Operational pages belong in primary navigation; configuration belongs in
   Settings.** Primary navigation is `Overview, Jobs, Candidates, Calendar,
-  Referrals, Settings` and should stay roughly that short. Anything a recruiter
-  configures once and then forgets goes into
-  `App\Filament\Clusters\Settings` (account, workspace, hiring workflows,
-  integrations, AI, plan) — never into the sidebar as a top-level item.
+  Referrals, Hiring workflows, Email templates, Team, Settings` and should stay
+  roughly that short. Hiring workflows, Email templates and Team are top-level
+  because recruiters reach for them in day-to-day work, not once-and-forget.
+  What a recruiter configures once and then forgets goes into
+  `App\Filament\Clusters\Settings` (account, workspace, integrations, AI, plan),
+  which stays the last sidebar item.
 - **Reusable pipeline definitions are configuration; a job's Kanban is
-  operational.** `PipelineResource` is clustered under Settings and is called
-  *hiring workflow* in UI copy. The word *pipeline* is reserved for the live
+  operational.** `PipelineResource` is a primary-navigation resource (outside
+  the Settings cluster) and is called *hiring workflow* in UI copy. The word *pipeline* is reserved for the live
   board of candidates inside a job. Never render the Kanban in Settings, and
   never manage stages from the job workspace.
 - **Job progress must be visible without opening every job.** The jobs list

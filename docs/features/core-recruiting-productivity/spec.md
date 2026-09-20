@@ -636,7 +636,8 @@ richer draft behaviour.
 
 ## Reusable email templates
 
-A workspace can manage reusable candidate email templates in Settings.
+A workspace can manage reusable candidate email templates from their own item
+in the main sidebar navigation (not inside Settings).
 
 Each template contains at minimum:
 
@@ -1295,8 +1296,9 @@ Configure reusable template once
 
 ## Communication
 
-- **AC34** — Workspace Settings provide reusable candidate email templates with a
-  name, subject, body, availability state, and visible supported variables.
+- **AC34** — The main sidebar navigation has an Email templates item where a
+  workspace manages reusable candidate email templates with a name, subject,
+  body, availability state, and visible supported variables.
 - **AC35** — Template variables include at least candidate name and Job/position
   name.
 - **AC36** — Selecting a template in a valid candidate context resolves its

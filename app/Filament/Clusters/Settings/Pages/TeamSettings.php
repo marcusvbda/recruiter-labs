@@ -5,7 +5,6 @@ namespace App\Filament\Clusters\Settings\Pages;
 use App\Actions\InviteWorkspaceMember;
 use App\Exceptions\WorkspaceInvitationAlreadyPending;
 use App\Exceptions\WorkspaceMemberAlreadyExists;
-use App\Filament\Clusters\Settings\SettingsCluster;
 use App\Filament\Clusters\Settings\Widgets\WorkspaceInvitationsTable;
 use App\Filament\Clusters\Settings\Widgets\WorkspaceMembersTable;
 use App\Models\Company;
@@ -29,11 +28,11 @@ use Throwable;
  */
 class TeamSettings extends Page
 {
-    protected static ?string $cluster = SettingsCluster::class;
+    protected static ?string $slug = 'team';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserGroup;
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 8;
 
     public static function getNavigationLabel(): string
     {

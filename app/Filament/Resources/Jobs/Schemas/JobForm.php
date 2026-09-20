@@ -11,6 +11,7 @@ use App\Models\Company;
 use App\Models\CvFileType;
 use App\Models\Job;
 use App\Models\Pipeline;
+use App\Services\AiActivityService;
 use Closure;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
@@ -299,6 +300,8 @@ class JobForm
             View::make('filament.resources.jobs.components.ai-criteria-processing')
                 ->viewData(fn (Job $record): array => [
                     'status' => $record->criteria_processing_status,
+                    'channel' => AiActivityService::ChannelPrefix.$record->company->slug,
+                    'event' => AiActivityService::Event,
                 ])
                 ->visible(fn (Job $record): bool => in_array($record->criteria_processing_status, [
                     JobCriteriaProcessingStatus::Pending,

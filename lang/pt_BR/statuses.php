@@ -28,7 +28,7 @@ return [
         'sends_email_helper' => 'Enviado automaticamente pelo provedor de e-mail configurado.',
         'email_template' => 'Modelo de e-mail',
         'email_template_helper' => 'O candidato recebe este modelo, com as variáveis resolvidas para ele.',
-        'email_template_hint' => 'Gerenciado em Configurações → Modelos de e-mail',
+        'email_template_hint' => 'Gerenciado em Modelos de e-mail',
         'email_template_retired' => 'não está mais disponível',
         'applications_count' => 'Candidatos',
     ],
